@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Deal Final · Pompeyo</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { background:#f5f6f8; overflow-x:hidden; }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
+  input[type="number"] { -moz-appearance:textfield; }
+  input:focus { border-color:#2563eb !important; box-shadow:0 0 0 2px rgba(37,99,235,0.15); }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useMemo, useCallback, useEffect } = React;
+
+// ─── GOOGLE SHEETS CONFIG ───────────────────────────────────────────────────
+// Paso pendiente: Miguel debe deployar el Apps Script, copiar la URL aquí y re-subir
+const SCRIPT_URL = ""; // ← Pegar URL del Apps Script desplegado
+
+// ─── CATÁLOGO EMBEBIDO (fallback si no hay conexión a Sheets) ───────────────
+const CATALOGO_LOCAL = {
+  Peugeot: {
+    Pasajeros: [
+      {familia:"208 MCA",modelo:"208 MCA Style Gasolina 100hp MT",cit:"PG9239E60823S00-7",pl:18490000,margen:0.09,tmp:{bono:1400000,aporteRed:462250,aporteSte:937750,precio:17090000},cc:{bono:1500000,aporteRed:462250,aporteSte:937750,aporteFin:100000,precio:16990000},ci:{bono:5300000,aporteRed:462250,aporteSte:937750,aporteFin:3900000,precio:13190000}},
+      {familia:"208 MCA",modelo:"208 MCA Allure Hybrid 136hp AT",cit:"PG9496E60524S00-9",pl:23990000,margen:0.09,tmp:{bono:2400000,aporteRed:599750,aporteSte:1800250,precio:21590000},cc:{bono:2500000,aporteRed:599750,aporteSte:1800250,aporteFin:100000,precio:21490000},ci:{bono:4800000,aporteRed:599750,aporteSte:1800250,aporteFin:2400000,precio:19190000}},
+      {familia:"208 MCA",modelo:"208 MCA GT Electric",cit:"PG9495EL0424S00-1",pl:26590000,margen:0.09,tmp:{bono:1900000,aporteRed:664750,aporteSte:1235250,precio:24690000},cc:{bono:2800000,aporteRed:664750,aporteSte:1235250,aporteFin:900000,precio:23790000},ci:{bono:4000000,aporteRed:664750,aporteSte:1235250,aporteFin:2100000,precio:22590000}},
+      {familia:"2008 MCA",modelo:"2008 MCA Style Hybrid 136hp AT",cit:"PG9562E60724S00-5",pl:23190000,margen:0.09,tmp:{bono:3400000,aporteRed:579750,aporteSte:2820250,precio:19790000},cc:{bono:5300000,aporteRed:579750,aporteSte:2820250,aporteFin:1900000,precio:17890000},ci:{bono:6200000,aporteRed:579750,aporteSte:2820250,aporteFin:2800000,precio:16990000}},
+      {familia:"2008 MCA",modelo:"2008 MCA Allure Hybrid 136hp AT",cit:"PG9562E60724S00-5",pl:25290000,margen:0.09,tmp:{bono:4000000,aporteRed:632250,aporteSte:3367750,precio:21290000},cc:{bono:5400000,aporteRed:632250,aporteSte:3367750,aporteFin:1400000,precio:19890000},ci:{bono:6300000,aporteRed:632250,aporteSte:3367750,aporteFin:2300000,precio:18990000}},
+      {familia:"2008 MCA",modelo:"2008 MCA GT Hybrid 136hp AT",cit:"PG9562E60724S00-5",pl:28590000,margen:0.09,tmp:{bono:3800000,aporteRed:714750,aporteSte:3085250,precio:24790000},cc:{bono:5700000,aporteRed:714750,aporteSte:3085250,aporteFin:1900000,precio:22890000},ci:{bono:6600000,aporteRed:714750,aporteSte:3085250,aporteFin:2800000,precio:21990000}},
+      {familia:"2008 MCA",modelo:"2008 MCA GT Electric",cit:"PG9306EL1023S00-3",pl:29590000,margen:0.09,tmp:{bono:1900000,aporteRed:739750,aporteSte:1160250,precio:27690000},cc:{bono:2800000,aporteRed:739750,aporteSte:1160250,aporteFin:900000,precio:26790000},ci:{bono:4000000,aporteRed:739750,aporteSte:1160250,aporteFin:2100000,precio:25590000}},
+      {familia:"308",modelo:"308 Allure Gasolina 130hp AT",cit:"PG8206E60422S00-7",pl:23790000,margen:0.09,tmp:{bono:2500000,aporteRed:594750,aporteSte:1905250,precio:21290000},cc:{bono:2900000,aporteRed:594750,aporteSte:1905250,aporteFin:400000,precio:20890000},ci:{bono:3800000,aporteRed:594750,aporteSte:1905250,aporteFin:1300000,precio:19990000}},
+      {familia:"308",modelo:"308 Allure Hybrid 136hp AT",cit:"PG9717E61124S00-0",pl:28290000,margen:0.09,tmp:{bono:4000000,aporteRed:707250,aporteSte:3292750,precio:24290000},cc:{bono:4400000,aporteRed:707250,aporteSte:3292750,aporteFin:400000,precio:23890000},ci:{bono:5300000,aporteRed:707250,aporteSte:3292750,aporteFin:1300000,precio:22990000}},
+      {familia:"308",modelo:"308 GT Gasolina 130hp AT",cit:"PG8206E60422S00-7",pl:27290000,margen:0.09,tmp:{bono:2300000,aporteRed:682250,aporteSte:1617750,precio:24990000},cc:{bono:2700000,aporteRed:682250,aporteSte:1617750,aporteFin:400000,precio:24590000},ci:{bono:3600000,aporteRed:682250,aporteSte:1617750,aporteFin:1300000,precio:23690000}},
+      {familia:"308",modelo:"308 GT Hybrid 136hp AT",cit:"PG9717E61124S00-0",pl:31790000,margen:0.09,tmp:{bono:4000000,aporteRed:794750,aporteSte:3205250,precio:27790000},cc:{bono:4400000,aporteRed:794750,aporteSte:3205250,aporteFin:400000,precio:27390000},ci:{bono:5300000,aporteRed:794750,aporteSte:3205250,aporteFin:1300000,precio:26490000}},
+      {familia:"3008",modelo:"3008 Active Pack Gasolina 130hp MT",cit:"PG8056E60620S00-9",pl:25290000,margen:0.09,tmp:{bono:4300000,aporteRed:632250,aporteSte:3667750,precio:20990000},cc:{bono:4700000,aporteRed:632250,aporteSte:3667750,aporteFin:400000,precio:20590000},ci:{bono:5600000,aporteRed:632250,aporteSte:3667750,aporteFin:1300000,precio:19690000}},
+      {familia:"New 3008",modelo:"New 3008 Allure Hybrid 136hp AT",cit:"PG9589E60724S00-2",pl:30790000,margen:0.09,tmp:{bono:3300000,aporteRed:769750,aporteSte:2530250,precio:27490000},cc:{bono:4800000,aporteRed:769750,aporteSte:2530250,aporteFin:1500000,precio:25990000},ci:{bono:5800000,aporteRed:769750,aporteSte:2530250,aporteFin:2500000,precio:24990000}},
+      {familia:"New 3008",modelo:"New 3008 GT Hybrid 136hp AT",cit:"PG9589E61224S02-2",pl:37290000,margen:0.09,tmp:{bono:4800000,aporteRed:932250,aporteSte:3867750,precio:32490000},cc:{bono:6300000,aporteRed:932250,aporteSte:3867750,aporteFin:1500000,precio:30990000},ci:{bono:7300000,aporteRed:932250,aporteSte:3867750,aporteFin:2500000,precio:29990000}},
+      {familia:"New 5008",modelo:"New 5008 Allure Hybrid 136hp AT",cit:"PG9682E61024S00-2",pl:33290000,margen:0.09,tmp:{bono:4300000,aporteRed:832250,aporteSte:3467750,precio:28990000},cc:{bono:5800000,aporteRed:832250,aporteSte:3467750,aporteFin:1500000,precio:27490000},ci:{bono:6800000,aporteRed:832250,aporteSte:3467750,aporteFin:2500000,precio:26490000}},
+      {familia:"New 5008",modelo:"New 5008 GT Hybrid 136hp AT",cit:"PG9682E61024S00-2",pl:39790000,margen:0.09,tmp:{bono:5800000,aporteRed:994750,aporteSte:4805250,precio:33990000},cc:{bono:7300000,aporteRed:994750,aporteSte:4805250,aporteFin:1500000,precio:32490000},ci:{bono:8300000,aporteRed:994750,aporteSte:4805250,aporteFin:2500000,precio:31490000}},
+      {familia:"Rifter MCA",modelo:"Rifter MCA Allure Diesel 100hp MT",cit:"PG9511E60524S00-9",pl:24590000,margen:0.09,tmp:{bono:1800000,aporteRed:614750,aporteSte:1185250,precio:22790000},cc:{bono:2100000,aporteRed:614750,aporteSte:1185250,aporteFin:300000,precio:22490000},ci:{bono:2400000,aporteRed:614750,aporteSte:1185250,aporteFin:600000,precio:22190000}},
+      {familia:"Rifter MCA",modelo:"Rifter MCA Allure Gasolina 130hp AT",cit:"PG9596E60724S00-0",pl:22090000,margen:0.09,tmp:{bono:1800000,aporteRed:552250,aporteSte:1247750,precio:20290000},cc:{bono:2100000,aporteRed:552250,aporteSte:1247750,aporteFin:300000,precio:19990000},ci:{bono:2400000,aporteRed:552250,aporteSte:1247750,aporteFin:600000,precio:19690000}},
+      {familia:"Rifter MCA",modelo:"Rifter MCA Allure Diesel 130hp AT",cit:"PG9514E60524S00-5",pl:26390000,margen:0.09,tmp:{bono:2300000,aporteRed:659750,aporteSte:1640250,precio:24090000},cc:{bono:2600000,aporteRed:659750,aporteSte:1640250,aporteFin:300000,precio:23790000},ci:{bono:2900000,aporteRed:659750,aporteSte:1640250,aporteFin:600000,precio:23490000}},
+      {familia:"Rifter MCA",modelo:"Rifter MCA GT Diesel 130hp AT",cit:"PG9514E60725S01-8",pl:29790000,margen:0.09,tmp:{bono:3200000,aporteRed:744750,aporteSte:2455250,precio:26590000},cc:{bono:3500000,aporteRed:744750,aporteSte:2455250,aporteFin:300000,precio:26290000},ci:{bono:3800000,aporteRed:744750,aporteSte:2455250,aporteFin:600000,precio:25990000}}
+    ],
+    Comerciales: [
+      {familia:"Partner MCA",modelo:"Partner MCA L1 Diesel 100hp MT",cit:"PG9508E60524S01-6",pl:23312100,margen:0.1,tmp:{bono:2023000,aporteRed:582802,aporteSte:1440198,precio:21289100},cc:{bono:2618000,aporteRed:582802,aporteSte:1440198,aporteFin:595000,precio:20694100},ci:null},
+      {familia:"Partner MCA",modelo:"Partner MCA L2 Diesel 100hp MT",cit:"PG9508E60524S00-2",pl:24264100,margen:0.1,tmp:{bono:2023000,aporteRed:606602,aporteSte:1416398,precio:22241100},cc:{bono:2618000,aporteRed:606602,aporteSte:1416398,aporteFin:595000,precio:21646100},ci:null},
+      {familia:"Expert MCA",modelo:"Expert MCA L3 Diesel 145hp MT",cit:"PG9683E61024M00-6",pl:32118100,margen:0.1,tmp:{bono:3927000,aporteRed:802952,aporteSte:3124048,precio:28191100},cc:{bono:4522000,aporteRed:802952,aporteSte:3124048,aporteFin:595000,precio:27596100},ci:null},
+      {familia:"Traveller MCA",modelo:"New Traveller MCA L3 8P Diesel 180hp AT",cit:"PG9610E60824M00-2",pl:36997100,margen:0.1,tmp:{bono:4165000,aporteRed:924928,aporteSte:3240072,precio:32832100},cc:{bono:4760000,aporteRed:924928,aporteSte:3240072,aporteFin:595000,precio:32237100},ci:null},
+      {familia:"Traveller MCA",modelo:"New Traveller MCA L3 9P Diesel 180hp AT",cit:"PG9610E60824M01-6",pl:37711100,margen:0.1,tmp:{bono:4165000,aporteRed:942778,aporteSte:3222222,precio:33546100},cc:{bono:4760000,aporteRed:942778,aporteSte:3222222,aporteFin:595000,precio:32951100},ci:null},
+      {familia:"Boxer MCA",modelo:"Boxer MCA Furgón L2H2 Diesel 140hp MT",cit:"PG9962E60525M03-1",pl:37354100,margen:0.1,tmp:{bono:5117000,aporteRed:933852,aporteSte:4183148,precio:32237100},cc:{bono:6188000,aporteRed:933852,aporteSte:4183148,aporteFin:1071000,precio:31166100},ci:null},
+      {familia:"Boxer MCA",modelo:"Boxer MCA Furgón L3H2 Diesel 140hp MT",cit:"PG9962E60525M02-8",pl:38663100,margen:0.1,tmp:{bono:4760000,aporteRed:966578,aporteSte:3793422,precio:33903100},cc:{bono:5831000,aporteRed:966578,aporteSte:3793422,aporteFin:1071000,precio:32832100},ci:null},
+      {familia:"Boxer MCA",modelo:"Boxer MCA Furgón L4H2 Diesel 140hp MT",cit:"PG9962E60525M00-0",pl:39853100,margen:0.1,tmp:{bono:4046000,aporteRed:996328,aporteSte:3049672,precio:35807100},cc:{bono:5117000,aporteRed:996328,aporteSte:3049672,aporteFin:1071000,precio:34736100},ci:null},
+      {familia:"Landtrek MCA",modelo:"Landtrek MCA Action4 Diesel 200hp 4x4 AT",cit:"PG9878E60325M00-6",pl:37830100,margen:0.1,tmp:{bono:8568000,aporteRed:945752,aporteSte:7622248,precio:29262100},cc:{bono:9163000,aporteRed:945752,aporteSte:7622248,aporteFin:595000,precio:28667100},ci:{bono:10115000,aporteRed:945752,aporteSte:7622248,aporteFin:1547000,precio:27715100}}
+    ]
+  },
+  "Citroën": {
+    Pasajeros: [
+      {familia:"C3",modelo:"C3 Live Pack Gasolina 82HP MT",cit:"CT8669E60622S01-7",pl:12890000,margen:0.09,tmp:{bono:1400000,aporteRed:322250,aporteSte:1077750,precio:11490000},cc:{bono:3200000,aporteRed:322250,aporteSte:1077750,aporteFin:1800000,precio:9690000},ci:{bono:4200000,aporteRed:322250,aporteSte:1077750,aporteFin:2800000,precio:8690000}},
+      {familia:"C3",modelo:"C3 Live Pack Gasolina 96HP MT",cit:"CT10477E60326S02-0",pl:12890000,margen:0.09,tmp:{bono:1600000,aporteRed:322250,aporteSte:1277750,precio:11290000},cc:{bono:3000000,aporteRed:322250,aporteSte:1277750,aporteFin:1400000,precio:9890000},ci:{bono:4000000,aporteRed:322250,aporteSte:1277750,aporteFin:2400000,precio:8890000}},
+      {familia:"C3",modelo:"C3 Feel Gasolina 82HP MT",cit:"CT8669E60622S01-7",pl:13690000,margen:0.09,tmp:{bono:1500000,aporteRed:342250,aporteSte:1157750,precio:12190000},cc:{bono:3300000,aporteRed:342250,aporteSte:1157750,aporteFin:1800000,precio:10390000},ci:{bono:4300000,aporteRed:342250,aporteSte:1157750,aporteFin:2800000,precio:9390000}},
+      {familia:"C3",modelo:"C3 Feel Gasolina 96HP MT",cit:"CT10477E60326S00-1",pl:13690000,margen:0.09,tmp:{bono:1500000,aporteRed:342250,aporteSte:1157750,precio:12190000},cc:{bono:3100000,aporteRed:342250,aporteSte:1157750,aporteFin:1600000,precio:10590000},ci:{bono:4100000,aporteRed:342250,aporteSte:1157750,aporteFin:2600000,precio:9590000}},
+      {familia:"C3",modelo:"C3 YOU Turbo 125HP AT",cit:"CT9651T3C0924S00-8",pl:16590000,margen:0.09,tmp:{bono:900000,aporteRed:414750,aporteSte:485250,precio:15690000},cc:{bono:2600000,aporteRed:414750,aporteSte:485250,aporteFin:1700000,precio:13990000},ci:{bono:3600000,aporteRed:414750,aporteSte:485250,aporteFin:2700000,precio:12990000}},
+      {familia:"Basalt",modelo:"Basalt Shine Turbo 125HP AT",cit:"CT9692T3C1024S00-0",pl:15690000,margen:0.09,tmp:{bono:700000,aporteRed:350000,aporteSte:350000,precio:14990000},cc:{bono:1200000,aporteRed:350000,aporteSte:350000,aporteFin:500000,precio:14490000},ci:{bono:1700000,aporteRed:350000,aporteSte:350000,aporteFin:1000000,precio:13990000}},
+      {familia:"C4 MCA",modelo:"C4 Plus Hybrid 136HP AT",cit:"CT9861E60225S00-6",pl:24590000,margen:0.09,tmp:{bono:2100000,aporteRed:614750,aporteSte:1485250,precio:22490000},cc:{bono:2900000,aporteRed:614750,aporteSte:1485250,aporteFin:800000,precio:21690000},ci:{bono:3400000,aporteRed:614750,aporteSte:1485250,aporteFin:1300000,precio:21190000}},
+      {familia:"C4 MCA",modelo:"C4 Max Hybrid 136HP AT",cit:"CT9861E60225S00-6",pl:26590000,margen:0.09,tmp:{bono:2100000,aporteRed:664750,aporteSte:1435250,precio:24490000},cc:{bono:2900000,aporteRed:664750,aporteSte:1435250,aporteFin:800000,precio:23690000},ci:{bono:3400000,aporteRed:664750,aporteSte:1435250,aporteFin:1300000,precio:23190000}},
+      {familia:"C3 Aircross",modelo:"C3 Aircross Feel Pack 5P Gasolina 115HP MT",cit:"CT9422E60124S00-9",pl:16190000,margen:0.09,tmp:{bono:1500000,aporteRed:404750,aporteSte:1095250,precio:14690000},cc:{bono:2800000,aporteRed:404750,aporteSte:1095250,aporteFin:1300000,precio:13390000},ci:{bono:3400000,aporteRed:404750,aporteSte:1095250,aporteFin:1900000,precio:12790000}},
+      {familia:"C3 Aircross",modelo:"C3 Aircross Feel Pack 7P Gasolina 115HP MT",cit:"CT9422E60225S01-2",pl:17290000,margen:0.09,tmp:{bono:1500000,aporteRed:432250,aporteSte:1067750,precio:15790000},cc:{bono:3300000,aporteRed:432250,aporteSte:1067750,aporteFin:1800000,precio:13990000},ci:{bono:4000000,aporteRed:432250,aporteSte:1067750,aporteFin:2500000,precio:13290000}},
+      {familia:"C3 Aircross",modelo:"C3 Aircross Shine 5P Gasolina 115HP MT",cit:"CT9422E60124S00-9",pl:16790000,margen:0.09,tmp:{bono:1800000,aporteRed:419750,aporteSte:1380250,precio:14990000},cc:{bono:3100000,aporteRed:419750,aporteSte:1380250,aporteFin:1300000,precio:13690000},ci:{bono:3600000,aporteRed:419750,aporteSte:1380250,aporteFin:1800000,precio:13190000}},
+      {familia:"C3 Aircross",modelo:"C3 Aircross Shine 5P Turbo 125HP AT",cit:"CT9573T3C0724S01-9",pl:19390000,margen:0.09,tmp:{bono:1700000,aporteRed:484750,aporteSte:1215250,precio:17690000},cc:{bono:3000000,aporteRed:484750,aporteSte:1215250,aporteFin:1300000,precio:16390000},ci:{bono:3500000,aporteRed:484750,aporteSte:1215250,aporteFin:1800000,precio:15890000}},
+      {familia:"C3 Aircross",modelo:"C3 Aircross Shine 7P Turbo 125HP AT",cit:"CT9573T3C0724S00-4",pl:20490000,margen:0.09,tmp:{bono:1700000,aporteRed:512250,aporteSte:1187750,precio:18790000},cc:{bono:3500000,aporteRed:512250,aporteSte:1187750,aporteFin:1800000,precio:16990000},ci:{bono:4200000,aporteRed:512250,aporteSte:1187750,aporteFin:2500000,precio:16290000}},
+      {familia:"C5 Aircross",modelo:"C5 Aircross Feel Pack Diesel 130HP AT",cit:"CT8284E60421S00-1",pl:26990000,margen:0.09,tmp:{bono:1000000,aporteRed:500000,aporteSte:500000,precio:25990000},cc:{bono:1900000,aporteRed:500000,aporteSte:500000,aporteFin:900000,precio:25090000},ci:{bono:2300000,aporteRed:500000,aporteSte:500000,aporteFin:1300000,precio:24690000}},
+      {familia:"C5 Aircross",modelo:"C5 Aircross Shine Diesel 130HP AT",cit:"CT8284E60421S00-1",pl:30990000,margen:0.09,tmp:{bono:1000000,aporteRed:500000,aporteSte:500000,precio:29990000},cc:{bono:1900000,aporteRed:500000,aporteSte:500000,aporteFin:900000,precio:29090000},ci:{bono:2300000,aporteRed:500000,aporteSte:500000,aporteFin:1300000,precio:28690000}},
+      {familia:"Berlingo Multispace",modelo:"Berlingo Multispace MCA Plus XL Diesel 100HP MT",cit:"CT9512E60524S00-4",pl:23090000,margen:0.09,tmp:{bono:2100000,aporteRed:577250,aporteSte:1522750,precio:20990000},cc:{bono:3200000,aporteRed:577250,aporteSte:1522750,aporteFin:1100000,precio:19890000},ci:{bono:3600000,aporteRed:577250,aporteSte:1522750,aporteFin:1500000,precio:19490000}},
+      {familia:"Berlingo Multispace",modelo:"Berlingo Multispace MCA Plus XL Diesel 130HP AT",cit:"CT9515E60524S00-0",pl:25090000,margen:0.09,tmp:{bono:2100000,aporteRed:627250,aporteSte:1472750,precio:22990000},cc:{bono:3200000,aporteRed:627250,aporteSte:1472750,aporteFin:1100000,precio:21890000},ci:{bono:3600000,aporteRed:627250,aporteSte:1472750,aporteFin:1500000,precio:21490000}}
+    ],
+    Comerciales: [
+      {familia:"Berlingo MCA",modelo:"Berlingo MCA M Diesel 100HP MT",cit:"CT9509E60524S01-1",pl:23074100,margen:0.1,tmp:{bono:2975000,aporteRed:576852,aporteSte:2398148,precio:20099100},cc:{bono:3570000,aporteRed:576852,aporteSte:2398148,aporteFin:595000,precio:19504100},ci:null},
+      {familia:"Berlingo MCA",modelo:"Berlingo MCA XL Diesel 100HP MT",cit:"CT9509E60524S00-8",pl:24026100,margen:0.1,tmp:{bono:2975000,aporteRed:600652,aporteSte:2374348,precio:21051100},cc:{bono:3570000,aporteRed:600652,aporteSte:2374348,aporteFin:595000,precio:20456100},ci:null},
+      {familia:"Jumpy MCA",modelo:"Jumpy MCA XL Diesel 145HP MT",cit:"CT9684E61024M00-1",pl:31404100,margen:0.1,tmp:{bono:3927000,aporteRed:785102,aporteSte:3141898,precio:27477100},cc:{bono:4522000,aporteRed:785102,aporteSte:3141898,aporteFin:595000,precio:26882100},ci:null},
+      {familia:"Spacetourer MCA",modelo:"Spacetourer MCA 8P Diesel 180HP AT",cit:"CT9611E60824M00-8",pl:36640100,margen:0.1,tmp:{bono:4998000,aporteRed:916002,aporteSte:4081998,precio:31642100},cc:{bono:5593000,aporteRed:916002,aporteSte:4081998,aporteFin:595000,precio:31047100},ci:null},
+      {familia:"Spacetourer MCA",modelo:"Spacetourer MCA 9P Diesel 180HP AT",cit:"CT9611E60824M01-1",pl:36759100,margen:0.1,tmp:{bono:4998000,aporteRed:918978,aporteSte:4079022,precio:31761100},cc:{bono:5593000,aporteRed:918978,aporteSte:4079022,aporteFin:595000,precio:31166100},ci:null},
+      {familia:"Jumper MCA",modelo:"Jumper MCA L2H2 Diesel 140HP MT",cit:"CT9964E60525M03-2",pl:36640100,margen:0.1,tmp:{bono:5593000,aporteRed:916002,aporteSte:4676998,precio:31047100},cc:{bono:6188000,aporteRed:916002,aporteSte:4676998,aporteFin:595000,precio:30452100},ci:null},
+      {familia:"Jumper MCA",modelo:"Jumper MCA L3H2 Diesel 140HP MT",cit:"CT9964E60525M02-9",pl:37949100,margen:0.1,tmp:{bono:5236000,aporteRed:948728,aporteSte:4287272,precio:32713100},cc:{bono:5831000,aporteRed:948728,aporteSte:4287272,aporteFin:595000,precio:32118100},ci:null},
+      {familia:"Jumper MCA",modelo:"Jumper MCA L4H2 Diesel 140HP MT",cit:"CT9964E60525M00-1",pl:39139100,margen:0.1,tmp:{bono:4522000,aporteRed:978478,aporteSte:3543522,precio:34617100},cc:{bono:5117000,aporteRed:978478,aporteSte:3543522,aporteFin:595000,precio:34022100},ci:null}
+    ]
+  }
+};
+
+const GASTOS_ROMA = 204500;
+const fmt = (n) => "$" + Math.round(n).toLocaleString("es-CL");
+const pct = (n) => (n * 100).toFixed(1) + "%";
+const parsePesos = (v) => { const s = String(v||"").replace(/\./g,"").replace(/,/g,""); return parseInt(s) || 0; };
+
+// ─── localStorage helpers ───────────────────────────────────────────────────
+const LS_PREFIX = "df_";
+const lsGet = (k) => { try { return JSON.parse(localStorage.getItem(LS_PREFIX+k)); } catch(e) { return null; } };
+const lsSet = (k,v) => { try { localStorage.setItem(LS_PREFIX+k, JSON.stringify(v)); } catch(e) {} };
+const lsGetDeals = () => lsGet("deals") || [];
+const lsSaveDeal = (d) => { const deals = lsGetDeals(); deals.unshift(d); lsSet("deals", deals); };
+const lsDeleteDeal = (id) => { const deals = lsGetDeals().filter(d=>d.id!==id); lsSet("deals", deals); };
+
+// ─── Deal encode/decode (base64 para WhatsApp) ─────────────────────────────
+const encodeDeal = (d) => { try { return btoa(unescape(encodeURIComponent(JSON.stringify(d)))); } catch(e) { return ""; } };
+const decodeDeal = (s) => { try { return JSON.parse(decodeURIComponent(escape(atob(s.trim())))); } catch(e) { return null; } };
+
+// ─── STYLES ─────────────────────────────────────────────────────────────────
+const C = {
+  bg:"#f5f6f8", card:"#fff", border:"#e0e3e8",
+  primary:"#18181b", accent:"#2563eb", accentLight:"#dbeafe",
+  text:"#18181b", muted:"#64748b", light:"#94a3b8",
+  green:"#16a34a", greenBg:"#dcfce7", yellow:"#ca8a04", yellowBg:"#fef9c3",
+  red:"#dc2626", redBg:"#fee2e2", peugeot:"#0f2b5b", citroen:"#c4161c",
+};
+
+const base = {
+  input:{width:"100%",padding:"10px 12px",borderRadius:8,border:"1px solid "+C.border,fontSize:14,fontFamily:"inherit",boxSizing:"border-box",outline:"none",background:C.card},
+  row:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0"},
+  label:{fontSize:13,color:C.muted},
+  val:{fontSize:14,fontWeight:600},
+  divider:{height:1,background:C.border,margin:"8px 0"},
+  section:{padding:"14px 18px"},
+  secTitle:{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",color:C.muted,marginBottom:10},
+  card:{background:C.card,borderRadius:12,border:"1px solid "+C.border,padding:14,marginBottom:10},
+};
+
+let _id = Date.now();
+const uid = () => ++_id;
+const PL = {tmp:"TMP",cc:"Crédito Conv.",ci:"Compra Inteligente"};
+
+// ═══════════════════════════════════════════════════════════════════════════
+function DealFinal() {
+  // Catalog state
+  const [catalogo, setCatalogo] = useState(CATALOGO_LOCAL);
+  const [catSource, setCatSource] = useState("embebido");
+  const [catLoading, setCatLoading] = useState(false);
+
+  // Navigation: "home" | "calc" | "import"
+  const [view, setView] = useState("home");
+
+  // Calculator state
+  const [marca, setMarca] = useState(null);
+  const [tipo, setTipo] = useState(null);
+  const [mIdx, setMIdx] = useState(null);
+  const [pago, setPago] = useState("tmp");
+  const [descPesos, setDescPesos] = useState("");
+  const [bonoZonal, setBonoZonal] = useState("");
+  const [comisionCredito, setComisionCredito] = useState("");
+  const [showUtil, setShowUtil] = useState(false);
+  const [vendedor, setVendedor] = useState(lsGet("vendedor") || "");
+  const [cliente, setCliente] = useState("");
+  const [confirmCierre, setConfirmCierre] = useState(false);
+
+  // Documentation items
+  const defaultDocs = [
+    {id:1,nombre:"SOAP",monto:18400,activo:true},
+    {id:2,nombre:"Inscripción",monto:89560,activo:true},
+    {id:3,nombre:"Trámite",monto:50000,activo:true},
+    {id:4,nombre:"TAG",monto:15000,activo:true},
+    {id:5,nombre:"GRAB",monto:35000,activo:true},
+    {id:6,nombre:"Permiso Circulación",monto:0,activo:true},
+    {id:7,nombre:"Impuesto Verde",monto:0,activo:true},
+  ];
+  const [docItems, setDocItems] = useState(defaultDocs);
+  const [accItems, setAccItems] = useState([]);
+  const [newAccNombre, setNewAccNombre] = useState("");
+  const [newAccMonto, setNewAccMonto] = useState("");
+
+  // Deal registry
+  const [deals, setDeals] = useState(lsGetDeals());
+  const [importCode, setImportCode] = useState("");
+  const [copyMsg, setCopyMsg] = useState("");
+
+  // ─── Try load catalog from Sheets on mount ───
+  useEffect(() => {
+    if (!SCRIPT_URL) return;
+    setCatLoading(true);
+    fetch(SCRIPT_URL + "?action=catalogo")
+      .then(r => r.json())
+      .then(data => {
+        if (data && data.Peugeot) {
+          setCatalogo(data);
+          setCatSource("sheets");
+        }
+      })
+      .catch(() => {})
+      .finally(() => setCatLoading(false));
+  }, []);
+
+  // ─── Derived data ───
+  const modelos = useMemo(() => {
+    if (!marca || !tipo) return [];
+    return catalogo[marca]?.[tipo] || [];
+  }, [marca, tipo, catalogo]);
+
+  const familias = useMemo(() => {
+    const map = {};
+    modelos.forEach((m, i) => {
+      if (!map[m.familia]) map[m.familia] = [];
+      map[m.familia].push({...m, idx:i});
+    });
+    return map;
+  }, [modelos]);
+
+  const auto = mIdx !== null ? modelos[mIdx] : null;
+  const formasPago = useMemo(() => {
+    if (!auto) return ["tmp","cc"];
+    const fps = ["tmp","cc"];
+    if (auto.ci) fps.push("ci");
+    return fps;
+  }, [auto]);
+  const pe = formasPago.includes(pago) ? pago : "tmp";
+
+  // ─── Calculations ───
+  const calc = useMemo(() => {
+    if (!auto) return null;
+    const fp = auto[pe];
+    if (!fp) return null;
+    const esCom = tipo === "Comerciales";
+    const maxDescPesos = Math.round(auto.pl * auto.margen);
+    const descNum = Math.min(parsePesos(descPesos), maxDescPesos);
+    const descPompeyoPct = auto.pl > 0 ? descNum / auto.pl : 0;
+    const bonoZonalNum = parsePesos(bonoZonal);
+    const aporteRedPesos = fp.aporteRed || 0;
+    const cePct = auto.pl > 0 ? aporteRedPesos / auto.pl : 0;
+    const totalDadoPct = descPompeyoPct + cePct;
+    // Aportes ya incluyen IVA para comerciales (corregido Jun 2026)
+    const precioAuto = auto.pl - fp.bono - descNum - bonoZonalNum;
+    const precioNeto = Math.round(precioAuto / 1.19);
+    const totalDoc = docItems.filter(d=>d.activo).reduce((s,d)=>s+parsePesos(d.monto), 0);
+    const totalAcc = accItems.reduce((s,a)=>s+parsePesos(a.monto), 0);
+    const totalCliente = precioAuto + totalDoc + totalAcc;
+    const margenBruto = maxDescPesos;
+    const margenDisponible = margenBruto - aporteRedPesos;
+    const margenNetoAuto = margenDisponible - descNum;
+    const margenNeto = margenNetoAuto - GASTOS_ROMA;
+    const comCredNum = parsePesos(comisionCredito);
+    const utilidadProxy = margenNeto + comCredNum;
+    const utilidadPct = auto.pl > 0 ? utilidadProxy / auto.pl : 0;
+    let alertaDesc = null;
+    if (descNum > maxDescPesos) alertaDesc = "roja";
+    else if (totalDadoPct > 0.04) alertaDesc = "amarilla";
+    let utilColor = C.green, utilIcon = "🟢";
+    if (utilidadPct < 0.03) { utilColor = C.red; utilIcon = "🔴"; }
+    else if (utilidadPct < 0.05) { utilColor = C.yellow; utilIcon = "🟡"; }
+    return { fp, esCom, descNum, descPompeyoPct, totalDadoPct, cePct, maxDescPesos, bonoZonalNum,
+      precioAuto, precioNeto, totalDoc, totalAcc, totalCliente,
+      margenBruto, aporteRedPesos, margenDisponible, margenNetoAuto, margenNeto,
+      comCredNum, utilidadProxy, utilidadPct, alertaDesc, utilColor, utilIcon };
+  }, [auto, pe, descPesos, bonoZonal, docItems, accItems, comisionCredito, tipo]);
+
+  // ─── Actions ───
+  const mc = marca === "Peugeot" ? C.peugeot : marca === "Citroën" ? C.citroen : C.accent;
+
+  const resetCalc = useCallback(() => {
+    setMarca(null);setTipo(null);setMIdx(null);setPago("tmp");
+    setDescPesos("");setBonoZonal("");setComisionCredito("");
+    setShowUtil(false);setAccItems([]);setCliente("");setConfirmCierre(false);
+    setDocItems(defaultDocs.map(d=>({...d})));
+  }, []);
+
+  const goHome = () => { resetCalc(); setView("home"); };
+
+  const toggleDoc = (id) => setDocItems(d=>d.map(x=>x.id===id?{...x,activo:!x.activo}:x));
+  const updateDocMonto = (id,v) => setDocItems(d=>d.map(x=>x.id===id?{...x,monto:v}:x));
+  const addAcc = () => {
+    if (!newAccNombre.trim()) return;
+    setAccItems(a=>[...a,{id:uid(),nombre:newAccNombre.trim(),monto:parsePesos(newAccMonto)}]);
+    setNewAccNombre("");setNewAccMonto("");
+  };
+  const removeAcc = (id) => setAccItems(a=>a.filter(x=>x.id!==id));
+  const updateAccMonto = (id,v) => setAccItems(a=>a.map(x=>x.id===id?{...x,monto:parsePesos(v)}:x));
+
+  // ─── Cerrar Deal ───
+  const cerrarDeal = () => {
+    if (!auto || !calc) return;
+    const deal = {
+      id: Date.now(), fecha: new Date().toLocaleDateString("es-CL"),
+      vendedor, cliente, marca, tipo, modelo: auto.modelo, cit: auto.cit,
+      formaPago: PL[pe], precioLista: auto.pl, bonoTotal: calc.fp.bono,
+      descPompeyo: calc.descNum, bonoZonal: calc.bonoZonalNum,
+      precioAuto: calc.precioAuto, totalDoc: calc.totalDoc,
+      totalAcc: calc.totalAcc, totalCliente: calc.totalCliente,
+      utilidadProxy: calc.utilidadProxy, utilidadPct: calc.utilidadPct,
+      aporteRed: calc.aporteRedPesos, aporteSte: calc.fp.aporteSte,
+      aporteFin: calc.fp.aporteFin || 0,
+    };
+    lsSaveDeal(deal);
+    setDeals(lsGetDeals());
+
+    // Post to Sheets if connected
+    if (SCRIPT_URL) {
+      fetch(SCRIPT_URL, { method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({action:"deal", deal}) }).catch(()=>{});
+    }
+
+    // WhatsApp share
+    const code = encodeDeal(deal);
+    const msg = `🚗 *DEAL FINAL*\n📅 ${deal.fecha}\n👤 Vendedor: ${vendedor}\n👥 Cliente: ${cliente}\n\n🔹 ${auto.modelo}\n💰 Lista: ${fmt(auto.pl)}\n🎯 Pago: ${PL[pe]}\n📉 Bono: ${fmt(calc.fp.bono)}\n${calc.descNum>0?`🔻 Desc: ${fmt(calc.descNum)}\n`:""}${calc.bonoZonalNum>0?`📍 Zonal: ${fmt(calc.bonoZonalNum)}\n`:""}\n💵 *Precio Auto: ${fmt(calc.precioAuto)}*\n📋 Doc: ${fmt(calc.totalDoc)}\n${calc.totalAcc>0?`🔧 Acc: ${fmt(calc.totalAcc)}\n`:""}\n✅ *TOTAL CLIENTE: ${fmt(calc.totalCliente)}*\n\n📎 Código: ${code}`;
+    const waUrl = "https://wa.me/?text=" + encodeURIComponent(msg);
+    window.open(waUrl, "_blank");
+    goHome();
+  };
+
+  // ─── Import deal from code ───
+  const importDeal = () => {
+    const d = decodeDeal(importCode);
+    if (!d) { alert("Código inválido"); return; }
+    if (!lsGetDeals().find(x=>x.id===d.id)) { lsSaveDeal(d); setDeals(lsGetDeals()); }
+    setImportCode(""); setView("home");
+  };
+
+  const deleteDeal = (id) => { lsDeleteDeal(id); setDeals(lsGetDeals()); };
+
+  const copyRegistro = () => {
+    const header = "Fecha\tVendedor\tCliente\tModelo\tPago\tPrecio Lista\tBono\tDesc\tZonal\tPrecio Auto\tDoc\tAcc\tTotal Cliente";
+    const rows = deals.map(d=>`${d.fecha}\t${d.vendedor}\t${d.cliente}\t${d.modelo}\t${d.formaPago}\t${d.precioLista}\t${d.bonoTotal}\t${d.descPompeyo}\t${d.bonoZonal}\t${d.precioAuto}\t${d.totalDoc}\t${d.totalAcc}\t${d.totalCliente}`);
+    navigator.clipboard.writeText(header+"\n"+rows.join("\n"))
+      .then(()=>{ setCopyMsg("✅ Copiado"); setTimeout(()=>setCopyMsg(""),2000); })
+      .catch(()=>{ setCopyMsg("❌ Error"); setTimeout(()=>setCopyMsg(""),2000); });
+  };
+
+  const chip = (label,value,color) => (
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0"}}>
+      <span style={{fontSize:12,color:color||C.muted}}>{label}</span>
+      <span style={{fontSize:12,fontWeight:600,color:color||C.text}}>{fmt(value)}</span>
+    </div>
+  );
+
+  const modelCount = Object.values(catalogo).reduce((s,brand)=>s+Object.values(brand).reduce((s2,arr)=>s2+arr.length,0),0);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════════════════════════════════════
+  return (
+    <div style={{fontFamily:"'Segoe UI',system-ui,sans-serif",background:C.bg,minHeight:"100vh",maxWidth:460,margin:"0 auto",paddingBottom:120,color:C.text,fontSize:14,lineHeight:1.5}}>
+
+      {/* ═══ HEADER ═══ */}
+      <div style={{background:view==="calc"&&marca?mc:C.primary,color:"#fff",padding:"14px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:10}}>
+        <div>
+          <div style={{fontSize:17,fontWeight:700,letterSpacing:"-0.02em"}}>Deal Final</div>
+          <div style={{fontSize:11,opacity:0.6}}>
+            {view==="calc" && auto ? auto.modelo : view==="calc" && marca ? `${marca} · ${tipo||""}` : `Catálogo ${catSource} · ${modelCount} modelos · Jun 2026`}
+          </div>
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          {view !== "home" && <div onClick={goHome} style={{cursor:"pointer",fontSize:12,opacity:0.8,padding:"5px 10px",border:"1px solid rgba(255,255,255,.3)",borderRadius:6}}>Inicio</div>}
+          {view === "calc" && marca && <div onClick={()=>{resetCalc();}} style={{cursor:"pointer",fontSize:12,opacity:0.8,padding:"5px 10px",border:"1px solid rgba(255,255,255,.3)",borderRadius:6}}>Nuevo</div>}
+        </div>
+      </div>
+
+      {/* ═══ HOME VIEW ═══ */}
+      {view === "home" && (<>
+        <div style={base.section}>
+          {/* Vendedor */}
+          <div style={{...base.card}}>
+            <div style={{fontSize:13,color:C.muted,marginBottom:4}}>Tu nombre (vendedor)</div>
+            <input type="text" value={vendedor} onChange={e=>{setVendedor(e.target.value);lsSet("vendedor",e.target.value);}}
+              placeholder="Ej: Javier Madariaga" style={base.input} />
+          </div>
+
+          {/* Actions */}
+          <div style={{display:"flex",gap:10,marginBottom:14}}>
+            <div onClick={()=>{setView("calc");resetCalc();}}
+              style={{flex:1,padding:"16px",borderRadius:10,background:C.accent,color:"#fff",textAlign:"center",cursor:"pointer",fontWeight:700,fontSize:15}}>
+              + Nuevo Deal
+            </div>
+            <div onClick={()=>setView("import")}
+              style={{flex:1,padding:"16px",borderRadius:10,border:"2px solid "+C.accent,color:C.accent,textAlign:"center",cursor:"pointer",fontWeight:600,fontSize:14}}>
+              📎 Cargar Código
+            </div>
+          </div>
+
+          {/* Catalog status */}
+          <div style={{...base.card,padding:10,display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:18}}>{catLoading?"⏳":catSource==="sheets"?"☁️":"💾"}</span>
+            <span style={{fontSize:12,color:C.muted}}>
+              {catLoading ? "Cargando catálogo..." : catSource==="sheets" ? `Catálogo cargado desde Sheets (${modelCount} modelos)` : `Catálogo embebido (${modelCount} modelos)`}
+            </span>
+          </div>
+
+          {/* Deal Registry */}
+          <div style={{...base.secTitle,marginTop:14}}>Registro de Deals ({deals.length})</div>
+          {deals.length > 0 && (
+            <div onClick={copyRegistro} style={{fontSize:12,color:C.accent,cursor:"pointer",marginBottom:10,fontWeight:600}}>
+              📋 Copiar registro como tabla {copyMsg && <span style={{color:C.green}}>{copyMsg}</span>}
+            </div>
+          )}
+          {deals.length === 0 && <div style={{...base.card,textAlign:"center",color:C.muted,fontSize:13}}>Sin deals registrados</div>}
+          {deals.map(d => {
+            const utilOk = d.utilidadPct >= 0.05;
+            const utilWarn = d.utilidadPct >= 0.03 && d.utilidadPct < 0.05;
+            const bg = utilOk ? C.greenBg : utilWarn ? C.yellowBg : C.redBg;
+            const bc = utilOk ? C.green : utilWarn ? C.yellow : C.red;
+            return (
+              <div key={d.id} style={{...base.card,borderLeft:"3px solid "+bc,background:bg+"44"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:700}}>{d.modelo}</div>
+                    <div style={{fontSize:11,color:C.muted}}>{d.fecha} · {d.vendedor} · {d.cliente}</div>
+                    <div style={{fontSize:12,marginTop:4}}>{d.formaPago} · Total: <b>{fmt(d.totalCliente)}</b></div>
+                  </div>
+                  <div onClick={()=>deleteDeal(d.id)} style={{cursor:"pointer",fontSize:16,color:C.red,padding:"0 4px"}}>×</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </>)}
+
+      {/* ═══ IMPORT VIEW ═══ */}
+      {view === "import" && (
+        <div style={base.section}>
+          <div style={base.secTitle}>Cargar Deal desde código</div>
+          <div style={base.card}>
+            <div style={{fontSize:13,color:C.muted,marginBottom:8}}>Pegá el código que te llegó por WhatsApp:</div>
+            <textarea value={importCode} onChange={e=>setImportCode(e.target.value)}
+              placeholder="Pegar código base64 aquí..." rows={4}
+              style={{...base.input,resize:"vertical",fontFamily:"monospace",fontSize:12}} />
+            <div onClick={importDeal}
+              style={{marginTop:10,padding:"12px",borderRadius:8,background:C.accent,color:"#fff",textAlign:"center",cursor:"pointer",fontWeight:600}}>
+              Cargar Deal
+            </div>
+          </div>
+          <div style={{fontSize:12,color:C.muted,marginTop:8}}>
+            <b>¿Cómo funciona?</b> Cuando un vendedor cierra un deal, la app genera un código. Ese código llega por WhatsApp. Copialo, pegalo acá arriba y apretá "Cargar Deal" para agregarlo a tu registro.
+          </div>
+        </div>
+      )}
+
+      {/* ═══ CALCULATOR VIEW ═══ */}
+      {view === "calc" && (<>
+
+        {/* Brand */}
+        {!marca && (
+          <div style={base.section}>
+            <div style={base.secTitle}>Selecciona marca</div>
+            <div style={{display:"flex",gap:10}}>
+              {["Peugeot","Citroën"].map(m=>(
+                <div key={m} onClick={()=>{setMarca(m);setTipo(null);setMIdx(null);}}
+                  style={{flex:1,padding:"20px 12px",borderRadius:10,border:"2px solid "+(m==="Peugeot"?C.peugeot:C.citroen),background:C.card,textAlign:"center",cursor:"pointer",fontWeight:700,fontSize:16,color:m==="Peugeot"?C.peugeot:C.citroen}}>
+                  {m}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {marca && !tipo && (
+          <div style={base.section}>
+            <div style={base.secTitle}>Tipo de vehículo</div>
+            <div style={{display:"flex",gap:10}}>
+              {["Pasajeros","Comerciales"].map(t=>(
+                <div key={t} onClick={()=>{setTipo(t);setMIdx(null);}}
+                  style={{flex:1,padding:"16px",borderRadius:10,border:"2px solid "+mc,background:C.card,textAlign:"center",cursor:"pointer",fontWeight:600,fontSize:15,color:mc}}>
+                  {t}
+                </div>
+              ))}
+            </div>
+            <div onClick={()=>setMarca(null)} style={{marginTop:10,fontSize:13,color:C.accent,cursor:"pointer"}}>← Cambiar marca</div>
+          </div>
+        )}
+        {marca && tipo && mIdx === null && (
+          <div style={base.section}>
+            <div style={base.secTitle}>Selecciona modelo</div>
+            {Object.entries(familias).map(([fam,items])=>(
+              <div key={fam} style={{marginBottom:12}}>
+                <div style={{fontSize:11,fontWeight:700,color:mc,marginBottom:4,textTransform:"uppercase",letterSpacing:"0.04em"}}>{fam}</div>
+                {items.map(m=>(
+                  <div key={m.idx} onClick={()=>{setMIdx(m.idx);setPago("tmp");setDescPesos("");setBonoZonal("");setComisionCredito("");setAccItems([]);setShowUtil(false);setConfirmCierre(false);}}
+                    style={{padding:"10px 14px",borderRadius:8,border:"1px solid "+C.border,background:C.card,marginBottom:5,cursor:"pointer"}}>
+                    <div style={{fontSize:13,fontWeight:600}}>{m.modelo.replace(m.familia+" ","")}</div>
+                    <div style={{fontSize:12,color:C.muted}}>Lista {fmt(m.pl)}</div>
+                  </div>
+                ))}
+              </div>
+            ))}
+            <div onClick={()=>setTipo(null)} style={{fontSize:13,color:C.accent,cursor:"pointer"}}>← Cambiar tipo</div>
+          </div>
+        )}
+
+        {/* ═══ DEAL CALCULATOR ═══ */}
+        {auto && calc && (<>
+          {/* Model Card */}
+          <div style={base.section}>
+            <div style={{...base.card,borderLeft:"3px solid "+mc}}>
+              <div style={{fontSize:14,fontWeight:700,marginBottom:6}}>{auto.modelo}</div>
+              <div style={base.row}><span style={base.label}>Precio Lista</span><span style={{fontSize:16,fontWeight:700}}>{fmt(auto.pl)}</span></div>
+              <div style={base.row}><span style={base.label}>CIT</span><span style={{fontSize:10,fontFamily:"monospace",color:C.muted}}>{auto.cit}</span></div>
+            </div>
+            <div onClick={()=>setMIdx(null)} style={{fontSize:13,color:C.accent,cursor:"pointer"}}>← Cambiar modelo</div>
+          </div>
+
+          {/* Forma de Pago */}
+          <div style={base.section}>
+            <div style={base.secTitle}>Forma de Pago</div>
+            <div style={{display:"flex",gap:6}}>
+              {formasPago.map(fp=>(
+                <div key={fp} onClick={()=>setPago(fp)}
+                  style={{flex:1,padding:"10px 8px",borderRadius:8,border:"2px solid "+(pe===fp?mc:C.border),background:pe===fp?mc+"10":C.card,color:pe===fp?mc:C.muted,fontWeight:pe===fp?700:500,fontSize:12,textAlign:"center",cursor:"pointer"}}>
+                  {PL[fp]}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Desglose Bonos */}
+          <div style={base.section}>
+            <div style={base.secTitle}>Desglose Bono {PL[pe]}</div>
+            <div style={base.card}>
+              {chip("Aporte Red (CE 2,5%)", calc.fp.aporteRed, "#b45309")}
+              {chip("Aporte Stellantis (Marca)", calc.fp.aporteSte, C.accent)}
+              {pe !== "tmp" && calc.fp.aporteFin > 0 && chip("Aporte Financiera", calc.fp.aporteFin, "#7c3aed")}
+              <div style={base.divider} />
+              <div style={base.row}>
+                <span style={{fontSize:13,fontWeight:700}}>Bono Total</span>
+                <span style={{fontSize:15,fontWeight:800,color:C.green}}>{fmt(calc.fp.bono)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Descuentos */}
+          <div style={base.section}>
+            <div style={base.secTitle}>Descuentos</div>
+            <div style={base.card}>
+              <div style={{marginBottom:10}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                  <span style={{fontSize:13,color:C.muted}}>Descuento Pompeyo ($)</span>
+                  {calc.descNum > 0 && (
+                    <span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:6,
+                      background:calc.totalDadoPct>0.04?C.yellowBg:C.greenBg,
+                      color:calc.totalDadoPct>0.04?C.yellow:C.green}}>
+                      {pct(calc.totalDadoPct)} dado
+                    </span>
+                  )}
+                </div>
+                <input type="number" inputMode="numeric" value={descPesos} onChange={e=>setDescPesos(e.target.value)}
+                  placeholder="Monto en pesos" style={base.input} />
+                {calc.descNum > 0 && (
+                  <div style={{fontSize:11,color:C.muted,marginTop:4,display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
+                    <span>Pompeyo {pct(calc.descPompeyoPct)}</span>
+                    <span style={{color:C.light}}>+</span>
+                    <span style={{color:"#b45309"}}>CE {pct(calc.cePct)}</span>
+                    <span style={{color:C.light}}>=</span>
+                    <span style={{fontWeight:700}}>Total {pct(calc.totalDadoPct)}</span>
+                  </div>
+                )}
+                {calc.alertaDesc === "amarilla" && (
+                  <div style={{padding:"8px 12px",borderRadius:6,background:C.yellowBg,borderLeft:"3px solid "+C.yellow,fontSize:12,marginTop:6}}>
+                    ⚠️ Total dado sobre 4% (Pompeyo + CE) — requiere autorización
+                  </div>
+                )}
+                {calc.alertaDesc === "roja" && (
+                  <div style={{padding:"8px 12px",borderRadius:6,background:C.redBg,borderLeft:"3px solid "+C.red,fontSize:12,marginTop:6}}>
+                    🚫 Tope: margen Red {fmt(calc.maxDescPesos)} ({pct(auto.margen)})
+                  </div>
+                )}
+                <div style={{fontSize:11,color:C.light,marginTop:4}}>
+                  Margen Red: {fmt(calc.maxDescPesos)} · Post CE: {fmt(calc.margenDisponible)} · Post Roma: {fmt(calc.margenDisponible - GASTOS_ROMA)}
+                </div>
+              </div>
+              <div style={base.divider} />
+              <div style={{marginTop:10}}>
+                <div style={{fontSize:13,color:C.muted,marginBottom:4}}>Bono Zonal ($)</div>
+                <input type="number" inputMode="numeric" value={bonoZonal} onChange={e=>setBonoZonal(e.target.value)}
+                  placeholder="0" style={base.input} />
+              </div>
+            </div>
+          </div>
+
+          {/* Precio Vehículo */}
+          <div style={base.section}>
+            <div style={base.secTitle}>Precio Vehículo</div>
+            <div style={{...base.card,background:mc+"06"}}>
+              <div style={base.row}><span style={base.label}>Precio Lista</span><span style={base.val}>{fmt(auto.pl)}</span></div>
+              <div style={base.row}><span style={{fontSize:12,color:"#b45309"}}>− Aporte Red (CE)</span><span style={{fontSize:12,color:"#b45309",fontWeight:600}}>−{fmt(calc.fp.aporteRed)}</span></div>
+              <div style={base.row}><span style={{fontSize:12,color:C.accent}}>− Aporte Stellantis</span><span style={{fontSize:12,color:C.accent,fontWeight:600}}>−{fmt(calc.fp.aporteSte)}</span></div>
+              {pe !== "tmp" && calc.fp.aporteFin > 0 && (
+                <div style={base.row}><span style={{fontSize:12,color:"#7c3aed"}}>− Aporte Financiera</span><span style={{fontSize:12,color:"#7c3aed",fontWeight:600}}>−{fmt(calc.fp.aporteFin)}</span></div>
+              )}
+
+              {calc.descNum > 0 && (
+                <div style={base.row}><span style={{fontSize:12,color:C.red}}>− Desc. Pompeyo</span><span style={{fontSize:12,color:C.red,fontWeight:600}}>−{fmt(calc.descNum)}</span></div>
+              )}
+              {calc.bonoZonalNum > 0 && (
+                <div style={base.row}><span style={{fontSize:12,color:C.green}}>− Bono Zonal</span><span style={{fontSize:12,color:C.green,fontWeight:600}}>−{fmt(calc.bonoZonalNum)}</span></div>
+              )}
+              <div style={base.divider} />
+              <div style={base.row}>
+                <span style={{fontSize:15,fontWeight:700}}>Precio Auto</span>
+                <span style={{fontSize:18,fontWeight:800}}>{fmt(calc.precioAuto)}</span>
+              </div>
+              <div style={base.row}><span style={base.label}>Neto sin IVA</span><span style={{fontSize:12,color:C.muted}}>{fmt(calc.precioNeto)}</span></div>
+            </div>
+          </div>
+
+          {/* Documentación */}
+          <div style={base.section}>
+            <div style={base.secTitle}>Documentación</div>
+            <div style={base.card}>
+              {docItems.map(d => (
+                <div key={d.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",opacity:d.activo?1:0.4}}>
+                  <div onClick={()=>toggleDoc(d.id)}
+                    style={{width:22,height:22,borderRadius:6,border:"2px solid "+(d.activo?mc:C.border),background:d.activo?mc:"transparent",
+                      display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0,color:"#fff",fontSize:12,fontWeight:700}}>
+                    {d.activo ? "✓" : ""}
+                  </div>
+                  <span style={{flex:1,fontSize:13,color:d.activo?C.text:C.muted}}>{d.nombre}</span>
+                  <input type="number" inputMode="numeric" value={d.monto||""} onChange={e=>updateDocMonto(d.id,e.target.value)}
+                    style={{width:100,padding:"6px 8px",borderRadius:6,border:"1px solid "+C.border,fontSize:13,textAlign:"right",fontFamily:"inherit",outline:"none",background:d.activo?C.card:"#f0f0f0"}}
+                    disabled={!d.activo} />
+                </div>
+              ))}
+              <div style={base.divider} />
+              <div style={base.row}>
+                <span style={{fontWeight:700,fontSize:13}}>Total Documentación</span>
+                <span style={{fontWeight:700,fontSize:14}}>{fmt(calc.totalDoc)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Accesorios */}
+          <div style={base.section}>
+            <div style={base.secTitle}>Accesorios</div>
+            <div style={base.card}>
+              {accItems.map(a => (
+                <div key={a.id} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0"}}>
+                  <div onClick={()=>removeAcc(a.id)}
+                    style={{width:22,height:22,borderRadius:6,background:C.redBg,color:C.red,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:14,fontWeight:700,flexShrink:0}}>
+                    ×
+                  </div>
+                  <span style={{flex:1,fontSize:13}}>{a.nombre}</span>
+                  <input type="number" inputMode="numeric" value={a.monto||""} onChange={e=>updateAccMonto(a.id,e.target.value)}
+                    style={{width:100,padding:"6px 8px",borderRadius:6,border:"1px solid "+C.border,fontSize:13,textAlign:"right",fontFamily:"inherit",outline:"none"}} />
+                </div>
+              ))}
+              {accItems.length > 0 && <div style={base.divider} />}
+              <div style={{display:"flex",gap:6,alignItems:"center",marginTop:accItems.length?6:0}}>
+                <input type="text" value={newAccNombre} onChange={e=>setNewAccNombre(e.target.value)}
+                  placeholder="Nombre" style={{...base.input,flex:1,padding:"8px 10px",fontSize:13}} />
+                <input type="number" inputMode="numeric" value={newAccMonto} onChange={e=>setNewAccMonto(e.target.value)}
+                  placeholder="$" style={{width:90,padding:"8px 10px",borderRadius:8,border:"1px solid "+C.border,fontSize:13,textAlign:"right",fontFamily:"inherit",outline:"none"}} />
+                <div onClick={addAcc}
+                  style={{width:36,height:36,borderRadius:8,background:mc,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:18,fontWeight:700,flexShrink:0}}>
+                  +
+                </div>
+              </div>
+              {calc.totalAcc > 0 && (<>
+                <div style={{...base.divider,marginTop:8}} />
+                <div style={base.row}>
+                  <span style={{fontWeight:700,fontSize:13}}>Total Accesorios</span>
+                  <span style={{fontWeight:700,fontSize:14}}>{fmt(calc.totalAcc)}</span>
+                </div>
+              </>)}
+            </div>
+          </div>
+
+          {/* Total Cliente */}
+          <div style={base.section}>
+            <div style={{...base.card,background:C.primary,color:"#fff",border:"none"}}>
+              <div style={{fontSize:11,textTransform:"uppercase",letterSpacing:"0.06em",opacity:0.6,marginBottom:6}}>Valor Total Cliente</div>
+              <div style={{fontSize:26,fontWeight:800,marginBottom:4}}>{fmt(calc.totalCliente)}</div>
+              <div style={{fontSize:11,opacity:0.5}}>
+                Auto {fmt(calc.precioAuto)} + Doc {fmt(calc.totalDoc)}{calc.totalAcc>0?" + Acc "+fmt(calc.totalAcc):""}
+              </div>
+            </div>
+          </div>
+
+          {/* Utilidad Proxy */}
+          <div style={base.section}>
+            <div onClick={()=>setShowUtil(!showUtil)}
+              style={{...base.card,cursor:"pointer",border:"2px solid "+(showUtil?calc.utilColor:C.border)}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <div style={{fontSize:11,textTransform:"uppercase",letterSpacing:"0.05em",color:C.muted}}>Utilidad Proxy (interno)</div>
+                  <div style={{fontSize:11,color:C.red,fontWeight:600}}>⛔ No mostrar al cliente</div>
+                </div>
+                <div style={{fontSize:18}}>{showUtil?"▾":"▸"}</div>
+              </div>
+            </div>
+            {showUtil && (
+              <div style={{...base.card,borderLeft:"3px solid "+calc.utilColor}}>
+                <div style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",marginBottom:6}}>Margen del negocio</div>
+                {chip("Margen Red bruto ("+pct(auto.margen)+")", calc.margenBruto)}
+                {chip("− Aporte Red CE (2,5%)", calc.aporteRedPesos, "#b45309")}
+                <div style={base.divider} />
+                {chip("= Margen post CE", calc.margenDisponible)}
+                {calc.descNum > 0 && chip("− Desc. Pompeyo", calc.descNum, C.red)}
+                {chip("= Margen post descuento", calc.margenNetoAuto)}
+                {chip("− Gastos prorrateados Roma", GASTOS_ROMA, C.muted)}
+                <div style={base.divider} />
+                <div style={base.row}>
+                  <span style={{fontSize:13,fontWeight:700}}>Margen neto auto</span>
+                  <span style={{fontSize:14,fontWeight:700,color:calc.margenNeto<0?C.red:C.text}}>{fmt(calc.margenNeto)}</span>
+                </div>
+                <div style={{marginTop:10,marginBottom:8}}>
+                  <div style={{fontSize:13,color:C.muted,marginBottom:4}}>Comisión crédito ($)</div>
+                  <input type="number" inputMode="numeric" value={comisionCredito} onChange={e=>setComisionCredito(e.target.value)}
+                    placeholder="0" style={base.input} />
+                </div>
+                <div style={base.divider} />
+                <div style={base.row}>
+                  <span style={{fontWeight:700}}>Utilidad Proxy</span>
+                  <span style={{fontWeight:800,fontSize:17,color:calc.utilColor}}>{calc.utilIcon} {fmt(calc.utilidadProxy)}</span>
+                </div>
+                <div style={base.row}>
+                  <span style={base.label}>% sobre precio lista</span>
+                  <span style={{display:"inline-block",padding:"2px 8px",borderRadius:6,fontSize:12,fontWeight:700,
+                    background:calc.utilidadPct>=0.05?C.greenBg:calc.utilidadPct>=0.03?C.yellowBg:C.redBg,
+                    color:calc.utilColor}}>{pct(calc.utilidadPct)}</span>
+                </div>
+                {/* APC */}
+                <div style={{marginTop:14,padding:"12px",background:C.bg,borderRadius:8}}>
+                  <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",color:C.muted,marginBottom:8}}>Distribución APC / Roma</div>
+                  <div style={{fontSize:11,fontWeight:700,color:mc,marginBottom:4}}>BONOS</div>
+                  <div style={{paddingLeft:8,marginBottom:8}}>
+                    {chip("Aporte Stellantis (Marca)", calc.fp.aporteSte, C.accent)}
+                    {pe !== "tmp" && calc.fp.aporteFin > 0 && chip("Aporte Financiera (cobro aparte)", calc.fp.aporteFin, "#7c3aed")}
+                    {calc.bonoZonalNum > 0 && chip("Bono Zonal", calc.bonoZonalNum, C.green)}
+                    <div style={{...base.divider,margin:"4px 0"}} />
+                    {chip("Total Bonos", calc.fp.aporteSte + (pe!=="tmp"?(calc.fp.aporteFin||0):0) + calc.bonoZonalNum)}
+                  </div>
+                  <div style={{fontSize:11,fontWeight:700,color:C.red,marginBottom:4}}>DESCUENTO (del margen dealer)</div>
+                  <div style={{paddingLeft:8}}>
+                    {chip("Aporte Red CE (2,5%)", calc.aporteRedPesos, "#b45309")}
+                    {calc.descNum > 0 && chip("Desc. Pompeyo", calc.descNum, C.red)}
+                    <div style={{...base.divider,margin:"4px 0"}} />
+                    {chip("Total Descuento", calc.aporteRedPesos + calc.descNum)}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ═══ CERRAR DEAL ═══ */}
+          <div style={base.section}>
+            {!confirmCierre ? (
+              <div onClick={()=>setConfirmCierre(true)}
+                style={{padding:"14px",borderRadius:10,background:C.green,color:"#fff",textAlign:"center",cursor:"pointer",fontWeight:700,fontSize:15}}>
+                ✅ Cerrar Deal
+              </div>
+            ) : (
+              <div style={{...base.card,border:"2px solid "+C.green}}>
+                <div style={{fontSize:13,fontWeight:700,marginBottom:8}}>Confirmar cierre del deal</div>
+                <div style={{marginBottom:10}}>
+                  <div style={{fontSize:13,color:C.muted,marginBottom:4}}>Nombre del cliente</div>
+                  <input type="text" value={cliente} onChange={e=>setCliente(e.target.value)}
+                    placeholder="Nombre del cliente" style={base.input} />
+                </div>
+                <div style={{fontSize:12,color:C.muted,marginBottom:10}}>
+                  Se guardará en el registro local, se enviará a Sheets{SCRIPT_URL?" ✅":" (pendiente)"}, y se abrirá WhatsApp para compartir.
+                </div>
+                <div style={{display:"flex",gap:8}}>
+                  <div onClick={()=>setConfirmCierre(false)}
+                    style={{flex:1,padding:"12px",borderRadius:8,border:"1px solid "+C.border,textAlign:"center",cursor:"pointer",fontSize:13,color:C.muted}}>
+                    Cancelar
+                  </div>
+                  <div onClick={cerrarDeal}
+                    style={{flex:1,padding:"12px",borderRadius:8,background:C.green,color:"#fff",textAlign:"center",cursor:"pointer",fontWeight:700,fontSize:13,opacity:cliente.trim()&&vendedor.trim()?1:0.4,pointerEvents:cliente.trim()&&vendedor.trim()?"auto":"none"}}>
+                    Confirmar y Compartir
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </>)}
+      </>)}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<DealFinal />);
+</script>
+</body>
+</html>
