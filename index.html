@@ -26,10 +26,38 @@ const storage = {
   set: async (key, value) => { localStorage.setItem("df_"+key, value); return {key,value}; },
 };
 
+// ─── GOOGLE SHEETS CONNECTION ───────────────────────────────────────────
+// Pega aquí la URL de tu Google Apps Script (ver instrucciones)
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxpyC8szLyyXGkC41GReuWlVmYLAXCA5d28rfQPE1z4jvOvr0WYxQGjGWtusEH95HOAzQ/exec';
+
+function buildCatalogo(rows) {
+  const cat = {};
+  rows.forEach(r => {
+    if (!r.Marca || !r.Tipo || !r.Modelo) return;
+    if (!cat[r.Marca]) cat[r.Marca] = {};
+    if (!cat[r.Marca][r.Tipo]) cat[r.Marca][r.Tipo] = [];
+    const m = {
+      familia: r.Familia, modelo: r.Modelo, cit: r.CIT,
+      pl: Number(r.PrecioLista), margen: Number(r.Margen),
+      tmp: { bono:Number(r.BonoTMP), aporteRed:Number(r.AporteRedTMP), aporteSte:Number(r.AporteSteTMP), precio:Number(r.PrecioTMP) },
+      cc: { bono:Number(r.BonoCC), aporteRed:Number(r.AporteRedCC), aporteSte:Number(r.AporteSteCC), aporteFin:Number(r.AporteFinCC), precio:Number(r.PrecioCC) },
+      ci: (r.BonoCI && Number(r.BonoCI) > 0) ? { bono:Number(r.BonoCI), aporteRed:Number(r.AporteRedCI), aporteSte:Number(r.AporteSteCI), aporteFin:Number(r.AporteFinCI), precio:Number(r.PrecioCI) } : null
+    };
+    cat[r.Marca][r.Tipo].push(m);
+  });
+  return cat;
+}
+
+async function postDeal(deal) {
+  if (!SCRIPT_URL) return;
+  try { await fetch(SCRIPT_URL, { method:'POST', body:JSON.stringify(deal) }); }
+  catch(e) { console.warn('Sheets sync failed:', e); }
+}
+
 const { useState, useMemo, useCallback, useEffect } = React;
 
-// ─── DATA ───────────────────────────────────────────────────────────────────
-const CATALOGO = {
+// ─── DATA (fallback — se reemplaza con Google Sheets si SCRIPT_URL está configurado) ──
+let CATALOGO = {
   Peugeot: {
     Pasajeros: [
       {familia:"208 MCA",modelo:"208 MCA Style Gasolina 100hp MT",cit:"PG9239E60823S00-7",pl:18490000,margen:0.09,tmp:{bono:1400000,aporteRed:462250,aporteSte:937750,precio:17090000},cc:{bono:1500000,aporteRed:462250,aporteSte:937750,aporteFin:100000,precio:16990000},ci:{bono:5300000,aporteRed:462250,aporteSte:937750,aporteFin:3900000,precio:13190000}},
@@ -241,6 +269,8 @@ function DealFinal() {
   const [deals, setDeals] = useState([]);
   const [showRegistro, setShowRegistro] = useState(false);
   const [closingStep, setClosingStep] = useState(null); // null | "confirm" | "saving" | "done"
+  const [catVersion, setCatVersion] = useState(0);
+  const [cargandoCat, setCargandoCat] = useState(!!SCRIPT_URL);
 
   const encodeDeal = useCallback(() => {
     if (!auto || !calc) return null;
@@ -302,6 +332,21 @@ function DealFinal() {
     })();
   }, []);
 
+  // Load catalog from Google Sheets if SCRIPT_URL is configured
+  useEffect(() => {
+    if (!SCRIPT_URL) return;
+    fetch(SCRIPT_URL)
+      .then(r => r.json())
+      .then(rows => {
+        if (Array.isArray(rows) && rows.length > 0) {
+          CATALOGO = buildCatalogo(rows);
+          setCatVersion(v => v + 1);
+        }
+        setCargandoCat(false);
+      })
+      .catch(() => setCargandoCat(false));
+  }, []);
+
   // ─── CLOSE DEAL: save + share ───
   const closeDeal = useCallback(async () => {
     if (!auto || !calc || !vendedor.trim()) return;
@@ -341,6 +386,9 @@ function DealFinal() {
       await storage.set("lastVendedor", vendedor.trim());
       setDeals(arr);
     } catch {}
+
+    // Send to Google Sheets
+    postDeal(dealRecord);
 
     // Build share text
     const code = encodeDeal();
@@ -513,6 +561,11 @@ function DealFinal() {
       {/* Brand / Type / Model selectors */}
       {!marca && (
         <div style={base.section}>
+          {cargandoCat && (
+            <div style={{padding:"12px",borderRadius:8,background:C.accentLight,color:C.accent,fontSize:12,textAlign:"center",marginBottom:12,fontWeight:600}}>
+              ⏳ Cargando catálogo desde Google Sheets...
+            </div>
+          )}
           <div style={base.secTitle}>Selecciona marca</div>
           <div style={{display:"flex",gap:10}}>
             {["Peugeot","Citroën"].map(m=>(
