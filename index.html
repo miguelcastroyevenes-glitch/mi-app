@@ -24,9 +24,79 @@
 const { useState, useMemo, useCallback, useEffect } = React;
 
 // ─── GOOGLE SHEETS CONFIG ───────────────────────────────────────────────────
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw-ho5U6qudG-3hztvFYUzQtCp1FG0CqMN8LeJmUK5UI6VoZwZ9ivtJFWQKrdkTuLTh/exec";
+// Paso pendiente: Miguel debe deployar el Apps Script, copiar la URL aquí y re-subir
+const SCRIPT_URL = ""; // ← Pegar URL del Apps Script desplegado
 
-// ─── CATÁLOGO: se carga 100% desde Google Sheets al abrir la app ───────────
+// ─── CATÁLOGO EMBEBIDO (fallback si no hay conexión a Sheets) ───────────────
+const CATALOGO_LOCAL = {
+  Peugeot: {
+    Pasajeros: [
+      {familia:"208 MCA",modelo:"208 MCA Style Gasolina 100hp MT",cit:"PG9239E60823S00-7",pl:18490000,margen:0.09,tmp:{bono:1400000,aporteRed:462250,aporteSte:937750,precio:17090000},cc:{bono:1500000,aporteRed:462250,aporteSte:937750,aporteFin:100000,precio:16990000},ci:{bono:5300000,aporteRed:462250,aporteSte:937750,aporteFin:3900000,precio:13190000}},
+      {familia:"208 MCA",modelo:"208 MCA Allure Hybrid 136hp AT",cit:"PG9496E60524S00-9",pl:23990000,margen:0.09,tmp:{bono:2400000,aporteRed:599750,aporteSte:1800250,precio:21590000},cc:{bono:2500000,aporteRed:599750,aporteSte:1800250,aporteFin:100000,precio:21490000},ci:{bono:4800000,aporteRed:599750,aporteSte:1800250,aporteFin:2400000,precio:19190000}},
+      {familia:"208 MCA",modelo:"208 MCA GT Electric",cit:"PG9495EL0424S00-1",pl:26590000,margen:0.09,tmp:{bono:1900000,aporteRed:664750,aporteSte:1235250,precio:24690000},cc:{bono:2800000,aporteRed:664750,aporteSte:1235250,aporteFin:900000,precio:23790000},ci:{bono:4000000,aporteRed:664750,aporteSte:1235250,aporteFin:2100000,precio:22590000}},
+      {familia:"2008 MCA",modelo:"2008 MCA Style Hybrid 136hp AT",cit:"PG9562E60724S00-5",pl:23190000,margen:0.09,tmp:{bono:3400000,aporteRed:579750,aporteSte:2820250,precio:19790000},cc:{bono:5300000,aporteRed:579750,aporteSte:2820250,aporteFin:1900000,precio:17890000},ci:{bono:6200000,aporteRed:579750,aporteSte:2820250,aporteFin:2800000,precio:16990000}},
+      {familia:"2008 MCA",modelo:"2008 MCA Allure Hybrid 136hp AT",cit:"PG9562E60724S00-5",pl:25290000,margen:0.09,tmp:{bono:4000000,aporteRed:632250,aporteSte:3367750,precio:21290000},cc:{bono:5400000,aporteRed:632250,aporteSte:3367750,aporteFin:1400000,precio:19890000},ci:{bono:6300000,aporteRed:632250,aporteSte:3367750,aporteFin:2300000,precio:18990000}},
+      {familia:"2008 MCA",modelo:"2008 MCA GT Hybrid 136hp AT",cit:"PG9562E60724S00-5",pl:28590000,margen:0.09,tmp:{bono:3800000,aporteRed:714750,aporteSte:3085250,precio:24790000},cc:{bono:5700000,aporteRed:714750,aporteSte:3085250,aporteFin:1900000,precio:22890000},ci:{bono:6600000,aporteRed:714750,aporteSte:3085250,aporteFin:2800000,precio:21990000}},
+      {familia:"2008 MCA",modelo:"2008 MCA GT Electric",cit:"PG9306EL1023S00-3",pl:29590000,margen:0.09,tmp:{bono:1900000,aporteRed:739750,aporteSte:1160250,precio:27690000},cc:{bono:2800000,aporteRed:739750,aporteSte:1160250,aporteFin:900000,precio:26790000},ci:{bono:4000000,aporteRed:739750,aporteSte:1160250,aporteFin:2100000,precio:25590000}},
+      {familia:"308",modelo:"308 Allure Gasolina 130hp AT",cit:"PG8206E60422S00-7",pl:23790000,margen:0.09,tmp:{bono:2500000,aporteRed:594750,aporteSte:1905250,precio:21290000},cc:{bono:2900000,aporteRed:594750,aporteSte:1905250,aporteFin:400000,precio:20890000},ci:{bono:3800000,aporteRed:594750,aporteSte:1905250,aporteFin:1300000,precio:19990000}},
+      {familia:"308",modelo:"308 Allure Hybrid 136hp AT",cit:"PG9717E61124S00-0",pl:28290000,margen:0.09,tmp:{bono:4000000,aporteRed:707250,aporteSte:3292750,precio:24290000},cc:{bono:4400000,aporteRed:707250,aporteSte:3292750,aporteFin:400000,precio:23890000},ci:{bono:5300000,aporteRed:707250,aporteSte:3292750,aporteFin:1300000,precio:22990000}},
+      {familia:"308",modelo:"308 GT Gasolina 130hp AT",cit:"PG8206E60422S00-7",pl:27290000,margen:0.09,tmp:{bono:2300000,aporteRed:682250,aporteSte:1617750,precio:24990000},cc:{bono:2700000,aporteRed:682250,aporteSte:1617750,aporteFin:400000,precio:24590000},ci:{bono:3600000,aporteRed:682250,aporteSte:1617750,aporteFin:1300000,precio:23690000}},
+      {familia:"308",modelo:"308 GT Hybrid 136hp AT",cit:"PG9717E61124S00-0",pl:31790000,margen:0.09,tmp:{bono:4000000,aporteRed:794750,aporteSte:3205250,precio:27790000},cc:{bono:4400000,aporteRed:794750,aporteSte:3205250,aporteFin:400000,precio:27390000},ci:{bono:5300000,aporteRed:794750,aporteSte:3205250,aporteFin:1300000,precio:26490000}},
+      {familia:"3008",modelo:"3008 Active Pack Gasolina 130hp MT",cit:"PG8056E60620S00-9",pl:25290000,margen:0.09,tmp:{bono:4300000,aporteRed:632250,aporteSte:3667750,precio:20990000},cc:{bono:4700000,aporteRed:632250,aporteSte:3667750,aporteFin:400000,precio:20590000},ci:{bono:5600000,aporteRed:632250,aporteSte:3667750,aporteFin:1300000,precio:19690000}},
+      {familia:"New 3008",modelo:"New 3008 Allure Hybrid 136hp AT",cit:"PG9589E60724S00-2",pl:30790000,margen:0.09,tmp:{bono:3300000,aporteRed:769750,aporteSte:2530250,precio:27490000},cc:{bono:4800000,aporteRed:769750,aporteSte:2530250,aporteFin:1500000,precio:25990000},ci:{bono:5800000,aporteRed:769750,aporteSte:2530250,aporteFin:2500000,precio:24990000}},
+      {familia:"New 3008",modelo:"New 3008 GT Hybrid 136hp AT",cit:"PG9589E61224S02-2",pl:37290000,margen:0.09,tmp:{bono:4800000,aporteRed:932250,aporteSte:3867750,precio:32490000},cc:{bono:6300000,aporteRed:932250,aporteSte:3867750,aporteFin:1500000,precio:30990000},ci:{bono:7300000,aporteRed:932250,aporteSte:3867750,aporteFin:2500000,precio:29990000}},
+      {familia:"New 5008",modelo:"New 5008 Allure Hybrid 136hp AT",cit:"PG9682E61024S00-2",pl:33290000,margen:0.09,tmp:{bono:4300000,aporteRed:832250,aporteSte:3467750,precio:28990000},cc:{bono:5800000,aporteRed:832250,aporteSte:3467750,aporteFin:1500000,precio:27490000},ci:{bono:6800000,aporteRed:832250,aporteSte:3467750,aporteFin:2500000,precio:26490000}},
+      {familia:"New 5008",modelo:"New 5008 GT Hybrid 136hp AT",cit:"PG9682E61024S00-2",pl:39790000,margen:0.09,tmp:{bono:5800000,aporteRed:994750,aporteSte:4805250,precio:33990000},cc:{bono:7300000,aporteRed:994750,aporteSte:4805250,aporteFin:1500000,precio:32490000},ci:{bono:8300000,aporteRed:994750,aporteSte:4805250,aporteFin:2500000,precio:31490000}},
+      {familia:"Rifter MCA",modelo:"Rifter MCA Allure Diesel 100hp MT",cit:"PG9511E60524S00-9",pl:24590000,margen:0.09,tmp:{bono:1800000,aporteRed:614750,aporteSte:1185250,precio:22790000},cc:{bono:2100000,aporteRed:614750,aporteSte:1185250,aporteFin:300000,precio:22490000},ci:{bono:2400000,aporteRed:614750,aporteSte:1185250,aporteFin:600000,precio:22190000}},
+      {familia:"Rifter MCA",modelo:"Rifter MCA Allure Gasolina 130hp AT",cit:"PG9596E60724S00-0",pl:22090000,margen:0.09,tmp:{bono:1800000,aporteRed:552250,aporteSte:1247750,precio:20290000},cc:{bono:2100000,aporteRed:552250,aporteSte:1247750,aporteFin:300000,precio:19990000},ci:{bono:2400000,aporteRed:552250,aporteSte:1247750,aporteFin:600000,precio:19690000}},
+      {familia:"Rifter MCA",modelo:"Rifter MCA Allure Diesel 130hp AT",cit:"PG9514E60524S00-5",pl:26390000,margen:0.09,tmp:{bono:2300000,aporteRed:659750,aporteSte:1640250,precio:24090000},cc:{bono:2600000,aporteRed:659750,aporteSte:1640250,aporteFin:300000,precio:23790000},ci:{bono:2900000,aporteRed:659750,aporteSte:1640250,aporteFin:600000,precio:23490000}},
+      {familia:"Rifter MCA",modelo:"Rifter MCA GT Diesel 130hp AT",cit:"PG9514E60725S01-8",pl:29790000,margen:0.09,tmp:{bono:3200000,aporteRed:744750,aporteSte:2455250,precio:26590000},cc:{bono:3500000,aporteRed:744750,aporteSte:2455250,aporteFin:300000,precio:26290000},ci:{bono:3800000,aporteRed:744750,aporteSte:2455250,aporteFin:600000,precio:25990000}},
+    ],
+    Comerciales: [
+      {familia:"Partner MCA",modelo:"Partner MCA L1 Diesel 100hp MT",cit:"PG9508E60524S01-6",pl:23312100,margen:0.10,tmp:{bono:2023000,aporteRed:489750,aporteSte:1210250,precio:21289100},cc:{bono:2618000,aporteRed:489750,aporteSte:1210250,aporteFin:500000,precio:20694100},ci:null},
+      {familia:"Partner MCA",modelo:"Partner MCA L2 Diesel 100hp MT",cit:"PG9508E60524S00-2",pl:24264100,margen:0.10,tmp:{bono:2023000,aporteRed:509750,aporteSte:1190250,precio:22241100},cc:{bono:2618000,aporteRed:509750,aporteSte:1190250,aporteFin:500000,precio:21646100},ci:null},
+      {familia:"Expert MCA",modelo:"Expert MCA L3 Diesel 145hp MT",cit:"PG9683E61024M00-6",pl:32118100,margen:0.10,tmp:{bono:3927000,aporteRed:674750,aporteSte:2625250,precio:28191100},cc:{bono:4522000,aporteRed:674750,aporteSte:2625250,aporteFin:500000,precio:27596100},ci:null},
+      {familia:"Traveller MCA",modelo:"New Traveller MCA L3 8P Diesel 180hp AT",cit:"PG9610E60824M00-2",pl:36997100,margen:0.10,tmp:{bono:4165000,aporteRed:777250,aporteSte:2722750,precio:32832100},cc:{bono:4760000,aporteRed:777250,aporteSte:2722750,aporteFin:500000,precio:32237100},ci:null},
+      {familia:"Traveller MCA",modelo:"New Traveller MCA L3 9P Diesel 180hp AT",cit:"PG9610E60824M01-6",pl:37711100,margen:0.10,tmp:{bono:4165000,aporteRed:792250,aporteSte:2707750,precio:33546100},cc:{bono:4760000,aporteRed:792250,aporteSte:2707750,aporteFin:500000,precio:32951100},ci:null},
+      {familia:"Boxer MCA",modelo:"Boxer MCA Furgón L2H2 Diesel 140hp MT",cit:"PG9962E60525M03-1",pl:37354100,margen:0.10,tmp:{bono:5117000,aporteRed:784750,aporteSte:3515250,precio:32237100},cc:{bono:6188000,aporteRed:784750,aporteSte:3515250,aporteFin:900000,precio:31166100},ci:null},
+      {familia:"Boxer MCA",modelo:"Boxer MCA Furgón L3H2 Diesel 140hp MT",cit:"PG9962E60525M02-8",pl:38663100,margen:0.10,tmp:{bono:4760000,aporteRed:812250,aporteSte:3187750,precio:33903100},cc:{bono:5831000,aporteRed:812250,aporteSte:3187750,aporteFin:900000,precio:32832100},ci:null},
+      {familia:"Boxer MCA",modelo:"Boxer MCA Furgón L4H2 Diesel 140hp MT",cit:"PG9962E60525M00-0",pl:39853100,margen:0.10,tmp:{bono:4046000,aporteRed:837250,aporteSte:2562750,precio:35807100},cc:{bono:5117000,aporteRed:837250,aporteSte:2562750,aporteFin:900000,precio:34736100},ci:null},
+      {familia:"Landtrek MCA",modelo:"Landtrek MCA Action4 Diesel 200hp 4x4 AT",cit:"PG9878E60325M00-6",pl:37830100,margen:0.10,tmp:{bono:8568000,aporteRed:794750,aporteSte:6405250,precio:29262100},cc:{bono:9163000,aporteRed:794750,aporteSte:6405250,aporteFin:500000,precio:28667100},ci:{bono:10115000,aporteRed:794750,aporteSte:6405250,aporteFin:1300000,precio:27715100}},
+    ],
+  },
+  "Citroën": {
+    Pasajeros: [
+      {familia:"C3",modelo:"C3 Live Pack Gasolina 82HP MT",cit:"CT8669E60622S01-7",pl:12890000,margen:0.09,tmp:{bono:1400000,aporteRed:322250,aporteSte:1077750,precio:11490000},cc:{bono:3200000,aporteRed:322250,aporteSte:1077750,aporteFin:1800000,precio:9690000},ci:{bono:4200000,aporteRed:322250,aporteSte:1077750,aporteFin:2800000,precio:8690000}},
+      {familia:"C3",modelo:"C3 Live Pack Gasolina 96HP MT",cit:"CT10477E60326S02-0",pl:12890000,margen:0.09,tmp:{bono:1600000,aporteRed:322250,aporteSte:1277750,precio:11290000},cc:{bono:3000000,aporteRed:322250,aporteSte:1277750,aporteFin:1400000,precio:9890000},ci:{bono:4000000,aporteRed:322250,aporteSte:1277750,aporteFin:2400000,precio:8890000}},
+      {familia:"C3",modelo:"C3 Feel Gasolina 82HP MT",cit:"CT8669E60622S01-7",pl:13690000,margen:0.09,tmp:{bono:1500000,aporteRed:342250,aporteSte:1157750,precio:12190000},cc:{bono:3300000,aporteRed:342250,aporteSte:1157750,aporteFin:1800000,precio:10390000},ci:{bono:4300000,aporteRed:342250,aporteSte:1157750,aporteFin:2800000,precio:9390000}},
+      {familia:"C3",modelo:"C3 Feel Gasolina 96HP MT",cit:"CT10477E60326S00-1",pl:13690000,margen:0.09,tmp:{bono:1500000,aporteRed:342250,aporteSte:1157750,precio:12190000},cc:{bono:3100000,aporteRed:342250,aporteSte:1157750,aporteFin:1600000,precio:10590000},ci:{bono:4100000,aporteRed:342250,aporteSte:1157750,aporteFin:2600000,precio:9590000}},
+      {familia:"C3",modelo:"C3 YOU Turbo 125HP AT",cit:"CT9651T3C0924S00-8",pl:16590000,margen:0.09,tmp:{bono:900000,aporteRed:414750,aporteSte:485250,precio:15690000},cc:{bono:2600000,aporteRed:414750,aporteSte:485250,aporteFin:1700000,precio:13990000},ci:{bono:3600000,aporteRed:414750,aporteSte:485250,aporteFin:2700000,precio:12990000}},
+      {familia:"Basalt",modelo:"Basalt Shine Turbo 125HP AT",cit:"CT9692T3C1024S00-0",pl:15690000,margen:0.09,tmp:{bono:700000,aporteRed:350000,aporteSte:350000,precio:14990000},cc:{bono:1200000,aporteRed:350000,aporteSte:350000,aporteFin:500000,precio:14490000},ci:{bono:1700000,aporteRed:350000,aporteSte:350000,aporteFin:1000000,precio:13990000}},
+      {familia:"C4 MCA",modelo:"C4 Plus Hybrid 136HP AT",cit:"CT9861E60225S00-6",pl:24590000,margen:0.09,tmp:{bono:2100000,aporteRed:614750,aporteSte:1485250,precio:22490000},cc:{bono:2900000,aporteRed:614750,aporteSte:1485250,aporteFin:800000,precio:21690000},ci:{bono:3400000,aporteRed:614750,aporteSte:1485250,aporteFin:1300000,precio:21190000}},
+      {familia:"C4 MCA",modelo:"C4 Max Hybrid 136HP AT",cit:"CT9861E60225S00-6",pl:26590000,margen:0.09,tmp:{bono:2100000,aporteRed:664750,aporteSte:1435250,precio:24490000},cc:{bono:2900000,aporteRed:664750,aporteSte:1435250,aporteFin:800000,precio:23690000},ci:{bono:3400000,aporteRed:664750,aporteSte:1435250,aporteFin:1300000,precio:23190000}},
+      {familia:"C3 Aircross",modelo:"C3 Aircross Feel Pack 5P Gasolina 115HP MT",cit:"CT9422E60124S00-9",pl:16190000,margen:0.09,tmp:{bono:1500000,aporteRed:404750,aporteSte:1095250,precio:14690000},cc:{bono:2800000,aporteRed:404750,aporteSte:1095250,aporteFin:1300000,precio:13390000},ci:{bono:3400000,aporteRed:404750,aporteSte:1095250,aporteFin:1900000,precio:12790000}},
+      {familia:"C3 Aircross",modelo:"C3 Aircross Feel Pack 7P Gasolina 115HP MT",cit:"CT9422E60225S01-2",pl:17290000,margen:0.09,tmp:{bono:1500000,aporteRed:432250,aporteSte:1067750,precio:15790000},cc:{bono:3300000,aporteRed:432250,aporteSte:1067750,aporteFin:1800000,precio:13990000},ci:{bono:4000000,aporteRed:432250,aporteSte:1067750,aporteFin:2500000,precio:13290000}},
+      {familia:"C3 Aircross",modelo:"C3 Aircross Shine 5P Gasolina 115HP MT",cit:"CT9422E60124S00-9",pl:16790000,margen:0.09,tmp:{bono:1800000,aporteRed:419750,aporteSte:1380250,precio:14990000},cc:{bono:3100000,aporteRed:419750,aporteSte:1380250,aporteFin:1300000,precio:13690000},ci:{bono:3600000,aporteRed:419750,aporteSte:1380250,aporteFin:1800000,precio:13190000}},
+      {familia:"C3 Aircross",modelo:"C3 Aircross Shine 5P Turbo 125HP AT",cit:"CT9573T3C0724S01-9",pl:19390000,margen:0.09,tmp:{bono:1700000,aporteRed:484750,aporteSte:1215250,precio:17690000},cc:{bono:3000000,aporteRed:484750,aporteSte:1215250,aporteFin:1300000,precio:16390000},ci:{bono:3500000,aporteRed:484750,aporteSte:1215250,aporteFin:1800000,precio:15890000}},
+      {familia:"C3 Aircross",modelo:"C3 Aircross Shine 7P Turbo 125HP AT",cit:"CT9573T3C0724S00-4",pl:20490000,margen:0.09,tmp:{bono:1700000,aporteRed:512250,aporteSte:1187750,precio:18790000},cc:{bono:3500000,aporteRed:512250,aporteSte:1187750,aporteFin:1800000,precio:16990000},ci:{bono:4200000,aporteRed:512250,aporteSte:1187750,aporteFin:2500000,precio:16290000}},
+      {familia:"C5 Aircross",modelo:"C5 Aircross Feel Pack Diesel 130HP AT",cit:"CT8284E60421S00-1",pl:26990000,margen:0.09,tmp:{bono:1000000,aporteRed:500000,aporteSte:500000,precio:25990000},cc:{bono:1900000,aporteRed:500000,aporteSte:500000,aporteFin:900000,precio:25090000},ci:{bono:2300000,aporteRed:500000,aporteSte:500000,aporteFin:1300000,precio:24690000}},
+      {familia:"C5 Aircross",modelo:"C5 Aircross Shine Diesel 130HP AT",cit:"CT8284E60421S00-1",pl:30990000,margen:0.09,tmp:{bono:1000000,aporteRed:500000,aporteSte:500000,precio:29990000},cc:{bono:1900000,aporteRed:500000,aporteSte:500000,aporteFin:900000,precio:29090000},ci:{bono:2300000,aporteRed:500000,aporteSte:500000,aporteFin:1300000,precio:28690000}},
+      {familia:"Berlingo Multispace",modelo:"Berlingo Multispace MCA Plus XL Diesel 100HP MT",cit:"CT9512E60524S00-4",pl:23090000,margen:0.09,tmp:{bono:2100000,aporteRed:577250,aporteSte:1522750,precio:20990000},cc:{bono:3200000,aporteRed:577250,aporteSte:1522750,aporteFin:1100000,precio:19890000},ci:{bono:3600000,aporteRed:577250,aporteSte:1522750,aporteFin:1500000,precio:19490000}},
+      {familia:"Berlingo Multispace",modelo:"Berlingo Multispace MCA Plus XL Diesel 130HP AT",cit:"CT9515E60524S00-0",pl:25090000,margen:0.09,tmp:{bono:2100000,aporteRed:627250,aporteSte:1472750,precio:22990000},cc:{bono:3200000,aporteRed:627250,aporteSte:1472750,aporteFin:1100000,precio:21890000},ci:{bono:3600000,aporteRed:627250,aporteSte:1472750,aporteFin:1500000,precio:21490000}},
+    ],
+    Comerciales: [
+      {familia:"Berlingo MCA",modelo:"Berlingo MCA M Diesel 100HP MT",cit:"CT9509E60524S01-1",pl:23074100,margen:0.10,tmp:{bono:2975000,aporteRed:484750,aporteSte:2015250,precio:20099100},cc:{bono:3570000,aporteRed:484750,aporteSte:2015250,aporteFin:500000,precio:19504100},ci:null},
+      {familia:"Berlingo MCA",modelo:"Berlingo MCA XL Diesel 100HP MT",cit:"CT9509E60524S00-8",pl:24026100,margen:0.10,tmp:{bono:2975000,aporteRed:504750,aporteSte:1995250,precio:21051100},cc:{bono:3570000,aporteRed:504750,aporteSte:1995250,aporteFin:500000,precio:20456100},ci:null},
+      {familia:"Jumpy MCA",modelo:"Jumpy MCA XL Diesel 145HP MT",cit:"CT9684E61024M00-1",pl:31404100,margen:0.10,tmp:{bono:3927000,aporteRed:659750,aporteSte:2640250,precio:27477100},cc:{bono:4522000,aporteRed:659750,aporteSte:2640250,aporteFin:500000,precio:26882100},ci:null},
+      {familia:"Spacetourer MCA",modelo:"Spacetourer MCA 8P Diesel 180HP AT",cit:"CT9611E60824M00-8",pl:36640100,margen:0.10,tmp:{bono:4998000,aporteRed:769750,aporteSte:3430250,precio:31642100},cc:{bono:5593000,aporteRed:769750,aporteSte:3430250,aporteFin:500000,precio:31047100},ci:null},
+      {familia:"Spacetourer MCA",modelo:"Spacetourer MCA 9P Diesel 180HP AT",cit:"CT9611E60824M01-1",pl:36759100,margen:0.10,tmp:{bono:4998000,aporteRed:772250,aporteSte:3427750,precio:31761100},cc:{bono:5593000,aporteRed:772250,aporteSte:3427750,aporteFin:500000,precio:31166100},ci:null},
+      {familia:"Jumper MCA",modelo:"Jumper MCA L2H2 Diesel 140HP MT",cit:"CT9964E60525M03-2",pl:36640100,margen:0.10,tmp:{bono:5593000,aporteRed:769750,aporteSte:3930250,precio:31047100},cc:{bono:6188000,aporteRed:769750,aporteSte:3930250,aporteFin:500000,precio:30452100},ci:null},
+      {familia:"Jumper MCA",modelo:"Jumper MCA L3H2 Diesel 140HP MT",cit:"CT9964E60525M02-9",pl:37949100,margen:0.10,tmp:{bono:5236000,aporteRed:797250,aporteSte:3602750,precio:32713100},cc:{bono:5831000,aporteRed:797250,aporteSte:3602750,aporteFin:500000,precio:32118100},ci:null},
+      {familia:"Jumper MCA",modelo:"Jumper MCA L4H2 Diesel 140HP MT",cit:"CT9964E60525M00-1",pl:39139100,margen:0.10,tmp:{bono:4522000,aporteRed:822250,aporteSte:2977750,precio:34617100},cc:{bono:5117000,aporteRed:822250,aporteSte:2977750,aporteFin:500000,precio:34022100},ci:null},
+    ],
+  },
+};
+
 const GASTOS_ROMA = 204500;
 const fmt = (n) => "$" + Math.round(n).toLocaleString("es-CL");
 const pct = (n) => (n * 100).toFixed(1) + "%";
@@ -38,6 +108,7 @@ const lsGet = (k) => { try { return JSON.parse(localStorage.getItem(LS_PREFIX+k)
 const lsSet = (k,v) => { try { localStorage.setItem(LS_PREFIX+k, JSON.stringify(v)); } catch(e) {} };
 const lsGetDeals = () => lsGet("deals") || [];
 const lsSaveDeal = (d) => { const deals = lsGetDeals(); deals.unshift(d); lsSet("deals", deals); };
+const lsUpdateDeal = (updated) => { const deals = lsGetDeals().map(d => d.id === updated.id ? updated : d); lsSet("deals", deals); };
 const lsDeleteDeal = (id) => { const deals = lsGetDeals().filter(d=>d.id!==id); lsSet("deals", deals); };
 
 // ─── Deal encode/decode (base64 para WhatsApp) ─────────────────────────────
@@ -67,14 +138,14 @@ const base = {
 let _id = Date.now();
 const uid = () => ++_id;
 const PL = {tmp:"TMP",cc:"Crédito Conv.",ci:"Compra Inteligente"};
+const PL_KEY = {"TMP":"tmp","Crédito Conv.":"cc","Compra Inteligente":"ci"};
 
 // ═══════════════════════════════════════════════════════════════════════════
 function DealFinal() {
   // Catalog state
-  const [catalogo, setCatalogo] = useState({});
-  const [catSource, setCatSource] = useState("cargando");
-  const [catLoading, setCatLoading] = useState(true);
-  const [catError, setCatError] = useState(false);
+  const [catalogo, setCatalogo] = useState(CATALOGO_LOCAL);
+  const [catSource, setCatSource] = useState("embebido");
+  const [catLoading, setCatLoading] = useState(false);
 
   // Navigation: "home" | "calc" | "import"
   const [view, setView] = useState("home");
@@ -91,6 +162,7 @@ function DealFinal() {
   const [vendedor, setVendedor] = useState(lsGet("vendedor") || "");
   const [cliente, setCliente] = useState("");
   const [confirmCierre, setConfirmCierre] = useState(false);
+  const [editingDealId, setEditingDealId] = useState(null);
 
   // Documentation items
   const defaultDocs = [
@@ -112,21 +184,19 @@ function DealFinal() {
   const [importCode, setImportCode] = useState("");
   const [copyMsg, setCopyMsg] = useState("");
 
-  // ─── Cargar catálogo desde Google Sheets al abrir la app ───
+  // ─── Try load catalog from Sheets on mount ───
   useEffect(() => {
+    if (!SCRIPT_URL) return;
     setCatLoading(true);
-    setCatError(false);
     fetch(SCRIPT_URL + "?action=catalogo")
       .then(r => r.json())
       .then(data => {
         if (data && data.Peugeot) {
           setCatalogo(data);
           setCatSource("sheets");
-        } else {
-          setCatError(true);
         }
       })
-      .catch(() => setCatError(true))
+      .catch(() => {})
       .finally(() => setCatLoading(false));
   }, []);
 
@@ -201,9 +271,35 @@ function DealFinal() {
     setDescPesos("");setBonoZonal("");setComisionCredito("");
     setShowUtil(false);setAccItems([]);setCliente("");setConfirmCierre(false);
     setDocItems(defaultDocs.map(d=>({...d})));
+    setEditingDealId(null);
   }, []);
 
   const goHome = () => { resetCalc(); setView("home"); };
+
+  // ─── Reabrir un deal ya cerrado para revisarlo/editarlo ───
+  const cargarDealParaEditar = (deal) => {
+    const modelos = catalogo[deal.marca]?.[deal.tipo] || [];
+    let idx = modelos.findIndex(m => m.cit === deal.cit && m.modelo === deal.modelo);
+    if (idx < 0) idx = modelos.findIndex(m => m.modelo === deal.modelo);
+    if (idx < 0) {
+      alert("Este modelo ya no está en el catálogo actual, no se puede reabrir para editar. Podés revisar los datos guardados copiando el registro.");
+      return;
+    }
+    setEditingDealId(deal.id);
+    setMarca(deal.marca);
+    setTipo(deal.tipo);
+    setMIdx(idx);
+    setPago(deal.pagoKey || PL_KEY[deal.formaPago] || "tmp");
+    setDescPesos(deal.descPompeyo ? String(deal.descPompeyo) : "");
+    setBonoZonal(deal.bonoZonal ? String(deal.bonoZonal) : "");
+    setComisionCredito(deal.comisionCredito ? String(deal.comisionCredito) : "");
+    setDocItems(deal.docItems ? deal.docItems.map(d=>({...d})) : defaultDocs.map(d=>({...d})));
+    setAccItems(deal.accItems ? deal.accItems.map(a=>({...a})) : []);
+    setCliente(deal.cliente || "");
+    setShowUtil(false);
+    setConfirmCierre(false);
+    setView("calc");
+  };
 
   const toggleDoc = (id) => setDocItems(d=>d.map(x=>x.id===id?{...x,activo:!x.activo}:x));
   const updateDocMonto = (id,v) => setDocItems(d=>d.map(x=>x.id===id?{...x,monto:v}:x));
@@ -215,34 +311,105 @@ function DealFinal() {
   const removeAcc = (id) => setAccItems(a=>a.filter(x=>x.id!==id));
   const updateAccMonto = (id,v) => setAccItems(a=>a.map(x=>x.id===id?{...x,monto:parsePesos(v)}:x));
 
-  // ─── Cerrar Deal ───
+  // ─── Compartir: usa el share nativo del celular; si no está disponible, copia al portapapeles ───
+  const copiarAlPortapapeles = (msg) => {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(msg)
+        .then(()=>alert("Resumen copiado al portapapeles. Pegalo donde quieras enviarlo (WhatsApp, Mail, etc.)."))
+        .catch(()=>alert("No se pudo copiar automáticamente. Copiá el texto manualmente desde el registro."));
+    } else {
+      alert("No se pudo copiar automáticamente. Copiá el texto manualmente desde el registro.");
+    }
+  };
+
+  const compartirDeal = async (msg) => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Deal Final · Pompeyo", text: msg });
+        return;
+      } catch (e) {
+        if (e && e.name === "AbortError") return; // el vendedor canceló el share, no hacer nada más
+        copiarAlPortapapeles(msg);
+        return;
+      }
+    }
+    copiarAlPortapapeles(msg);
+  };
+
+  // ─── Arma el mensaje de validación (texto plano, sin emoji, con el mismo desglose que Utilidad Proxy) ───
+  const buildMensajeDeal = (deal, code) => {
+    const L = [];
+    L.push("DEAL FINAL - PARA VALIDACIÓN");
+    L.push(`Fecha: ${deal.fecha}${deal.editado ? " (editado)" : ""}`);
+    L.push(`Vendedor: ${deal.vendedor}`);
+    L.push(`Cliente: ${deal.cliente}`);
+    L.push("");
+    L.push(`Modelo: ${deal.modelo}`);
+    L.push(`CIT: ${deal.cit}`);
+    L.push(`Forma de pago: ${deal.formaPago}`);
+    L.push("");
+    L.push("--- BONO ---");
+    L.push(`Aporte Red (CE 2,5%): ${fmt(deal.aporteRed)}`);
+    L.push(`Aporte Stellantis: ${fmt(deal.aporteSte)}`);
+    if (deal.aporteFin > 0) L.push(`Aporte Financiera: ${fmt(deal.aporteFin)}`);
+    if (deal.ivaBono > 0) L.push(`IVA sobre bonos: ${fmt(deal.ivaBono)}`);
+    L.push(`Bono Total: ${fmt(deal.bonoTotal)}`);
+    L.push("");
+    L.push("--- DESCUENTO ---");
+    L.push(`Descuento Pompeyo: ${fmt(deal.descPompeyo)} (${pct(deal.descPompeyoPct)})`);
+    L.push(`Aporte Red CE: ${fmt(deal.aporteRed)} (${pct(deal.cePct)})`);
+    L.push(`Total dado (Pompeyo + CE): ${pct(deal.totalDadoPct)}`);
+    if (deal.bonoZonal > 0) L.push(`Bono Zonal: ${fmt(deal.bonoZonal)}`);
+    L.push("");
+    L.push(`Precio Auto: ${fmt(deal.precioAuto)}`);
+    L.push(`Documentación: ${fmt(deal.totalDoc)}`);
+    if (deal.totalAcc > 0) L.push(`Accesorios: ${fmt(deal.totalAcc)}`);
+    L.push(`TOTAL CLIENTE: ${fmt(deal.totalCliente)}`);
+    L.push("");
+    L.push("--- UTILIDAD (interno, no mostrar al cliente) ---");
+    L.push(`Margen neto auto: ${fmt(deal.margenNeto)}`);
+    L.push(`Comisión crédito: ${fmt(deal.comisionCredito)}`);
+    L.push(`Utilidad Proxy: ${fmt(deal.utilidadProxy)} (${pct(deal.utilidadPct)})`);
+    L.push("");
+    L.push(`Código: ${code}`);
+    return L.join("\n");
+  };
+
+  // ─── Cerrar (o actualizar) Deal ───
   const cerrarDeal = () => {
     if (!auto || !calc) return;
+    const prevDeal = editingDealId ? (deals.find(d=>d.id===editingDealId) || {}) : {};
     const deal = {
-      id: Date.now(), fecha: new Date().toLocaleDateString("es-CL"),
+      ...prevDeal,
+      id: editingDealId || Date.now(),
+      fecha: prevDeal.fecha || new Date().toLocaleDateString("es-CL"),
+      editado: !!editingDealId,
+      fechaEdicion: editingDealId ? new Date().toLocaleDateString("es-CL") : (prevDeal.fechaEdicion || null),
       vendedor, cliente, marca, tipo, modelo: auto.modelo, cit: auto.cit,
-      formaPago: PL[pe], precioLista: auto.pl, bonoTotal: calc.fp.bono,
-      descPompeyo: calc.descNum, bonoZonal: calc.bonoZonalNum,
+      formaPago: PL[pe], pagoKey: pe, precioLista: auto.pl, bonoTotal: calc.fp.bono,
+      descPompeyo: calc.descNum, descPompeyoPct: calc.descPompeyoPct, cePct: calc.cePct,
+      totalDadoPct: calc.totalDadoPct, bonoZonal: calc.bonoZonalNum,
       precioAuto: calc.precioAuto, totalDoc: calc.totalDoc,
       totalAcc: calc.totalAcc, totalCliente: calc.totalCliente,
       utilidadProxy: calc.utilidadProxy, utilidadPct: calc.utilidadPct,
+      margenNeto: calc.margenNeto, comisionCredito: calc.comCredNum,
       aporteRed: calc.aporteRedPesos, aporteSte: calc.fp.aporteSte,
-      aporteFin: calc.fp.aporteFin || 0,
+      aporteFin: calc.fp.aporteFin || 0, ivaBono: calc.ivaBono || 0,
+      // snapshot editable para poder reabrir el deal más tarde
+      docItems: docItems.map(d=>({...d})), accItems: accItems.map(a=>({...a})),
     };
-    lsSaveDeal(deal);
+    if (editingDealId) { lsUpdateDeal(deal); } else { lsSaveDeal(deal); }
     setDeals(lsGetDeals());
 
     // Post to Sheets if connected
     if (SCRIPT_URL) {
       fetch(SCRIPT_URL, { method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({action:"deal", deal}) }).catch(()=>{});
+        body: JSON.stringify({action: editingDealId ? "deal_update" : "deal", deal}) }).catch(()=>{});
     }
 
-    // WhatsApp share
     const code = encodeDeal(deal);
-    const msg = `🚗 *DEAL FINAL*\n📅 ${deal.fecha}\n👤 Vendedor: ${vendedor}\n👥 Cliente: ${cliente}\n\n🔹 ${auto.modelo}\n💰 Lista: ${fmt(auto.pl)}\n🎯 Pago: ${PL[pe]}\n📉 Bono: ${fmt(calc.fp.bono)}\n${calc.descNum>0?`🔻 Desc: ${fmt(calc.descNum)}\n`:""}${calc.bonoZonalNum>0?`📍 Zonal: ${fmt(calc.bonoZonalNum)}\n`:""}\n💵 *Precio Auto: ${fmt(calc.precioAuto)}*\n📋 Doc: ${fmt(calc.totalDoc)}\n${calc.totalAcc>0?`🔧 Acc: ${fmt(calc.totalAcc)}\n`:""}\n✅ *TOTAL CLIENTE: ${fmt(calc.totalCliente)}*\n\n📎 Código: ${code}`;
-    const waUrl = "https://wa.me/?text=" + encodeURIComponent(msg);
-    window.open(waUrl, "_blank");
+    const msg = buildMensajeDeal(deal, code);
+    compartirDeal(msg);
     goHome();
   };
 
@@ -284,7 +451,7 @@ function DealFinal() {
         <div>
           <div style={{fontSize:17,fontWeight:700,letterSpacing:"-0.02em"}}>Deal Final</div>
           <div style={{fontSize:11,opacity:0.6}}>
-            {view==="calc" && auto ? auto.modelo : view==="calc" && marca ? `${marca} · ${tipo||""}` : catLoading ? "Cargando catálogo..." : catError ? "⚠️ Sin conexión al catálogo" : `Catálogo Sheets · ${modelCount} modelos`}
+            {view==="calc" && auto ? auto.modelo : view==="calc" && marca ? `${marca} · ${tipo||""}` : `Catálogo ${catSource} · ${modelCount} modelos · Jun 2026`}
           </div>
         </div>
         <div style={{display:"flex",gap:8}}>
@@ -316,25 +483,12 @@ function DealFinal() {
           </div>
 
           {/* Catalog status */}
-          {!catError ? (
-            <div style={{...base.card,padding:10,display:"flex",alignItems:"center",gap:8}}>
-              <span style={{fontSize:18}}>{catLoading?"⏳":"☁️"}</span>
-              <span style={{fontSize:12,color:C.muted}}>
-                {catLoading ? "Cargando catálogo desde Sheets..." : `Catálogo cargado desde Sheets (${modelCount} modelos)`}
-              </span>
-            </div>
-          ) : (
-            <div style={{...base.card,padding:10,border:"1px solid "+C.red,background:C.redBg}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                <span style={{fontSize:18}}>⚠️</span>
-                <span style={{fontSize:12,color:C.red,fontWeight:600}}>No se pudo cargar el catálogo desde Sheets. Revisa tu conexión a internet.</span>
-              </div>
-              <div onClick={()=>window.location.reload()}
-                style={{fontSize:12,color:C.accent,fontWeight:700,cursor:"pointer",textAlign:"center",padding:"6px",border:"1px solid "+C.accent,borderRadius:6}}>
-                🔄 Reintentar
-              </div>
-            </div>
-          )}
+          <div style={{...base.card,padding:10,display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:18}}>{catLoading?"⏳":catSource==="sheets"?"☁️":"💾"}</span>
+            <span style={{fontSize:12,color:C.muted}}>
+              {catLoading ? "Cargando catálogo..." : catSource==="sheets" ? `Catálogo cargado desde Sheets (${modelCount} modelos)` : `Catálogo embebido (${modelCount} modelos)`}
+            </span>
+          </div>
 
           {/* Deal Registry */}
           <div style={{...base.secTitle,marginTop:14}}>Registro de Deals ({deals.length})</div>
@@ -350,15 +504,17 @@ function DealFinal() {
             const bg = utilOk ? C.greenBg : utilWarn ? C.yellowBg : C.redBg;
             const bc = utilOk ? C.green : utilWarn ? C.yellow : C.red;
             return (
-              <div key={d.id} style={{...base.card,borderLeft:"3px solid "+bc,background:bg+"44"}}>
+              <div key={d.id} onClick={()=>cargarDealParaEditar(d)}
+                style={{...base.card,borderLeft:"3px solid "+bc,background:bg+"44",cursor:"pointer"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
                   <div>
                     <div style={{fontSize:13,fontWeight:700}}>{d.modelo}</div>
-                    <div style={{fontSize:11,color:C.muted}}>{d.fecha} · {d.vendedor} · {d.cliente}</div>
+                    <div style={{fontSize:11,color:C.muted}}>{d.fecha}{d.editado?" (editado)":""} · {d.vendedor} · {d.cliente}</div>
                     <div style={{fontSize:12,marginTop:4}}>{d.formaPago} · Total: <b>{fmt(d.totalCliente)}</b></div>
                   </div>
-                  <div onClick={()=>deleteDeal(d.id)} style={{cursor:"pointer",fontSize:16,color:C.red,padding:"0 4px"}}>×</div>
+                  <div onClick={(e)=>{e.stopPropagation();deleteDeal(d.id);}} style={{cursor:"pointer",fontSize:16,color:C.red,padding:"0 4px"}}>×</div>
                 </div>
+                <div style={{fontSize:11,color:C.accent,marginTop:6}}>Toca para revisar / editar →</div>
               </div>
             );
           })}
@@ -437,6 +593,13 @@ function DealFinal() {
 
         {/* ═══ DEAL CALCULATOR ═══ */}
         {auto && calc && (<>
+          {editingDealId && (
+            <div style={base.section}>
+              <div style={{padding:"8px 12px",borderRadius:6,background:C.accentLight,color:C.accent,fontSize:12,fontWeight:700}}>
+                ✏️ Revisando / editando un deal ya cerrado
+              </div>
+            </div>
+          )}
           {/* Model Card */}
           <div style={base.section}>
             <div style={{...base.card,borderLeft:"3px solid "+mc}}>
@@ -693,21 +856,31 @@ function DealFinal() {
 
           {/* ═══ CERRAR DEAL ═══ */}
           <div style={base.section}>
+            {(pe === "cc" || pe === "ci") && !comisionCredito && (
+              <div style={{padding:"8px 12px",borderRadius:6,background:C.yellowBg,borderLeft:"3px solid "+C.yellow,fontSize:12,marginBottom:8}}>
+                ⚠️ No ingresaste la Comisión Crédito (sección Utilidad Proxy) — la utilidad que se comparte no la está considerando. Podés cerrar igual.
+              </div>
+            )}
             {!confirmCierre ? (
               <div onClick={()=>setConfirmCierre(true)}
                 style={{padding:"14px",borderRadius:10,background:C.green,color:"#fff",textAlign:"center",cursor:"pointer",fontWeight:700,fontSize:15}}>
-                ✅ Cerrar Deal
+                {editingDealId ? "✅ Actualizar Deal" : "✅ Cerrar Deal"}
               </div>
             ) : (
               <div style={{...base.card,border:"2px solid "+C.green}}>
-                <div style={{fontSize:13,fontWeight:700,marginBottom:8}}>Confirmar cierre del deal</div>
+                <div style={{fontSize:13,fontWeight:700,marginBottom:8}}>{editingDealId ? "Confirmar actualización del deal" : "Confirmar cierre del deal"}</div>
                 <div style={{marginBottom:10}}>
                   <div style={{fontSize:13,color:C.muted,marginBottom:4}}>Nombre del cliente</div>
                   <input type="text" value={cliente} onChange={e=>setCliente(e.target.value)}
                     placeholder="Nombre del cliente" style={base.input} />
                 </div>
+                {(pe === "cc" || pe === "ci") && !comisionCredito && (
+                  <div style={{padding:"8px 12px",borderRadius:6,background:C.yellowBg,borderLeft:"3px solid "+C.yellow,fontSize:12,marginBottom:10}}>
+                    ⚠️ Sin Comisión Crédito ingresada — se comparte igual, pero la utilidad puede quedar incompleta.
+                  </div>
+                )}
                 <div style={{fontSize:12,color:C.muted,marginBottom:10}}>
-                  Se guardará en el registro local, se enviará a Sheets{SCRIPT_URL?" ✅":" (pendiente)"}, y se abrirá WhatsApp para compartir.
+                  Se guardará en el registro local, se enviará a Sheets{SCRIPT_URL?" ✅":" (pendiente)"}, y se abrirá el menú de compartir de tu celular.
                 </div>
                 <div style={{display:"flex",gap:8}}>
                   <div onClick={()=>setConfirmCierre(false)}
@@ -716,7 +889,7 @@ function DealFinal() {
                   </div>
                   <div onClick={cerrarDeal}
                     style={{flex:1,padding:"12px",borderRadius:8,background:C.green,color:"#fff",textAlign:"center",cursor:"pointer",fontWeight:700,fontSize:13,opacity:cliente.trim()&&vendedor.trim()?1:0.4,pointerEvents:cliente.trim()&&vendedor.trim()?"auto":"none"}}>
-                    Confirmar y Compartir
+                    {editingDealId ? "Confirmar y Compartir" : "Confirmar y Compartir"}
                   </div>
                 </div>
               </div>
