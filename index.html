@@ -103,7 +103,7 @@ const CATALOGO_LOCAL = {
 };
 
 const GASTOS_ROMA = 204500;
-const APP_VERSION = "2026-07-09 · v4"; // ← actualizar cada vez que se sube una nueva versión
+const APP_VERSION = "2026-07-09 · v5"; // ← actualizar cada vez que se sube una nueva versión
 const fmt = (n) => "$" + Math.round(n).toLocaleString("es-CL");
 const pct = (n) => (n * 100).toFixed(1) + "%";
 const parsePesos = (v) => { const s = String(v||"").replace(/\./g,"").replace(/,/g,""); return parseInt(s) || 0; };
@@ -257,7 +257,7 @@ function DealFinal() {
     const totalAcc = accItems.reduce((s,a)=>s+parsePesos(a.monto), 0);
     const totalCliente = precioAuto + totalDoc + totalAcc;
     const margenBruto = maxDescPesos;
-    const margenDisponible = margenBruto - aporteRedPesos;
+    const margenDisponible = margenBruto - aporteRedConIva;
     const margenNetoAuto = margenDisponible - descNum;
     const margenNeto = margenNetoAuto - GASTOS_ROMA;
     const comCredNum = parsePesos(comisionCredito);
@@ -833,7 +833,7 @@ function DealFinal() {
               <div style={{...base.card,borderLeft:"3px solid "+calc.utilColor}}>
                 <div style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",marginBottom:6}}>Margen del negocio</div>
                 {chip("Margen Red bruto ("+pct(auto.margen)+")", calc.margenBruto)}
-                {chip("− Aporte Red CE (2,5%)", calc.aporteRedPesos, "#b45309")}
+                {chip("− Aporte Red CE (2,5%)"+(calc.esCom?" (con IVA)":""), calc.aporteRedConIva, "#b45309")}
                 <div style={base.divider} />
                 {chip("= Margen post CE", calc.margenDisponible)}
                 {calc.descNum > 0 && chip("− Desc. Pompeyo", calc.descNum, C.red)}
