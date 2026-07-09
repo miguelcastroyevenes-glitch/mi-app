@@ -103,7 +103,7 @@ const CATALOGO_LOCAL = {
 };
 
 const GASTOS_ROMA = 204500;
-const APP_VERSION = "2026-07-06 · v3"; // ← actualizar cada vez que se sube una nueva versión
+const APP_VERSION = "2026-07-09 · v4"; // ← actualizar cada vez que se sube una nueva versión
 const fmt = (n) => "$" + Math.round(n).toLocaleString("es-CL");
 const pct = (n) => (n * 100).toFixed(1) + "%";
 const parsePesos = (v) => { const s = String(v||"").replace(/\./g,"").replace(/,/g,""); return parseInt(s) || 0; };
@@ -244,8 +244,13 @@ function DealFinal() {
     const aporteRedPesos = fp.aporteRed || 0;
     const cePct = auto.pl > 0 ? aporteRedPesos / auto.pl : 0;
     const totalDadoPct = descPompeyoPct + cePct;
-    const sumaAportes = aporteRedPesos + (fp.aporteSte||0) + (fp.aporteFin||0);
-    const ivaBono = fp.bono - sumaAportes;
+    // Cada aporte se muestra SIEMPRE con IVA incluido (comerciales: los aportes vienen netos del
+    // catalogo, se multiplican x1.19; pasajeros: ya vienen con IVA, no se tocan). Aporte
+    // Stellantis absorbe el resto para que la suma cuadre siempre exacto con fp.bono (evita
+    // descuadres de $1 por redondeo independiente en cada linea).
+    const aporteRedConIva = esCom ? Math.round(aporteRedPesos * 1.19) : aporteRedPesos;
+    const aporteFinConIva = esCom ? Math.round((fp.aporteFin||0) * 1.19) : (fp.aporteFin||0);
+    const aporteSteConIva = esCom ? (fp.bono - aporteRedConIva - aporteFinConIva) : (fp.aporteSte||0);
     const precioAuto = auto.pl - fp.bono - descNum - bonoZonalNum;
     const precioNeto = Math.round(precioAuto / 1.19);
     const totalDoc = docItems.filter(d=>d.activo).reduce((s,d)=>s+parsePesos(d.monto), 0);
@@ -265,7 +270,7 @@ function DealFinal() {
     if (utilidadPct < 0.03) { utilColor = C.red; utilIcon = "🔴"; }
     else if (utilidadPct < 0.05) { utilColor = C.yellow; utilIcon = "🟡"; }
     return { fp, esCom, descNum, descPompeyoPct, totalDadoPct, cePct, maxDescPesos, bonoZonalNum,
-      ivaBono, precioAuto, precioNeto, totalDoc, totalAcc, totalCliente,
+      aporteRedConIva, aporteSteConIva, aporteFinConIva, precioAuto, precioNeto, totalDoc, totalAcc, totalCliente,
       margenBruto, aporteRedPesos, margenDisponible, margenNetoAuto, margenNeto,
       comCredNum, utilidadProxy, utilidadPct, alertaDesc, utilColor, utilIcon };
   }, [auto, pe, descPesos, bonoZonal, docItems, accItems, comisionCredito, tipo]);
@@ -356,11 +361,10 @@ function DealFinal() {
     L.push(`CIT: ${deal.cit}`);
     L.push(`Forma de pago: ${deal.formaPago}`);
     L.push("");
-    L.push("--- BONO ---");
+    L.push("--- BONO ---" + (deal.esCom ? " (con IVA)" : ""));
     L.push(`Aporte Red (CE 2,5%): ${fmt(deal.aporteRed)}`);
     L.push(`Aporte Stellantis: ${fmt(deal.aporteSte)}`);
     if (deal.aporteFin > 0) L.push(`Aporte Financiera: ${fmt(deal.aporteFin)}`);
-    if (deal.ivaBono > 0) L.push(`IVA sobre bonos: ${fmt(deal.ivaBono)}`);
     L.push(`Bono Total: ${fmt(deal.bonoTotal)}`);
     L.push("");
     L.push("--- DESCUENTO ---");
@@ -401,8 +405,8 @@ function DealFinal() {
       totalAcc: calc.totalAcc, totalCliente: calc.totalCliente,
       utilidadProxy: calc.utilidadProxy, utilidadPct: calc.utilidadPct,
       margenNeto: calc.margenNeto, comisionCredito: calc.comCredNum,
-      aporteRed: calc.aporteRedPesos, aporteSte: calc.fp.aporteSte,
-      aporteFin: calc.fp.aporteFin || 0, ivaBono: calc.ivaBono || 0,
+      esCom: calc.esCom, aporteRed: calc.aporteRedConIva, aporteSte: calc.aporteSteConIva,
+      aporteFin: calc.aporteFinConIva || 0,
       // snapshot editable para poder reabrir el deal más tarde
       docItems: docItems.map(d=>({...d})), accItems: accItems.map(a=>({...a})),
     };
@@ -654,12 +658,11 @@ function DealFinal() {
 
           {/* Desglose Bonos */}
           <div style={base.section}>
-            <div style={base.secTitle}>Desglose Bono {PL[pe]}</div>
+            <div style={base.secTitle}>Desglose Bono {PL[pe]}{calc.esCom ? " (con IVA)" : ""}</div>
             <div style={base.card}>
-              {chip("Aporte Red (CE 2,5%)", calc.fp.aporteRed, "#b45309")}
-              {chip("Aporte Stellantis (Marca)", calc.fp.aporteSte, C.accent)}
-              {pe !== "tmp" && calc.fp.aporteFin > 0 && chip("Aporte Financiera", calc.fp.aporteFin, "#7c3aed")}
-              {calc.ivaBono > 0 && chip("IVA sobre bonos", calc.ivaBono, C.muted)}
+              {chip("Aporte Red (CE 2,5%)", calc.aporteRedConIva, "#b45309")}
+              {chip("Aporte Stellantis (Marca)", calc.aporteSteConIva, C.accent)}
+              {pe !== "tmp" && calc.aporteFinConIva > 0 && chip("Aporte Financiera", calc.aporteFinConIva, "#7c3aed")}
               <div style={base.divider} />
               <div style={base.row}>
                 <span style={{fontSize:13,fontWeight:700}}>Bono Total</span>
@@ -722,13 +725,10 @@ function DealFinal() {
             <div style={base.secTitle}>Precio Vehículo</div>
             <div style={{...base.card,background:mc+"06"}}>
               <div style={base.row}><span style={base.label}>Precio Lista</span><span style={base.val}>{fmt(auto.pl)}</span></div>
-              <div style={base.row}><span style={{fontSize:12,color:"#b45309"}}>− Aporte Red (CE)</span><span style={{fontSize:12,color:"#b45309",fontWeight:600}}>−{fmt(calc.fp.aporteRed)}</span></div>
-              <div style={base.row}><span style={{fontSize:12,color:C.accent}}>− Aporte Stellantis</span><span style={{fontSize:12,color:C.accent,fontWeight:600}}>−{fmt(calc.fp.aporteSte)}</span></div>
-              {pe !== "tmp" && calc.fp.aporteFin > 0 && (
-                <div style={base.row}><span style={{fontSize:12,color:"#7c3aed"}}>− Aporte Financiera</span><span style={{fontSize:12,color:"#7c3aed",fontWeight:600}}>−{fmt(calc.fp.aporteFin)}</span></div>
-              )}
-              {calc.ivaBono > 0 && (
-                <div style={base.row}><span style={{fontSize:12,color:C.muted}}>− IVA bonos</span><span style={{fontSize:12,color:C.muted,fontWeight:600}}>−{fmt(calc.ivaBono)}</span></div>
+              <div style={base.row}><span style={{fontSize:12,color:"#b45309"}}>− Aporte Red (CE)</span><span style={{fontSize:12,color:"#b45309",fontWeight:600}}>−{fmt(calc.aporteRedConIva)}</span></div>
+              <div style={base.row}><span style={{fontSize:12,color:C.accent}}>− Aporte Stellantis</span><span style={{fontSize:12,color:C.accent,fontWeight:600}}>−{fmt(calc.aporteSteConIva)}</span></div>
+              {pe !== "tmp" && calc.aporteFinConIva > 0 && (
+                <div style={base.row}><span style={{fontSize:12,color:"#7c3aed"}}>− Aporte Financiera</span><span style={{fontSize:12,color:"#7c3aed",fontWeight:600}}>−{fmt(calc.aporteFinConIva)}</span></div>
               )}
               {calc.descNum > 0 && (
                 <div style={base.row}><span style={{fontSize:12,color:C.red}}>− Desc. Pompeyo</span><span style={{fontSize:12,color:C.red,fontWeight:600}}>−{fmt(calc.descNum)}</span></div>
@@ -862,21 +862,21 @@ function DealFinal() {
                 </div>
                 {/* APC */}
                 <div style={{marginTop:14,padding:"12px",background:C.bg,borderRadius:8}}>
-                  <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",color:C.muted,marginBottom:8}}>Distribución APC / Roma</div>
+                  <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",color:C.muted,marginBottom:8}}>Distribución APC / Roma{calc.esCom ? " (bonos con IVA)" : ""}</div>
                   <div style={{fontSize:11,fontWeight:700,color:mc,marginBottom:4}}>BONOS</div>
                   <div style={{paddingLeft:8,marginBottom:8}}>
-                    {chip("Aporte Stellantis (Marca)", calc.fp.aporteSte, C.accent)}
-                    {pe !== "tmp" && calc.fp.aporteFin > 0 && chip("Aporte Financiera (cobro aparte)", calc.fp.aporteFin, "#7c3aed")}
+                    {chip("Aporte Stellantis (Marca)", calc.aporteSteConIva, C.accent)}
+                    {pe !== "tmp" && calc.aporteFinConIva > 0 && chip("Aporte Financiera (cobro aparte)", calc.aporteFinConIva, "#7c3aed")}
                     {calc.bonoZonalNum > 0 && chip("Bono Zonal", calc.bonoZonalNum, C.green)}
                     <div style={{...base.divider,margin:"4px 0"}} />
-                    {chip("Total Bonos", calc.fp.aporteSte + (pe!=="tmp"?(calc.fp.aporteFin||0):0) + calc.bonoZonalNum)}
+                    {chip("Total Bonos", calc.aporteSteConIva + (pe!=="tmp"?(calc.aporteFinConIva||0):0) + calc.bonoZonalNum)}
                   </div>
                   <div style={{fontSize:11,fontWeight:700,color:C.red,marginBottom:4}}>DESCUENTO (del margen dealer)</div>
                   <div style={{paddingLeft:8}}>
-                    {chip("Aporte Red CE (2,5%)", calc.aporteRedPesos, "#b45309")}
+                    {chip("Aporte Red CE (2,5%)", calc.aporteRedConIva, "#b45309")}
                     {calc.descNum > 0 && chip("Desc. Pompeyo", calc.descNum, C.red)}
                     <div style={{...base.divider,margin:"4px 0"}} />
-                    {chip("Total Descuento", calc.aporteRedPesos + calc.descNum)}
+                    {chip("Total Descuento", calc.aporteRedConIva + calc.descNum)}
                   </div>
                 </div>
               </div>
