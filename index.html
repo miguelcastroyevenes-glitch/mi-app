@@ -105,7 +105,20 @@ const CATALOGO_LOCAL = {
 };
 
 const GASTOS_ROMA = 204500;
-const APP_VERSION = "2026-08-03 · v7"; // ← actualizar cada vez que se sube una nueva versión
+const PUSH_VIN = {vigencia:"2026-08-23", data:{
+  "2008 MCA Allure Hybrid 136hp AT":[{v:"VR3USHPY6VJ009629",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY2VJ009630",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY4VJ009631",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY0VJ009626",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY6VJ009632",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY8VJ009633",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY7VJ009638",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY5VJ009637",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY2VJ009627",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY1VJ009649",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY8VJ009468",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY2VJ009403",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY5VJ009816",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY5VJ009685",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY4VJ010004",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:12},{v:"VR3USHPY3VJ009877",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY7VJ009011",m:800000,mk:400000,ce:400000,u:"IN COUNTRY",a:47},{v:"VR3USHPY0VJ009688",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14}],
+  "2008 MCA GT Hybrid 136hp AT":[{v:"VR3USHPYXVJ009911",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY0VJ010310",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:12}],
+  "2008 MCA Style Hybrid 136hp AT":[{v:"VR3USHPY0VJ009190",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY7VJ009199",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY8VJ009356",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY0VJ008167",m:800000,mk:400000,ce:400000,u:"IN COUNTRY",a:47},{v:"VR3USHPY4VJ008169",m:800000,mk:400000,ce:400000,u:"IN COUNTRY",a:47},{v:"VR3USHPY2VJ009787",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY0VJ009786",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY0VJ008668",m:800000,mk:400000,ce:400000,u:"IN COUNTRY",a:47},{v:"VR3USHPY1VJ008680",m:800000,mk:400000,ce:400000,u:"IN COUNTRY",a:47},{v:"VR3USHPY3VJ008650",m:800000,mk:400000,ce:400000,u:"IN COUNTRY",a:47},{v:"VR3USHPY1VJ010445",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:12}],
+  "208 MCA Allure Hybrid 136hp AT":[{v:"VR3UPHPY1V4000076",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:118},{v:"VR3UPHPY2V5000078",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:43},{v:"VR3UPHPY7V5000058",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:74},{v:"VR3UPHPY9V5000059",m:800000,mk:400000,ce:400000,u:"IN COUNTRY",a:74},{v:"VR3UPHPY5V5000060",m:800000,mk:400000,ce:400000,u:"IN COUNTRY",a:74},{v:"VR3UPHPY2V5000064",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:43},{v:"VR3UPHPY5V5000091",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:74},{v:"VR3UPHPY9V5000093",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:74},{v:"VR3UPHPY5V5000088",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:74}],
+  "C4 Max Hybrid 136HP AT":[{v:"VR7BAHPY2TE001333",m:1200000,mk:600000,ce:600000,u:"GRIS MERCURY",a:null},{v:"VR7BAHPY6TE001304",m:1200000,mk:600000,ce:600000,u:"GRIS MERCURY",a:null},{v:"VR7BAHPY9TE001832",m:1200000,mk:600000,ce:600000,u:"NEGRO PERLA NERA",a:null},{v:"VR7BAHPY9VE000456",m:1200000,mk:600000,ce:600000,u:"GRIS MERCURY",a:null},{v:"VR7BAHPY3VE000453",m:1200000,mk:600000,ce:600000,u:"GRIS MERCURY",a:null}],
+  "C4 Plus Hybrid 136HP AT":[{v:"VR7BAHPY0TE000374",m:1200000,mk:600000,ce:600000,u:"BLANCO OKENITE",a:null},{v:"VR7BAHPY1TE000402",m:1200000,mk:600000,ce:600000,u:"GRIS MERCURY",a:null},{v:"VR7BAHPY3TE000420",m:1200000,mk:600000,ce:600000,u:"BLANCO OKENITE",a:null},{v:"VR7BAHPY5TE000418",m:1200000,mk:600000,ce:600000,u:"BLANCO OKENITE",a:null},{v:"VR7BAHPY1TE000478",m:1200000,mk:600000,ce:600000,u:"BLANCO OKENITE",a:null},{v:"VR7BAHPY6TE000461",m:1200000,mk:600000,ce:600000,u:"GRIS MERCURY",a:null}],
+  "New 3008 Allure Hybrid 136hp AT":[{v:"VR3KAHPY8VS001343",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:78},{v:"VR3KAHPYXVS001358",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:61},{v:"VR3KAHPY1VS001359",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:61},{v:"VR3KAHPY8VS001360",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:76},{v:"VR3KAHPYXVS001361",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:78},{v:"VR3KAHPY3VS001315",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:78},{v:"VR3KAHPYXVS001456",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:61},{v:"VR3KAHPY1VS001457",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:61},{v:"VR3KAHPY9VS002646",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:6},{v:"VR3KAHPY0VS002647",m:800000,mk:400000,ce:400000,u:"IN COUNTRY",a:5},{v:"VR3KAHPY8VS002718",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:61},{v:"VR3KAHPYXVS002719",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:61}],
+  "New 3008 GT Hybrid 136hp AT":[{v:"VR3KAHPY9VS002419",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:13},{v:"VR3KAHPY5VS002420",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:13},{v:"VR3KAHPY5VS003065",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY6VS003074",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY7VS003066",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY3VS003064",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY2VS003069",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY1VS003080",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY9VS003084",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY7VS003083",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY5VS003079",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY5VS003082",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY2VS003055",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY4VS003056",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY4VS002733",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY8VS002735",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPYXVS003966",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY7VS003973",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY8VS003979",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY6VS003978",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY4VS003980",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY6VS003981",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY2VS003976",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY4VS003977",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY1VS003953",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY8VS003948",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPYXVS003949",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0}],
+  "New 5008 Allure Hybrid 136hp AT":[{v:"VR3KAHPY1VS000163",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:153},{v:"VR3KAHPY5VS000182",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:153},{v:"VR3KAHPY9VS000234",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:61},{v:"VR3KAHPY0VS000235",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:61},{v:"VR3KAHPY6VS000241",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:61},{v:"VR3KAHPY6VS000658",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:61},{v:"VR3KAHPYXVS000808",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:61},{v:"VR3KAHPY1VS000812",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:96},{v:"VR3KAHPY5VS000800",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:103},{v:"VR3KAHPY7VS000829",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:103}],
+  "New 5008 GT Hybrid 136hp AT":[{v:"VR3KAHPY1VS003743",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:6},{v:"VR3KAHPYXVS003711",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:6},{v:"VR3KAHPY4VS004028",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:6},{v:"VR3KAHPY0VS004026",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:6},{v:"VR3KAHPY9VS003991",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:4},{v:"VR3KAHPY4VS003607",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:4}],
+}};
+const PUSH_VIGENTE = (new Date().toISOString().slice(0,10) <= PUSH_VIN.vigencia);
+const APP_VERSION = "2026-08-14 · v9"; // ← actualizar cada vez que se sube una nueva versión
 const fmt = (n) => "$" + Math.round(n).toLocaleString("es-CL");
 const pct = (n) => (n * 100).toFixed(1) + "%";
 const parsePesos = (v) => { const s = String(v||"").replace(/\./g,"").replace(/,/g,""); return parseInt(s) || 0; };
@@ -175,6 +188,8 @@ function DealFinal() {
   const [postCierreCode, setPostCierreCode] = useState("");
   const [showDetalle, setShowDetalle] = useState(false);
   const [storeOn, setStoreOn] = useState(false);
+  const [pushVin, setPushVin] = useState("");
+  const [pushDispoOk, setPushDispoOk] = useState(false);
 
   // Documentation items
   const defaultDocs = [
@@ -228,6 +243,8 @@ function DealFinal() {
   }, [modelos]);
 
   const auto = mIdx !== null ? modelos[mIdx] : null;
+  const pushList = (auto && PUSH_VIGENTE) ? (PUSH_VIN.data[auto.modelo] || null) : null;
+  const pushSel = (pushVin && pushList) ? (pushList.find(x=>x.v===pushVin) || null) : null;
   const formasPago = useMemo(() => {
     if (!auto) return ["tmp","cc"];
     const fps = ["tmp","cc"];
@@ -297,7 +314,7 @@ function DealFinal() {
     setDescPesos("");setBonoZonal("");setComisionCredito("");
     setShowUtil(false);setAccItems([]);setCliente("");setConfirmCierre(false);
     setDocItems(defaultDocs.map(d=>({...d})));
-    setEditingDealId(null);setStoreOn(false);
+    setEditingDealId(null);setStoreOn(false);setPushVin("");setPushDispoOk(false);
   }, []);
 
   const goHome = () => { resetCalc(); setView("home"); };
@@ -326,11 +343,21 @@ function DealFinal() {
     setAccItems(deal.accItems ? deal.accItems.map(a=>({...a})) : []);
     setCliente(deal.cliente || "");
     setStoreOn(!!deal.store);
+    setPushVin(deal.pushVin || "");
+    setPushDispoOk(deal.pushVin ? true : false);
     setShowUtil(false);
     setConfirmCierre(false);
     setView("calc");
   };
 
+  const seleccionarPushVin = (vin) => {
+    const lista = (auto && PUSH_VIGENTE) ? (PUSH_VIN.data[auto.modelo] || []) : [];
+    const item = lista.find(x=>x.v===vin);
+    setPushVin(vin);
+    setPushDispoOk(false);
+    if (item) { setBonoZonal(String(item.mk)); setDescPesos(String(item.ce)); }
+    else { setBonoZonal(""); setDescPesos(""); }
+  };
   const toggleDoc = (id) => setDocItems(d=>d.map(x=>x.id===id?{...x,activo:!x.activo}:x));
   const updateDocMonto = (id,v) => setDocItems(d=>d.map(x=>x.id===id?{...x,monto:v}:x));
   const addAcc = () => {
@@ -383,6 +410,11 @@ function DealFinal() {
       L.push(`STORE: bono adicional ${fmt(deal.storeAdic)} (plata Stellantis)`);
       if (deal.storeLcdv && deal.storeLcdv.length) L.push(`LCDV a confirmar: ${deal.storeLcdv.join(", ")}`);
     }
+    if (deal.pushVin) {
+      L.push(`PUSH VIN: ${deal.pushVin}`);
+      L.push(`  Aporte Marca (en Bono Zonal): ${fmt(deal.pushMarca)}`);
+      L.push(`  Aporte Ces (en Desc. Pompeyo): ${fmt(deal.pushCes)}`);
+    }
     L.push(`Aporte Red (CE 2,5%): ${fmt(deal.aporteRed)}`);
     L.push(`Aporte Stellantis: ${fmt(deal.aporteSte)}`);
     if (deal.aporteFin > 0) L.push(`Aporte Financiera: ${fmt(deal.aporteFin)}`);
@@ -430,6 +462,7 @@ function DealFinal() {
       aporteFin: calc.aporteFinConIva || 0,
       store: calc.usaStore, storeAdic: calc.usaStore ? calc.storeAdic : 0,
       storeLcdv: calc.usaStore ? calc.storeLcdv : [],
+      pushVin: pushSel ? pushSel.v : null, pushMarca: pushSel ? pushSel.mk : 0, pushCes: pushSel ? pushSel.ce : 0, pushTotal: pushSel ? pushSel.m : 0,
       // snapshot editable para poder reabrir el deal más tarde
       docItems: docItems.map(d=>({...d})), accItems: accItems.map(a=>({...a})),
     };
@@ -651,7 +684,7 @@ function DealFinal() {
               <div key={fam} style={{marginBottom:12}}>
                 <div style={{fontSize:11,fontWeight:700,color:mc,marginBottom:4,textTransform:"uppercase",letterSpacing:"0.04em"}}>{fam}</div>
                 {items.map(m=>(
-                  <div key={m.idx} onClick={()=>{setMIdx(m.idx);setPago("tmp");setDescPesos("");setBonoZonal("");setComisionCredito("");setAccItems([]);setShowUtil(false);setConfirmCierre(false);setStoreOn(false);}}
+                  <div key={m.idx} onClick={()=>{setMIdx(m.idx);setPago("tmp");setDescPesos("");setBonoZonal("");setComisionCredito("");setAccItems([]);setShowUtil(false);setConfirmCierre(false);setStoreOn(false);setPushVin("");setPushDispoOk(false);}}
                     style={{padding:"10px 14px",borderRadius:8,border:"1px solid "+(m.store?"#0891b2":C.border),background:C.card,marginBottom:5,cursor:"pointer"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
                       <div style={{fontSize:13,fontWeight:600}}>{m.modelo.replace(m.familia+" ","")}</div>
@@ -730,6 +763,42 @@ function DealFinal() {
             </div>
           )}
 
+          {/* ═══ PUSH VIN (unidades específicas con bono zonal adicional, campaña 13-23 ago) ═══ */}
+          {pushList && (
+            <div style={base.section}>
+              <div style={{...base.card, border:"2px solid "+(pushSel?"#7c3aed":C.border), background:pushSel?"#faf5ff":C.card}}>
+                <div style={{fontSize:13,fontWeight:800,color:"#7c3aed"}}>🔔 Push VIN disponible <span style={{fontSize:11,fontWeight:600,color:C.muted}}>· vence {PUSH_VIN.vigencia.split("-").reverse().join("-")}</span></div>
+                <div style={{fontSize:12,color:C.muted,marginTop:2,marginBottom:8}}>
+                  Bono adicional por unidad específica. Al elegir el VIN se carga el Aporte Marca en Bono Zonal y se sugiere el Descuento Pompeyo a igualar.
+                </div>
+                <select value={pushVin} onChange={e=>seleccionarPushVin(e.target.value)} style={{...base.input, cursor:"pointer"}}>
+                  <option value="">— Sin push / elegir VIN —</option>
+                  {pushList.map(x=>(
+                    <option key={x.v} value={x.v}>{x.v} · {x.u}{x.a?(" · "+x.a+"d"):""} · {fmt(x.m)}</option>
+                  ))}
+                </select>
+                {pushSel && (
+                  <div style={{marginTop:10}}>
+                    <div style={{padding:"6px 10px",borderRadius:6,background:"#ede9fe",fontSize:12,marginBottom:8,display:"inline-block"}}>
+                      <b style={{color:"#7c3aed"}}>Push activo</b> · Total {fmt(pushSel.m)}
+                    </div>
+                    <div style={{fontSize:12,color:C.muted,marginBottom:4}}>Aporte Marca (→ Bono Zonal, plata de afuera): <b style={{color:"#7c3aed"}}>{fmt(pushSel.mk)}</b></div>
+                    <div style={{fontSize:12,color:C.muted,marginBottom:8}}>Aporte Ces (→ Descuento Pompeyo, sale de tu margen): <b style={{color:"#7c3aed"}}>{fmt(pushSel.ce)}</b></div>
+                    {calc && calc.descNum < pushSel.ce && (
+                      <div style={{padding:"8px 12px",borderRadius:6,background:C.yellowBg,borderLeft:"3px solid "+C.yellow,fontSize:12,marginBottom:8}}>
+                        ⚠️ Descuento Pompeyo actual ({fmt(calc.descNum)}) es menor al mínimo a igualar ({fmt(pushSel.ce)}). Subilo para cubrir el push.
+                      </div>
+                    )}
+                    <label style={{display:"flex",alignItems:"flex-start",gap:8,cursor:"pointer",padding:"8px 10px",borderRadius:6,background:pushDispoOk?"#ecfdf5":"#fef2f2",border:"1px solid "+(pushDispoOk?C.green:"#fca5a5")}}>
+                      <input type="checkbox" checked={pushDispoOk} onChange={e=>setPushDispoOk(e.target.checked)} style={{marginTop:2}} />
+                      <span style={{fontSize:12,color:C.text}}>Confirmé que este VIN sigue disponible en ROMA antes de cerrar.</span>
+                    </label>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Desglose Bonos */}
           <div style={base.section}>
             <div style={base.secTitle}>Desglose Bono {PL[pe]}{calc.esCom ? " (con IVA)" : ""}{calc.usaStore ? " · ⚡ STORE" : ""}</div>
@@ -789,7 +858,9 @@ function DealFinal() {
               <div style={{marginTop:10}}>
                 <div style={{fontSize:13,color:C.muted,marginBottom:4}}>Bono Zonal ($)</div>
                 <input type="number" inputMode="numeric" value={bonoZonal} onChange={e=>setBonoZonal(e.target.value)}
-                  placeholder="0" style={base.input} />
+                  readOnly={!!pushSel}
+                  placeholder="0" style={{...base.input, ...(pushSel?{background:"#f1f5f9",color:C.muted}:{})}} />
+                {pushSel && <div style={{fontSize:11,color:"#7c3aed",marginTop:4}}>Cargado por Push VIN (Aporte Marca {fmt(pushSel.mk)}). Se ajusta desde el panel Push.</div>}
               </div>
             </div>
           </div>
@@ -965,10 +1036,16 @@ function DealFinal() {
               </div>
             )}
             {!confirmCierre ? (
+              (pushSel && !pushDispoOk) ? (
+                <div style={{padding:"14px",borderRadius:10,background:"#e5e7eb",color:C.muted,textAlign:"center",fontWeight:700,fontSize:14}}>
+                  🔒 Confirmá la disponibilidad del VIN en el panel Push para poder cerrar
+                </div>
+              ) : (
               <div onClick={()=>setConfirmCierre(true)}
                 style={{padding:"14px",borderRadius:10,background:C.green,color:"#fff",textAlign:"center",cursor:"pointer",fontWeight:700,fontSize:15}}>
                 {editingDealId ? "✅ Actualizar Deal" : "✅ Cerrar Deal"}
               </div>
+              )
             ) : (
               <div style={{...base.card,border:"2px solid "+C.green}}>
                 <div style={{fontSize:13,fontWeight:700,marginBottom:8}}>{editingDealId ? "Confirmar actualización del deal" : "Confirmar cierre del deal"}</div>
