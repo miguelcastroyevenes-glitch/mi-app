@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock Pompeyo</title>
+<noscript>
+  <style>body{font-family:sans-serif;padding:40px 20px;text-align:center;color:#1a1d21;}</style>
+  <div style="max-width:420px;margin:60px auto;">
+    <h2>⚠️ Este archivo necesita JavaScript</h2>
+    <p>Se abrió en un visor que lo bloquea. Tócalo y elige <b>"Abrir en Chrome"</b> o <b>"Abrir en Safari"</b> (no lo veas dentro de WhatsApp/Drive/Archivos).</p>
+  </div>
+</noscript>
+<style>
+  :root{
+    --bg:#f4f5f7;
+    --card:#ffffff;
+    --card-hover:#fbfbfc;
+    --line:#e6e8eb;
+    --ink:#1a1d21;
+    --ink-dim:#767c85;
+    --ink-faint:#a4aab2;
+    --peugeot:#e2001a;
+    --peugeot-bg:#fdeced;
+    --citroen:#0a5cad;
+    --citroen-bg:#e9f2fb;
+    --amber:#c47f0a;
+    --amber-bg:#fdf3e2;
+    --green:#1a8a5f;
+    --green-bg:#e7f6ee;
+    --radius:18px;
+    --radius-sm:12px;
+    --shadow:0 1px 2px rgba(20,22,25,.04), 0 8px 24px -12px rgba(20,22,25,.08);
+    --mono:ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+    --sans:-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:var(--sans);
+    padding:28px 20px 90px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1100px;margin:0 auto;}
+
+  header{
+    display:flex; justify-content:space-between; align-items:center;
+    flex-wrap:wrap; gap:14px; margin-bottom:22px;
+  }
+  .brand-title{display:flex; align-items:center; gap:12px;}
+  .brand-title .dot{
+    width:12px;height:12px;border-radius:50%;
+    background:linear-gradient(135deg,var(--peugeot),var(--citroen));
+  }
+  .brand-title h1{
+    font-size:1.5rem; font-weight:800; margin:0; letter-spacing:-0.02em;
+  }
+  .brand-title p{margin:2px 0 0; color:var(--ink-dim); font-size:.82rem;}
+  .meta-badge{
+    background:var(--card); border:1px solid var(--line); border-radius:100px;
+    padding:8px 16px; font-size:.78rem; color:var(--ink-dim);
+    box-shadow:var(--shadow); font-family:var(--mono);
+  }
+  .meta-badge b{color:var(--ink); font-weight:700;}
+
+  /* Tabs de secciones */
+  .tabs{
+    display:flex; gap:8px; margin-bottom:20px; overflow-x:auto;
+    padding-bottom:2px;
+  }
+  .tab{
+    font-size:.84rem; font-weight:600; padding:10px 18px;
+    border-radius:100px; border:1px solid var(--line); background:var(--card);
+    color:var(--ink-dim); cursor:pointer; white-space:nowrap; transition:.15s;
+    display:flex; align-items:center; gap:7px;
+  }
+  .tab .count-chip{
+    background:var(--bg); border-radius:100px; padding:1px 8px; font-size:.72rem;
+    font-family:var(--mono); font-weight:600;
+  }
+  .tab.active{background:var(--ink); color:#fff; border-color:var(--ink);}
+  .tab.active .count-chip{background:rgba(255,255,255,.18); color:#fff;}
+
+  .section{display:none;}
+  .section.active{display:block; animation:fade .2s ease;}
+  @keyframes fade{from{opacity:0;} to{opacity:1;}}
+
+  .subrow{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:14px; flex-wrap:wrap; gap:10px;
+  }
+  .brand-filter{display:flex; gap:6px;}
+  .bf-pill{
+    font-family:var(--mono); font-size:.72rem; padding:6px 13px;
+    border-radius:100px; border:1px solid var(--line); background:var(--card);
+    color:var(--ink-dim); cursor:pointer;
+  }
+  .bf-pill.active[data-b="peugeot"]{background:var(--peugeot); border-color:var(--peugeot); color:#fff;}
+  .bf-pill.active[data-b="citroen"]{background:var(--citroen); border-color:var(--citroen); color:#fff;}
+  .bf-pill.active[data-b="all"]{background:var(--ink); border-color:var(--ink); color:#fff;}
+
+  .notice{
+    background:var(--amber-bg); border:1px solid #f0d9ac; border-radius:var(--radius-sm);
+    padding:12px 16px; font-size:.8rem; color:#8a5c05; margin-bottom:16px;
+    display:flex; gap:10px; align-items:flex-start;
+  }
+  .notice a{color:#8a5c05; font-weight:700; text-decoration:underline;}
+
+  .grid{
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
+    gap:12px;
+  }
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:18px; cursor:pointer; box-shadow:var(--shadow);
+    transition:.15s; position:relative; overflow:hidden;
+  }
+  .card:hover{transform:translateY(-2px); border-color:#d5d9de;}
+  .card:active{transform:translateY(0);}
+  .card .bar{
+    position:absolute; top:0; left:0; height:3px; width:100%;
+  }
+  .card[data-brand="peugeot"] .bar{background:var(--peugeot);}
+  .card[data-brand="citroen"] .bar{background:var(--citroen);}
+  .card .tag{
+    font-size:.65rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+  }
+  .card[data-brand="peugeot"] .tag{color:var(--peugeot);}
+  .card[data-brand="citroen"] .tag{color:var(--citroen);}
+  .card h3{
+    font-size:1.02rem; font-weight:700; margin:6px 0 14px; letter-spacing:-0.01em;
+    line-height:1.2; min-height:2.2em;
+  }
+  .card .count-row{display:flex; align-items:baseline; gap:6px;}
+  .card .count-row .n{font-family:var(--mono); font-size:1.6rem; font-weight:700;}
+  .card .count-row .lbl{font-size:.72rem; color:var(--ink-faint);}
+  .card .tap-hint{
+    font-size:.68rem; color:var(--ink-faint); margin-top:10px;
+    display:flex; align-items:center; gap:5px;
+  }
+
+  /* Detalle - modal estilo bottom-sheet en mobile, panel en desktop */
+  .overlay{
+    display:none; position:fixed; inset:0; background:rgba(20,22,25,.45);
+    z-index:50; align-items:flex-end; justify-content:center;
+  }
+  .overlay.open{display:flex;}
+  .sheet{
+    background:var(--card); width:100%; max-width:760px; max-height:82vh;
+    border-radius:22px 22px 0 0; overflow:hidden; display:flex; flex-direction:column;
+    animation:up .22s ease;
+  }
+  @media(min-width:720px){
+    .overlay{align-items:center;}
+    .sheet{border-radius:var(--radius); max-height:78vh; margin:20px;}
+  }
+  @keyframes up{from{transform:translateY(30px); opacity:0;} to{transform:translateY(0); opacity:1;}}
+  .sheet-head{
+    padding:18px 22px; border-bottom:1px solid var(--line);
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .sheet-head h4{margin:0; font-size:1.1rem; font-weight:800;}
+  .sheet-head .sub{font-size:.76rem; color:var(--ink-dim); margin-top:2px;}
+  .sheet-close{
+    width:32px; height:32px; border-radius:50%; border:1px solid var(--line);
+    background:var(--bg); display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:1rem; color:var(--ink-dim); flex-shrink:0;
+  }
+  .sheet-body{overflow-y:auto; padding:6px 0;}
+  .row-item{
+    padding:12px 22px; border-bottom:1px solid #f0f1f3;
+    display:flex; justify-content:space-between; align-items:center; gap:12px;
+  }
+  .row-item:last-child{border-bottom:none;}
+  .row-item .vin{font-family:var(--mono); font-size:.78rem; font-weight:600; color:var(--ink);}
+  .row-item .meta{font-size:.72rem; color:var(--ink-dim); margin-top:2px;}
+  .row-item .color-sw{
+    display:inline-block; width:8px;height:8px;border-radius:50%; margin-right:5px;
+    border:1px solid rgba(0,0,0,.08);
+  }
+  .status-chip{
+    font-size:.68rem; font-weight:700; padding:3px 10px; border-radius:100px; flex-shrink:0;
+  }
+  .status-free{background:var(--green-bg); color:var(--green);}
+  .status-taken{background:var(--peugeot-bg); color:#a01426;}
+
+  footer{
+    max-width:1100px; margin:32px auto 0; font-size:.74rem; color:var(--ink-faint);
+    text-align:center;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand-title">
+      <div class="dot"></div>
+      <div>
+        <h1>Stock Pompeyo</h1>
+        <p>Peugeot &amp; Citroën · vista rápida para el equipo</p>
+      </div>
+    </div>
+    <div class="meta-badge">Corte <b>19-08-2026</b></div>
+  </header>
+
+  <div class="subrow" style="margin-bottom:14px;">
+    <div class="brand-filter">
+      <a class="bf-pill" href="liquidacion-peugeot.pdf" target="_blank" style="text-decoration:none;">📄 Liquidación Peugeot</a>
+      <a class="bf-pill" href="liquidacion-citroen.pdf" target="_blank" style="text-decoration:none;">📄 Liquidación Citroën</a>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+
+  <!-- STOCK FISICO -->
+  <div class="section" id="sec-fisico">
+    <div class="subrow">
+      <div class="brand-filter">
+        <div class="bf-pill active" data-b="all" onclick="setBrandFilter('fisico','all',this)">Todas</div>
+        <div class="bf-pill" data-b="peugeot" onclick="setBrandFilter('fisico','peugeot',this)">Peugeot</div>
+        <div class="bf-pill" data-b="citroen" onclick="setBrandFilter('fisico','citroen',this)">Citroën</div>
+      </div>
+      <div class="meta-badge" style="font-family:var(--sans); font-size:.74rem;">59 unidades en ROMA</div>
+    </div>
+    <div class="grid" id="grid-fisico"></div>
+  </div>
+
+  <!-- ASIGNACION -->
+  <div class="section" id="sec-asignacion">
+    <div class="notice">
+      ⚠️ <span>Esta info es estática y vive fuera de ROMA/APC. Antes de comprometer una unidad, verifica disponibilidad real en el Drive (pestaña del <b>mes en curso</b>) y crea la venta en APC como catálogo.
+      <br><a href="https://docs.google.com/spreadsheets/d/15e2v5X5--J4dRmRapFpHsE-8Sw3Xczi2uO4J0XX3f_U/edit" target="_blank">→ Abrir Asignación Peugeot</a> &nbsp;|&nbsp;
+      <a href="https://docs.google.com/spreadsheets/d/1uM1KlSuk777PqScZ_lcUOG-1PfTVRB2xjmyCsFFarLs/edit" target="_blank">→ Abrir Asignación Citroën</a></span>
+    </div>
+    <div class="subrow">
+      <div class="brand-filter">
+        <div class="bf-pill active" data-b="all" onclick="setBrandFilter('asig','all',this)">Todas</div>
+        <div class="bf-pill" data-b="peugeot" onclick="setBrandFilter('asig','peugeot',this)">Peugeot</div>
+        <div class="bf-pill" data-b="citroen" onclick="setBrandFilter('asig','citroen',this)">Citroën</div>
+      </div>
+    </div>
+    <div class="grid" id="grid-asignacion"></div>
+  </div>
+
+  <!-- PRE INSCRITAS -->
+  <div class="section" id="sec-preinscritas">
+    <div class="notice">
+      ⚠️ Unidades ya inscritas pero con historial de reserva manual. Verifica la columna de asignación antes de ofrecer.
+      <br><a href="https://docs.google.com/spreadsheets/d/1S8OuZ0yLYbbTeDNnQkvyeck9nCjnJKG9xe2lg8x22ic/edit" target="_blank">→ Abrir Unidades Pre Inscritas</a>
+    </div>
+    <div class="grid" id="grid-preinscritas"></div>
+  </div>
+
+</div>
+
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeSheet()">
+  <div class="sheet">
+    <div class="sheet-head">
+      <div>
+        <h4 id="sheet-title">—</h4>
+        <div class="sub" id="sheet-sub"></div>
+      </div>
+      <div class="sheet-close" onclick="closeSheet()">✕</div>
+    </div>
+    <div class="sheet-body" id="sheet-body"></div>
+  </div>
+</div>
+
+<footer>Generado a partir de exports de ROMA + Drive de asignación · actualización manual diaria</footer>
+
+<script>
+const colorMap = {
+  "Gris Artense":"#8a8f92","Blanco Banquise":"#ececec","Blanco Hielo":"#f2f2ee","Gris Grafito":"#4b4f52",
+  "Azul Kiama":"#2e5f8a","Azul Ingaro":"#274f7d","Blanco Okenite":"#efefe9","Blanco Okenita":"#efefe9",
+  "Negro Perla Nera":"#1c1c1e","Gris Titane":"#6b6e70","Azul Obsession":"#1c3a63","Gris Sellenium":"#7d8285"
+};
+function sw(c){ const k=Object.keys(colorMap).find(k=>k.toLowerCase()===(c||'').toLowerCase()); return k?colorMap[k]:'#ccc'; }
+
+// ---------- STOCK FISICO (detalle completo, todas las unidades) ----------
+const fisico = {"peugeot":[{"modelo":"NUEVO 5008","n":2,"det":[{"vin":"VR3KAHPY5VS000800","version":"5008 P74 Allure Hybrid 136hp AT","color":"Blanco Okenite","sucursal":"PEUGEOT QUILIN","bodega":"STOCK PEUGEOT QUILIN"},{"vin":"VR3KAHPY2VS000818","version":"5008 P74 Allure Hybrid 136hp AT","color":"GRIS ARTENSE","sucursal":"PEUGEOT QUILIN","bodega":"STOCK PEUGEOT QUILIN"}]},{"modelo":"Nuevo 208","n":1,"det":[{"vin":"VR3UPHPY1V4000076","version":"208 MCA ALLURE Hybrid 136hp AT","color":"Blanco Okenite","sucursal":"PEUGEOT QUILIN","bodega":"STOCK PEUGEOT QUILIN"}]}],"citroen":[{"modelo":"C3 Aircross","n":21,"det":[{"vin":"935CLFCE5VB504311","version":"C3 Aircross Feel Pack 5P Gasolina 96HP MT","color":"BLANCO BANQUISE","sucursal":"LOGISTICA POMPEYO","bodega":"KAR-LOGISTICS"},{"vin":"935CLFCE6VB504009","version":"C3 Aircross Shine TN 5P Gasolina 96HP MT","color":"GRIS ARTENSE","sucursal":"CITROEN MOVICENTER","bodega":"STOCK CITROEN MOVICENTER"},{"vin":"935CLFCE7VB504133","version":"C3 Aircross Feel Pack 5P Gasolina 96HP MT","color":"BLANCO BANQUISE","sucursal":"CITROEN BILBAO","bodega":"STOCK CITROEN BILBAO"},{"vin":"935CLFCEXVB504014","version":"C3 Aircross Shine TN 5P Gasolina 96HP MT","color":"GRIS GRAFITO","sucursal":"CITROEN MALL PLAZA SUR","bodega":"STOCK CITROEN PLAZA SUR"},{"vin":"935CLFCEXVB504174","version":"C3 Aircross Feel Pack 5P Gasolina 96HP MT","color":"BLANCO BANQUISE","sucursal":"CITROEN MALL PLAZA SUR","bodega":"STOCK CITROEN PLAZA SUR"},{"vin":"935CNFD10VB501144","version":"C3 Aircross Shine TN 5P Turbo 125HP AT","color":"GRIS ARTENSE","sucursal":"LOGISTICA POMPEYO","bodega":"KAR-LOGISTICS"},{"vin":"935CNFD12VB501159","version":"C3 Aircross Shine TN 5P Turbo 125HP AT","color":"GRIS GRAFITO","sucursal":"LOGISTICA POMPEYO","bodega":"KAR-LOGISTICS"},{"vin":"935CNFD16VB501195","version":"C3 Aircross Shine TN 5P Turbo 125HP AT","color":"BLANCO BANQUISE","sucursal":"PEUGEOT CAMINO MELIPILLA","bodega":"STOCK PEUGEOT CAMINO MELIPILLA"},{"vin":"935CNFD1XVB501152","version":"C3 Aircross Shine TN 5P Turbo 125HP AT","color":"GRIS GRAFITO","sucursal":"LOGISTICA POMPEYO","bodega":"KAR-LOGISTICS"},{"vin":"935CNFD1XVB501183","version":"C3 Aircross Shine TN 5P Turbo 125HP AT","color":"BLANCO BANQUISE","sucursal":"OPEL MALL PLAZA EGAÑA","bodega":"STOCK OPEL PLAZA EGAÑA"},{"vin":"935CLFCE7VB504018","version":"C3 Aircross Feel Pack 5P Gasolina 96HP MT","color":"BLANCO BANQUISE","sucursal":"LOGISTICA POMPEYO","bodega":"KAR-LOGISTICS"},{"vin":"935CLFCE5VB504132","version":"C3 Aircross Feel Pack 5P Gasolina 96HP MT","color":"BLANCO BANQUISE","sucursal":"LOGISTICA POMPEYO","bodega":"KAR-LOGISTICS"},{"vin":"935CLFCE4VB504140","version":"C3 Aircross Feel Pack 5P Gasolina 96HP MT","color":"GRIS ARTENSE","sucursal":"LOGISTICA POMPEYO","bodega":"KAR-LOGISTICS"},{"vin":"935CLFCE3VB504002","version":"C3 Aircross Feel Pack 5P Gasolina 96HP MT","color":"GRIS ARTENSE","sucursal":"LOGISTICA POMPEYO","bodega":"KAR-LOGISTICS"},{"vin":"935CLFCE9VB503999","version":"C3 Aircross Feel Pack 5P Gasolina 96HP MT","color":"GRIS ARTENSE","sucursal":"LOGISTICA POMPEYO","bodega":"KAR-LOGISTICS"},{"vin":"935CLFCE5VB504373","version":"C3 Aircross Feel Pack 5P Gasolina 96HP MT","color":"GRIS GRAFITO","sucursal":"CITROEN PLAZA EGAÑA","bodega":"BODEGA CITROEN EGAÑA"},{"vin":"935CLFCE0VB504376","version":"C3 Aircross Feel Pack 5P Gasolina 96HP MT","color":"GRIS GRAFITO","sucursal":"LOGISTICA POMPEYO","bodega":"KAR-LOGISTICS"},{"vin":"935CLFCE2VB504511","version":"C3 Aircross Shine TN 5P Gasolina 96HP MT","color":"GRIS GRAFITO","sucursal":"PEUGEOT ARAUCO MAIPU","bodega":"STOCK PEUGEOT ARAUCO MAIPU"},{"vin":"935CLFCE3VB504517","version":"C3 Aircross Feel Pack 5P Gasolina 96HP MT","color":"BLANCO BANQUISE","sucursal":"CITROEN MOVICENTER","bodega":"STOCK CITROEN MOVICENTER"},{"vin":"935CLFCE4VB504316","version":"C3 Aircross Feel Pack 5P Gasolina 96HP MT","color":"GRIS ARTENSE","sucursal":"LOGISTICA POMPEYO","bodega":"KAR-LOGISTICS"},{"vin":"935CLFCE4VB504347","version":"C3 Aircross Feel Pack 5P Gasolina 96HP MT","color":"GRIS ARTENSE","sucursal":"LOGISTICA POMPEYO","bodega":"KAR-LOGISTICS"}]},{"modelo":"C4","n":9,"det":[{"vin":"VR7BAHPY9VE000456","version":"C4 MCA MAX Hybrid 136HP AT","color":"GRIS MERCURE","sucursal":"CITROEN MALL PLAZA SUR","bodega":"STOCK CITROEN PLAZA SUR"},{"vin":"VR7BAHPY3VE000453","version":"C4 MCA MAX Hybrid 136HP AT","color":"GRIS MERCURE","sucursal":"CITROEN MALL PLAZA SUR","bodega":"STOCK CITROEN PLAZA SUR"},{"vin":"VR7BAHPY0TE000374","version":"C4 MCA Plus Hybrid 136HP AT","color":"Blanco Okenite","sucursal":"OPEL IRARRAZAVAL","bodega":"STOCK OPEL IRARRAZAVAL"},{"vin":"VR7BAHPY1TE000402","version":"C4 MCA Plus Hybrid 136HP AT","color":"GRIS MERCURY","sucursal":"CITROEN BILBAO","bodega":"STOCK CITROEN BILBAO"},{"vin":"VR7BAHPY6TE000461","version":"C4 MCA Plus Hybrid 136HP AT","color":"GRIS MERCURY","sucursal":"CITROEN QUILIN","bodega":"STOCK CITROEN QUILIN"},{"vin":"VR7BAHPY2TE001333","version":"C4 MCA MAX Hybrid 136HP AT","color":"GRIS MERCURY","sucursal":"CITROEN MOVICENTER","bodega":"STOCK CITROEN MOVICENTER"},{"vin":"VR7BAHPY5TE000418","version":"C4 MCA Plus Hybrid 136HP AT","color":"Blanco Okenite","sucursal":"PEUGEOT ARAUCO MAIPU","bodega":"STOCK PEUGEOT ARAUCO MAIPU"},{"vin":"VR7BAHPY3TE000420","version":"C4 MCA Plus Hybrid 136HP AT","color":"Blanco Okenite","sucursal":"CITROEN MOVICENTER","bodega":"STOCK CITROEN MOVICENTER"},{"vin":"VR7BAHPY1TE000478","version":"C4 MCA Plus Hybrid 136HP AT","color":"Blanco Okenite","sucursal":"CITROEN PLAZA EGAÑA","bodega":"BODEGA CITROEN EGAÑA"}]},{"modelo":"C3","n":8,"det":[{"vin":"935CMFD10VB506914","version":"C3 YOU Turbo 125HP AT","color":"GRIS ARTENSE","sucursal":"LOGISTICA POMPEYO","bodega":"EN BARCO"},{"vin":"935CEFCEXVB506341","version":"C3 Live Pack Gasolina 96HP MT","color":"BLANCO BANQUISE","sucursal":"LOGISTICA POMPEYO","bodega":"EN BARCO"},{"vin":"935CEFCE9VB506444","version":"C3 Live Pack Gasolina 96HP MT","color":"BLANCO BANQUISE","sucursal":"LOGISTICA POMPEYO","bodega":"EN BARCO"},{"vin":"935CEFCE6VB506613","version":"C3 Live Pack Gasolina 96HP MT","color":"GRIS ARTENSE","sucursal":"LOGISTICA POMPEYO","bodega":"EN BARCO"},{"vin":"935CEFCE4VB506626","version":"C3 Live Pack Gasolina 96HP MT","color":"BLANCO BANQUISE","sucursal":"LOGISTICA POMPEYO","bodega":"EN BARCO"},{"vin":"935CEFCE4VB506609","version":"C3 Live Pack Gasolina 96HP MT","color":"GRIS ARTENSE","sucursal":"LOGISTICA POMPEYO","bodega":"EN BARCO"},{"vin":"935CEFCE2VB506611","version":"C3 Live Pack Gasolina 96HP MT","color":"GRIS ARTENSE","sucursal":"LOGISTICA POMPEYO","bodega":"EN BARCO"},{"vin":"935CEFCE1VB506339","version":"C3 Live Pack Gasolina 96HP MT","color":"BLANCO BANQUISE","sucursal":"LOGISTICA POMPEYO","bodega":"EN BARCO"}]},{"modelo":"JUMPER","n":7,"det":[{"vin":"VF7YDT6FXVMC71823","version":"Jumper MCA L4H2 Diesel 140HP MT","color":"BLANCO HIELO","sucursal":"LOGISTICA POMPEYO","bodega":"KAR-LOGISTICS"},{"vin":"VF7YDT6FXTMC24966","version":"Jumper MCA L2H2 Diesel 140HP MT","color":"BLANCO HIELO","sucursal":"LOGISTICA POMPEYO","bodega":"KAR-LOGISTICS"},{"vin":"VF7YDT6FXVMC45707","version":"Jumper MCA L2H2 Diesel 140HP MT","color":"BLANCO HIELO","sucursal":"CITROEN QUILIN","bodega":"STOCK CITROEN QUILIN"},{"vin":"VF7YDT6F1VMC47006","version":"Jumper MCA L2H2 Diesel 140HP MT","color":"BLANCO HIELO","sucursal":"LOGISTICA POMPEYO","bodega":"KAR-LOGISTICS"},{"vin":"VF7YDT6F7VMC69284","version":"Jumper MCA L3H2 Diesel 140HP MT","color":"BLANCO HIELO","sucursal":"PEUGEOT CAMINO MELIPILLA","bodega":"STOCK PEUGEOT CAMINO MELIPILLA"},{"vin":"VF7YDT6F5VMC68134","version":"Jumper MCA L3H2 Diesel 140HP MT","color":"BLANCO HIELO","sucursal":"LOGISTICA POMPEYO","bodega":"KAR-LOGISTICS"},{"vin":"VF7YDT6F1VMC68860","version":"Jumper MCA L3H2 Diesel 140HP MT","color":"BLANCO HIELO","sucursal":"LOGISTICA POMPEYO","bodega":"KAR-LOGISTICS"}]},{"modelo":"SPACETOURER","n":6,"det":[{"vin":"VF7VKEHZ4TZ005397","version":"Spacetourer MCA 9P Diesel 180HP AT","color":"GRIS TITANE","sucursal":"CITROEN BILBAO","bodega":"STOCK CITROEN BILBAO"},{"vin":"VF7VKEHZ6TZ005157","version":"Spacetourer MCA 8P Diesel 180HP AT","color":"GRIS ARTENSE","sucursal":"PEUGEOT CAMINO MELIPILLA","bodega":"STOCK PEUGEOT CAMINO MELIPILLA"},{"vin":"VF7VKEHZ6TZ005191","version":"Spacetourer MCA 8P Diesel 180HP AT","color":"GRIS TITANE","sucursal":"CITROEN MALL PLAZA SUR","bodega":"STOCK CITROEN PLAZA SUR"},{"vin":"VF7VKEHZ8TZ006004","version":"Spacetourer MCA 8P Diesel 180HP AT","color":"BLANCO HIELO","sucursal":"LOGISTICA POMPEYO","bodega":"KAR-LOGISTICS"},{"vin":"VF7VKEHZ4TZ005206","version":"Spacetourer MCA 8P Diesel 180HP AT","color":"BLANCO HIELO","sucursal":"LOGISTICA POMPEYO","bodega":"KAR-LOGISTICS"},{"vin":"VF7VKEHZ0TZ005154","version":"Spacetourer MCA 8P Diesel 180HP AT","color":"GRIS TITANE","sucursal":"LOGISTICA POMPEYO","bodega":"KAR-LOGISTICS"}]},{"modelo":"Berlingo VU","n":3,"det":[{"vin":"VR7EDYHT9VJ002903","version":"Berlingo MCA XL Diesel 100HP MT","color":"BLANCO HIELO","sucursal":"CITROEN MOVICENTER","bodega":"STOCK CITROEN MOVICENTER"},{"vin":"VR7EDYHT1VJ002894","version":"Berlingo MCA XL Diesel 100HP MT","color":"BLANCO HIELO","sucursal":"PEUGEOT ARAUCO MAIPU","bodega":"STOCK PEUGEOT ARAUCO MAIPU"},{"vin":"VR7EDYHT0VJ002580","version":"Berlingo MCA XL Diesel 100HP MT","color":"BLANCO HIELO","sucursal":"LOGISTICA POMPEYO","bodega":"KAR-LOGISTICS"}]},{"modelo":"BERLINGO VP","n":2,"det":[{"vin":"VR7EBYHT9VJ002289","version":"Berlingo Multispace MCA XL5 Plus Diesel 100HP MT","color":"NEGRO PERLA NERA","sucursal":"CITROEN MOVICENTER","bodega":"STOCK CITROEN MOVICENTER"},{"vin":"VR7EBYHT6VJ002363","version":"Berlingo Multispace MCA XL5 Plus Diesel 100HP MT","color":"NEGRO PERLA NERA","sucursal":"CITROEN IRARRAZAVAL","bodega":"STOCK CITROEN IRARRAZAVAL"}]}]};
+
+// ---------- ASIGNACION DE MARCA (datos completos reales de los Drive) ----------
+const LINK_ASIG_PEU = "https://docs.google.com/spreadsheets/d/15e2v5X5--J4dRmRapFpHsE-8Sw3Xczi2uO4J0XX3f_U/edit";
+const LINK_ASIG_CIT = "https://docs.google.com/spreadsheets/d/1uM1KlSuk777PqScZ_lcUOG-1PfTVRB2xjmyCsFFarLs/edit";
+const asignacion = {
+  peugeot: [
+    {modelo:"Boxer Chasis/Cabina Simple", n:3, link:LINK_ASIG_PEU, det:[
+      {vin:"VF3YDT6A7TMD14999", entrega:"desde Fin Agosto", color:"Blanco Hielo", nv:null},
+      {vin:"VF3YDT6A2TMD17129", entrega:"desde Fin Agosto", color:"Blanco Hielo", nv:null},
+      {vin:"VF3YDT6A9TMD16933", entrega:"desde Fin Sept", color:"Blanco Hielo", nv:null},
+    ]},
+    {modelo:"New 5008 GT MHEV 136 eDCT6", n:8, link:LINK_ASIG_PEU, det:[
+      {vin:"VR3KAHPY9VS003599", entrega:"desde Fin Sept", color:"Blanco Okenite", nv:null},
+      {vin:"VR3KAHPY9VS003568", entrega:"desde Fin Sept", color:"Azul Ingaro", nv:"NV 96499 MOVICENTER"},
+      {vin:"VR3KAHPY6VS003561", entrega:"desde Fin Sept", color:"Azul Ingaro", nv:null},
+      {vin:"VR3KAHPY4VS003607", entrega:"desde Fin Sept", color:"Blanco Okenite", nv:"NV 96709 PLAZA SUR"},
+      {vin:"VR3KAHPY9VS003991", entrega:"desde Fin Sept", color:"Negro Perla Nera", nv:"En APC"},
+      {vin:"VR3KAHPY0VS004026", entrega:"desde Fin Sept", color:"Negro Perla Nera", nv:"En APC"},
+      {vin:"VR3KAHPY4VS004028", entrega:"desde Fin Sept", color:"Negro Perla Nera", nv:"En APC"},
+      {vin:"VR3KAHPYXVS003711", entrega:"desde Fin Sept", color:"Gris Titane", nv:"En APC"},
+      {vin:"VR3KAHPY1VS003743", entrega:"desde Fin Sept", color:"Gris Artense", nv:"NV 96123 PLAZA SUR"},
+    ]},
+    {modelo:"Expert MCA L3 Diesel 145hp MT", n:10, link:LINK_ASIG_PEU, det:[
+      {vin:"VF3VLEHT8VZ000491", entrega:"—", color:"Blanco Hielo", nv:null},
+      {vin:"VF3VLEHT6VZ000490", entrega:"—", color:"Blanco Hielo", nv:null},
+      {vin:"VF3VLEHTXVZ000489", entrega:"—", color:"Blanco Hielo", nv:null},
+      {vin:"VF3VLEHT8VZ000488", entrega:"—", color:"Blanco Hielo", nv:null},
+      {vin:"VF3VLEHT6VZ000487", entrega:"—", color:"Blanco Hielo", nv:null},
+      {vin:"VF3VLEHT1VZ000476", entrega:"—", color:"Blanco Hielo", nv:null},
+      {vin:"VF3VLEHTXVZ000475", entrega:"—", color:"Blanco Hielo", nv:null},
+      {vin:"VF3VLEHT8VZ000474", entrega:"—", color:"Blanco Hielo", nv:null},
+      {vin:"VF3VLEHT6TZ003029", entrega:"—", color:"Blanco Hielo", nv:null},
+      {vin:"VF3VLEHT5TZ003054", entrega:"—", color:"Blanco Hielo", nv:null},
+    ]},
+    {modelo:"New 3008 GT MHEV 136 eDCT6", n:24, link:LINK_ASIG_PEU, det:[
+      {vin:"VR3KAHPY5VS003065", entrega:"desde Fin Agosto", color:"Gris Artense", nv:null},
+      {vin:"VR3KAHPY6VS003074", entrega:"desde Fin Agosto", color:"Gris Artense", nv:null},
+      {vin:"VR3KAHPY7VS003066", entrega:"desde Fin Agosto", color:"Gris Artense", nv:null},
+      {vin:"VR3KAHPY3VS003064", entrega:"desde Fin Agosto", color:"Gris Artense", nv:null},
+      {vin:"VR3KAHPY2VS003069", entrega:"desde Fin Agosto", color:"Gris Artense", nv:null},
+      {vin:"VR3KAHPY1VS003080", entrega:"desde Fin Agosto", color:"Negro Perla Nera", nv:"MOVICENTER CAT 96319"},
+      {vin:"VR3KAHPY9VS003084", entrega:"desde Fin Agosto", color:"Negro Perla Nera", nv:null},
+      {vin:"VR3KAHPY7VS003083", entrega:"desde Fin Agosto", color:"Negro Perla Nera", nv:null},
+      {vin:"VR3KAHPY5VS003079", entrega:"desde Fin Agosto", color:"Negro Perla Nera", nv:null},
+      {vin:"VR3KAHPY5VS003082", entrega:"desde Fin Agosto", color:"Negro Perla Nera", nv:null},
+      {vin:"VR3KAHPY2VS003055", entrega:"desde Fin Agosto", color:"Blanco Okenita", nv:null},
+      {vin:"VR3KAHPY4VS003056", entrega:"desde Fin Agosto", color:"Blanco Okenita", nv:null},
+      {vin:"VR3KAHPY4VS002733", entrega:"desde Fin Agosto", color:"Blanco Okenita", nv:null},
+      {vin:"VR3KAHPY8VS002735", entrega:"desde Fin Agosto", color:"Blanco Okenita", nv:null},
+      {vin:"VR3KAHPYXVS003949", entrega:"desde Fin Sept", color:"Azul Ingaro", nv:null},
+      {vin:"VR3KAHPY8VS003948", entrega:"desde Fin Sept", color:"Azul Ingaro", nv:null},
+      {vin:"VR3KAHPY1VS003953", entrega:"desde Fin Sept", color:"Azul Ingaro", nv:null},
+      {vin:"VR3KAHPY4VS003977", entrega:"desde Fin Sept", color:"Gris Titane", nv:null},
+      {vin:"VR3KAHPY2VS003976", entrega:"desde Fin Sept", color:"Gris Titane", nv:null},
+      {vin:"VR3KAHPY6VS003981", entrega:"desde Fin Sept", color:"Gris Titane", nv:null},
+      {vin:"VR3KAHPY4VS003980", entrega:"desde Fin Sept", color:"Gris Titane", nv:null},
+      {vin:"VR3KAHPY6VS003978", entrega:"desde Fin Sept", color:"Gris Titane", nv:null},
+      {vin:"VR3KAHPY8VS003979", entrega:"desde Fin Sept", color:"Gris Titane", nv:null},
+      {vin:"VR3KAHPY7VS003973", entrega:"desde Fin Sept", color:"Gris Titane", nv:null},
+      {vin:"VR3KAHPYXVS003966", entrega:"desde Fin Sept", color:"Gris Titane", nv:null},
+    ]},
+    {modelo:"2008 MCA GT MHEV 136 eDCT6", n:11, link:LINK_ASIG_PEU, det:[
+      {vin:"VR3USHPY3VJ011631", entrega:"desde Fin Sept", color:"Azul Obsession", nv:null},
+      {vin:"VR3USHPYXVJ011383", entrega:"desde Fin Sept", color:"Negro Perla Nera", nv:null},
+      {vin:"VR3USHPY2VJ011460", entrega:"desde Fin Sept", color:"Gris Sellenium", nv:null},
+      {vin:"VR3USHPY9VJ011584", entrega:"desde Fin Sept", color:"Blanco Okenita", nv:null},
+      {vin:"VR3USHPY9VJ011195", entrega:"desde Fin Sept", color:"Blanco Okenita", nv:null},
+      {vin:"VR3USHPY0VJ010940", entrega:"desde Fin Sept", color:"Blanco Okenita", nv:null},
+      {vin:"VR3USHPY2VJ011586", entrega:"desde Fin Sept", color:"Blanco Okenita", nv:null},
+      {vin:"VR3USHPY3VJ010950", entrega:"desde Fin Sept", color:"Gris Sellenium", nv:null},
+      {vin:"VR3USHPY3VJ010947", entrega:"desde Fin Sept", color:"Blanco Okenita", nv:null},
+      {vin:"VR3USHPY1VJ010946", entrega:"desde Fin Sept", color:"Blanco Okenita", nv:null},
+      {vin:"VR3USHPY6VJ011591", entrega:"desde Fin Sept", color:"Blanco Okenita", nv:null},
+    ]},
+  ],
+  citroen: [
+    {modelo:"C3 Feel Gasolina 96HP MT", n:4, link:LINK_ASIG_CIT, det:[
+      {vin:"935CEFCE0VB506767", entrega:"desde 25/09", color:"Gris Artense", nv:"NV 96649 Egaña"},
+      {vin:"935CEFCE1VB506616", entrega:"desde 25/09", color:"Gris Artense", nv:"NV 96293 Plaza Sur"},
+      {vin:"935CEFCE5VB506781", entrega:"desde 25/09", color:"Gris Grafito", nv:"NV 96073 Plaza Sur"},
+      {vin:"935CEFCE3VB506777", entrega:"desde 25/09", color:"Negro Perla Nera", nv:"NV 96343 Movicenter"},
+    ]},
+    {modelo:"C3 Live Pack Gasolina 96HP MT", n:7, link:LINK_ASIG_CIT, det:[
+      {vin:"935CEFCEXVB506341", entrega:"desde 25/09", color:"Blanco Banquise", nv:null},
+      {vin:"935CEFCE9VB506444", entrega:"desde 25/09", color:"Blanco Banquise", nv:null},
+      {vin:"935CEFCE4VB506626", entrega:"desde 25/09", color:"Blanco Banquise", nv:null},
+      {vin:"935CEFCE1VB506339", entrega:"desde 25/09", color:"Blanco Banquise", nv:null},
+      {vin:"935CEFCE6VB506613", entrega:"desde 25/09", color:"Gris Artense", nv:null},
+      {vin:"935CEFCE4VB506609", entrega:"desde 25/09", color:"Gris Artense", nv:null},
+      {vin:"935CEFCE2VB506611", entrega:"desde 25/09", color:"Gris Artense", nv:null},
+    ]},
+    {modelo:"C3 YOU Turbo 125HP AT", n:1, link:LINK_ASIG_CIT, det:[
+      {vin:"935CMFD10VB506914", entrega:"desde 25/09", color:"Gris Artense", nv:null},
+    ]},
+    {modelo:"Berlingo MCA M Diesel 100HP MT", n:4, link:LINK_ASIG_CIT, det:[
+      {vin:"VR7EDYHT9TN506888", entrega:"Piso Marca", color:"Blanco Hielo", nv:null},
+      {vin:"VR7EDYHT7TN506887", entrega:"Piso Marca", color:"Blanco Hielo", nv:null},
+      {vin:"VR7EDYHT3TN506885", entrega:"Piso Marca", color:"Blanco Hielo", nv:null},
+      {vin:"VR7EDYHT5TN506922", entrega:"Piso Marca", color:"Blanco Hielo", nv:null},
+    ]},
+    {modelo:"Jumpy MCA XL Diesel 145HP MT", n:2, link:LINK_ASIG_CIT, det:[
+      {vin:"VF7VLEHT8TZ004164", entrega:"Piso Marca", color:"Blanco Hielo", nv:null},
+      {vin:"VF7VLEHT0TZ004160", entrega:"Piso Marca", color:"Blanco Hielo", nv:null},
+    ]},
+    {modelo:"Berlingo Multispace MCA XL Plus Diesel 130HP AT", n:2, link:LINK_ASIG_CIT, det:[
+      {vin:"VR7EBYHZXVJ003777", entrega:"Piso Marca", color:"Gris Artense", nv:null},
+      {vin:"VR7EBYHZ3VJ003779", entrega:"Piso Marca", color:"Gris Artense", nv:null},
+    ]},
+    {modelo:"Berlingo MCA XL Diesel 100HP MT", n:4, link:LINK_ASIG_CIT, det:[
+      {vin:"VR7EDYHT0VJ011182", entrega:"desde 25/09", color:"Blanco Hielo", nv:null},
+      {vin:"VR7EDYHTXVJ011013", entrega:"desde 25/09", color:"Blanco Hielo", nv:null},
+      {vin:"VR7EDYHT8VJ011012", entrega:"desde 25/09", color:"Blanco Hielo", nv:null},
+      {vin:"VR7EDYHT3VJ011015", entrega:"desde 25/09", color:"Blanco Hielo", nv:null},
+    ]},
+  ]
+};
+
+// ---------- PRE INSCRITAS (datos completos reales) ----------
+const LINK_PREINSCRITAS = "https://docs.google.com/spreadsheets/d/1S8OuZ0yLYbbTeDNnQkvyeck9nCjnJKG9xe2lg8x22ic/edit";
+const preinscritas = [
+  {modelo:"Nuevo 208", n:1, link:LINK_PREINSCRITAS, det:[
+    {vin:"VR3UPHPY8T4000461", info:"208 MCA ALLURE Hybrid 136hp AT", color:"Blanco Banquise", nv:null},
+  ]},
+  {modelo:"NUEVO 5008", n:1, link:LINK_PREINSCRITAS, det:[
+    {vin:"VR3KAHPY5TS009638", info:"New 5008 Allure Hybrid 136hp AT", color:"Azul Ingaro", nv:null},
+  ]},
+  {modelo:"Nueva Partner", n:25, link:LINK_PREINSCRITAS, det:[
+    {vin:"VR3EDYHT0VN000239", info:"PARTNER MCA L1 Diesel 100hp MT", color:"Blanco Hielo", nv:"MOVICENTER 76.223.118-2"},
+    {vin:"VR3EDYHT7VN000240", info:"PARTNER MCA L1 Diesel 100hp MT", color:"Blanco Hielo", nv:"MOVICENTER NV 1465"},
+    {vin:"VR3EDYHT9VN000241", info:"PARTNER MCA L1 Diesel 100hp MT", color:"Blanco Hielo", nv:"MOVICENTER NV 1470"},
+    {vin:"VR3EDYHT0VN000242", info:"PARTNER MCA L1 Diesel 100hp MT", color:"Blanco Hielo", nv:"MOVICENTER NV 76033808-7"},
+    {vin:"VR3EDYHT2VN000243", info:"PARTNER MCA L1 Diesel 100hp MT", color:"Blanco Hielo", nv:"FLOTAS STELLANTIS"},
+    {vin:"VR3EDYHT2VN000310", info:"PARTNER MCA L1 Diesel 100hp MT", color:"Blanco Hielo", nv:"ARAUCO MAIPU NV 76.621.653-6"},
+    {vin:"VR3EDYHT6VN000312", info:"PARTNER MCA L1 Diesel 100hp MT", color:"Blanco Hielo", nv:"MOVICENTER 78.466.674-3"},
+    {vin:"VR3EDYHT5VN000317", info:"PARTNER MCA L1 Diesel 100hp MT", color:"Blanco Hielo", nv:"MOVICENTER 15.389.967-3"},
+    {vin:"VR3EDYHTXVN000233", info:"PARTNER MCA L1 Diesel 100hp MT", color:"Blanco Hielo", nv:"MOVICENTER 78401817-2"},
+    {vin:"VR3EDYHT1VN000234", info:"PARTNER MCA L1 Diesel 100hp MT", color:"Blanco Hielo", nv:"MOVICENTER 19.936.675-0"},
+    {vin:"VR3EDYHT5VN000236", info:"PARTNER MCA L1 Diesel 100hp MT", color:"Blanco Hielo", nv:null},
+    {vin:"VR3EDYHT7VN000237", info:"PARTNER MCA L1 Diesel 100hp MT", color:"Blanco Hielo", nv:"QUILIN"},
+    {vin:"VR3EDYHT9VN000238", info:"PARTNER MCA L1 Diesel 100hp MT", color:"Blanco Hielo", nv:"ARAUCO MAIPU 78.290.890-1"},
+    {vin:"VR3EDYHT4VN000244", info:"PARTNER MCA L1 Diesel 100hp MT", color:"Blanco Hielo", nv:"ARAUCO MAIPU 78.290.890-1"},
+    {vin:"VR3EDYHT6VN000245", info:"PARTNER MCA L1 Diesel 100hp MT", color:"Blanco Hielo", nv:"ARAUCO MAIPU 78.290.890-1"},
+    {vin:"VR3EDYHT8VN000246", info:"PARTNER MCA L1 Diesel 100hp MT", color:"Blanco Hielo", nv:"ARAUCO MAIPU 78.290.890-1"},
+    {vin:"VR3EDYHTXVN000247", info:"PARTNER MCA L1 Diesel 100hp MT", color:"Blanco Hielo", nv:null},
+    {vin:"VR3EDYHT1VN000248", info:"PARTNER MCA L1 Diesel 100hp MT", color:"Blanco Hielo", nv:"ARAUCO MAIPU 13238163-1"},
+    {vin:"VR3EDYHT3VN000249", info:"PARTNER MCA L1 Diesel 100hp MT", color:"Blanco Hielo", nv:null},
+    {vin:"VR3EDYHTXVN000250", info:"PARTNER MCA L1 Diesel 100hp MT", color:"Blanco Hielo", nv:"MOVICENTER 77.232.568-1"},
+    {vin:"VR3EDYHT3VN000252", info:"PARTNER MCA L1 Diesel 100hp MT", color:"Blanco Hielo", nv:"FLOTAS"},
+    {vin:"VR3EDYHT5VN000253", info:"PARTNER MCA L1 Diesel 100hp MT", color:"Blanco Hielo", nv:null},
+    {vin:"VR3EDYHT7VN000254", info:"PARTNER MCA L1 Diesel 100hp MT", color:"Blanco Hielo", nv:null},
+    {vin:"VR3EDYHT9VN000255", info:"PARTNER MCA L1 Diesel 100hp MT", color:"Blanco Hielo", nv:"NV MOVICENTER 77.602.638-7"},
+    {vin:"VR3EDYHT0VN000256", info:"PARTNER MCA L1 Diesel 100hp MT", color:"Blanco Hielo", nv:null},
+  ]},
+];
+
+// ---------- Render ----------
+const tabsDef = [
+  {id:'fisico', label:'Stock físico', total: fisico.peugeot.reduce((a,c)=>a+c.n,0)+fisico.citroen.reduce((a,c)=>a+c.n,0)},
+  {id:'asignacion', label:'Asignación de marca', total: asignacion.peugeot.reduce((a,c)=>a+c.n,0)+asignacion.citroen.reduce((a,c)=>a+c.n,0)},
+  {id:'preinscritas', label:'Pre inscritas', total: preinscritas.reduce((a,c)=>a+c.n,0)},
+];
+const tabsEl = document.getElementById('tabs');
+tabsDef.forEach((t,i)=>{
+  const d = document.createElement('div');
+  d.className = 'tab'+(i===0?' active':'');
+  d.dataset.sec = t.id;
+  d.innerHTML = `${t.label} <span class="count-chip">${t.total}</span>`;
+  d.onclick = ()=>switchTab(t.id, d);
+  tabsEl.appendChild(d);
+});
+function switchTab(id, el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('sec-'+id).classList.add('active');
+  closeSheet();
+}
+document.getElementById('sec-fisico').classList.add('active');
+
+function renderGrid(containerId, dataObj, brandFilter, sourceLabel){
+  const grid = document.getElementById(containerId);
+  grid.innerHTML = '';
+  let items = [];
+  if(brandFilter==='all'||brandFilter==='peugeot') dataObj.peugeot.forEach(d=>items.push({...d, brand:'peugeot'}));
+  if(brandFilter==='all'||brandFilter==='citroen') dataObj.citroen.forEach(d=>items.push({...d, brand:'citroen'}));
+  items.sort((a,b)=>b.n-a.n);
+  items.forEach(d=>{
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.brand = d.brand;
+    card.onclick = ()=>openSheet(d, sourceLabel);
+    card.innerHTML = `
+      <div class="bar"></div>
+      <div class="tag">${d.brand==='peugeot'?'Peugeot':'Citroën'}</div>
+      <h3>${d.modelo}</h3>
+      <div class="count-row"><span class="n">${d.n}</span><span class="lbl">unidades</span></div>
+      <div class="tap-hint">👆 toca para ver el detalle</div>`;
+    grid.appendChild(card);
+  });
+}
+
+function renderFlatGrid(containerId, arr, sourceLabel){
+  const grid = document.getElementById(containerId);
+  grid.innerHTML = '';
+  arr.forEach(d=>{
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.onclick = ()=>openSheet(d, sourceLabel);
+    card.innerHTML = `
+      <div class="bar" style="background:var(--amber)"></div>
+      <div class="tag" style="color:var(--amber)">Peugeot</div>
+      <h3>${d.modelo}</h3>
+      <div class="count-row"><span class="n">${d.n}</span><span class="lbl">unidades</span></div>
+      <div class="tap-hint">👆 toca para ver el detalle</div>`;
+    grid.appendChild(card);
+  });
+}
+
+function openSheet(d, sourceLabel){
+  document.getElementById('sheet-title').textContent = d.modelo + ` (${d.n})`;
+  const linkHtml = d.link ? ` · <a href="${d.link}" target="_blank" style="color:inherit;text-decoration:underline;">abrir planilla ↗</a>` : '';
+  document.getElementById('sheet-sub').innerHTML = sourceLabel + linkHtml;
+  const body = document.getElementById('sheet-body');
+  body.innerHTML = d.det.map(r=>{
+    const statusChip = r.nv===undefined ? '' :
+      (r.nv ? `<span class="status-chip status-taken">${r.nv}</span>` : `<span class="status-chip status-free">Libre</span>`);
+    const swatchHtml = r.color ? `<span class="color-sw" style="background:${sw(r.color)}"></span>${r.color}` : '';
+    const bodegaTxt = (r.sucursal || r.bodega) ? `📍 ${[r.sucursal, r.bodega].filter(Boolean).join(' — ')}` : '';
+    const line2parts = [r.entrega, r.version || r.info, swatchHtml, bodegaTxt].filter(Boolean);
+    return `
+    <div class="row-item">
+      <div>
+        <div class="vin">${r.vin}</div>
+        <div class="meta">${line2parts.join(' · ')}</div>
+      </div>
+      ${statusChip}
+    </div>`;
+  }).join('');
+  document.getElementById('overlay').classList.add('open');
+}
+function closeSheet(){ document.getElementById('overlay').classList.remove('open'); }
+
+function setBrandFilter(section, brand, el){
+  el.parentElement.querySelectorAll('.bf-pill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  if(section==='fisico') renderGrid('grid-fisico', fisico, brand, 'Stock físico · ROMA');
+  if(section==='asig') renderGrid('grid-asignacion', asignacion, brand, 'Asignación de marca · no está en ROMA/APC');
+}
+
+renderGrid('grid-fisico', fisico, 'all', 'Stock físico · ROMA');
+renderGrid('grid-asignacion', asignacion, 'all', 'Asignación de marca · no está en ROMA/APC');
+renderFlatGrid('grid-preinscritas', preinscritas, 'Unidades Pre Inscritas TM');
+</script>
+</body>
+</html>
