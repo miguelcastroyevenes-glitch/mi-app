@@ -178,7 +178,7 @@ const PROX_MES = {boletin:"Nº 09/1 - 2026", vigencia:"1 al 6 de septiembre 2026
   "Jumper MCA L3H2 Diesel 140HP MT":{ago:26990000,sept:27590000,delta:600000},
   "Jumper MCA L4H2 Diesel 140HP MT":{ago:28590000,sept:29190000,delta:600000},
 }};
-const APP_VERSION = "2026-09-01 · v15"; // ← actualizar cada vez que se sube una nueva versión
+const APP_VERSION = "2026-09-01 · v16"; // ← actualizar cada vez que se sube una nueva versión
 const fmt = (n) => "$" + Math.round(n).toLocaleString("es-CL");
 const pct = (n) => (n * 100).toFixed(1) + "%";
 // RUT chileno: se usa como llave para encontrar el deal despues, asi que se valida el
@@ -385,12 +385,23 @@ const defaultDocs = [
     const comCredNum = parsePesos(comisionCredito);
     const utilidadProxy = margenNeto + comCredNum;
     const utilidadPct = auto.pl > 0 ? utilidadProxy / auto.pl : 0;
+
+    // En flota la utilidad se arma con otra base: lo que queda del margen fijo despues del
+    // aporte del concesionario. Los gastos de Roma se descuentan igual que en retail.
+    // El % va contra el precio lista SIN IVA, que es la base con la que se calculo el margen:
+    // compararlo contra el precio con IVA daria un porcentaje mas chico y enganoso.
+    const margenFlotaNeto = trFlota ? (margenFlotaPesos - GASTOS_ROMA) : 0;
+    const utilidadFlota = margenFlotaNeto + comCredNum;
+    const utilidadFlotaPct = (trFlota && b2b && b2b.plSinIva > 0) ? utilidadFlota / b2b.plSinIva : 0;
+
+    const utilFinal = esFlota ? utilidadFlota : utilidadProxy;
+    const utilPctFinal = esFlota ? utilidadFlotaPct : utilidadPct;
     let alertaDesc = null;
     if (descNum > maxDescPesos) alertaDesc = "roja";
     else if (totalDadoPct > 0.04) alertaDesc = "amarilla";
     let utilColor = C.green, utilIcon = "🟢";
-    if (utilidadPct < 0.03) { utilColor = C.red; utilIcon = "🔴"; }
-    else if (utilidadPct < 0.05) { utilColor = C.yellow; utilIcon = "🟡"; }
+    if (utilPctFinal < 0.03) { utilColor = C.red; utilIcon = "🔴"; }
+    else if (utilPctFinal < 0.05) { utilColor = C.yellow; utilIcon = "🟡"; }
     return { fp, esCom, descNum, descPompeyoPct, totalDadoPct, cePct, maxDescPesos, bonoZonalNum,
       aporteRedConIva, aporteSteConIva, aporteFinConIva, precioAuto, precioNeto, totalDoc, totalAcc, totalCliente,
       margenBruto, aporteRedPesos, margenDisponible, margenNetoAuto, margenNeto,
@@ -398,6 +409,7 @@ const defaultDocs = [
       esFlota, b2b, trFlota, redFlota, steFlota, aporteSteFlota, aporteRedFlota,
       precioFlotaNeto, precioFlotaConIva,
       descFlotaPesos, margenFlotaPct, margenFlotaPesos,
+      margenFlotaNeto, utilidadFlota, utilidadFlotaPct, utilFinal, utilPctFinal,
       // Lo que efectivamente paga el cliente. En flota es el precio del tramo llevado a IVA;
       // en retail es el de siempre. Nunca se suman los dos.
       precioAutoFinal, totalClienteFinal };
@@ -519,6 +531,11 @@ const defaultDocs = [
       L.push(`Precio flota NETO: ${fmt(deal.precioFlotaNeto)}`);
       L.push(`Equivalente con IVA: ${fmt(deal.precioFlotaConIva)}`);
       L.push("");
+      L.push("--- UTILIDAD (interno, no mostrar al cliente) ---");
+      L.push(`Margen neto flota: ${fmt(deal.margenNeto)}`);
+      if (deal.comisionCredito > 0) L.push(`Comisión crédito: ${fmt(deal.comisionCredito)}`);
+      L.push(`Utilidad Proxy: ${fmt(deal.utilidadProxy)} (${pct(deal.utilidadPct)})`);
+      L.push("");
       L.push(`Documentación: ${fmt(deal.totalDoc)}`);
       if (deal.totalAcc > 0) L.push(`Accesorios: ${fmt(deal.totalAcc)}`);
       L.push(`TOTAL CLIENTE (con IVA): ${fmt(deal.totalCliente)}`);
@@ -561,7 +578,8 @@ const defaultDocs = [
 
   // ─── Cerrar (o actualizar) Deal ───
   // Para cerrar hacen falta: vendedor, nombre, RUT valido y — si es credito — la comision.
-  const comisionOk = !(pe === "cc" || pe === "ci") || !!comisionCredito;
+  // En flota no hay forma de pago, asi que la comision de credito no se exige.
+  const comisionOk = modoVenta === "flota" || !(pe === "cc" || pe === "ci") || !!comisionCredito;
   const puedeCerrar = !!cliente.trim() && !!vendedor.trim() && rutValido(rutCliente) && comisionOk;
 
   const cerrarDeal = () => {
@@ -587,8 +605,9 @@ const defaultDocs = [
       precioAuto: calc.precioAutoFinal, totalDoc: calc.totalDoc,
       totalAcc: calc.totalAcc, totalCliente: calc.totalClienteFinal,
       precioAutoRetail: calc.precioAuto,
-      utilidadProxy: calc.utilidadProxy, utilidadPct: calc.utilidadPct,
-      margenNeto: calc.margenNeto, comisionCredito: calc.comCredNum,
+      utilidadProxy: calc.utilFinal, utilidadPct: calc.utilPctFinal,
+      margenNeto: calc.esFlota ? calc.margenFlotaNeto : calc.margenNeto,
+      comisionCredito: calc.comCredNum,
       esCom: calc.esCom, aporteRed: calc.aporteRedConIva, aporteSte: calc.aporteSteConIva,
       aporteFin: calc.aporteFinConIva || 0,
       pushVin: pushSel ? pushSel.v : null, pushMarca: pushSel ? pushSel.mk : 0, pushCes: pushSel ? pushSel.ce : 0, pushTotal: pushSel ? pushSel.m : 0,
@@ -1205,19 +1224,35 @@ const defaultDocs = [
             </div>
             {showUtil && (
               <div style={{...base.card,borderLeft:"3px solid "+calc.utilColor}}>
-                <div style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",marginBottom:6}}>Margen del negocio</div>
-                {chip("Margen Red bruto ("+pct(auto.margen)+")", calc.margenBruto)}
-                {chip("− Aporte Red CE (2,5%)"+(calc.esCom?" (con IVA)":""), calc.aporteRedConIva, "#b45309")}
-                <div style={base.divider} />
-                {chip("= Margen post CE", calc.margenDisponible)}
-                {calc.descNum > 0 && chip("− Desc. Pompeyo", calc.descNum, C.red)}
-                {chip("= Margen post descuento", calc.margenNetoAuto)}
-                {chip("− Gastos prorrateados Roma", GASTOS_ROMA, C.muted)}
-                <div style={base.divider} />
-                <div style={base.row}>
-                  <span style={{fontSize:13,fontWeight:700}}>Margen neto auto</span>
-                  <span style={{fontSize:14,fontWeight:700,color:calc.margenNeto<0?C.red:C.text}}>{fmt(calc.margenNeto)}</span>
-                </div>
+                <div style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",marginBottom:6}}>Margen del negocio{calc.esFlota?" · flota (todo neto)":""}</div>
+                {/* Flota y retail no comparten el desglose: en flota no hay margen Red ni CE
+                    ni descuento Pompeyo, y las cifras van netas. Los gastos de Roma si son
+                    los mismos en los dos casos. */}
+                {calc.esFlota ? (<>
+                  {chip("Margen fijo de lista ("+pct(calc.b2b ? calc.b2b.margenFijo : 0)+")", calc.b2b ? Math.round(calc.b2b.plSinIva * calc.b2b.margenFijo) : 0)}
+                  {chip("− Aporte concesionario ("+pct(calc.redFlota)+")", calc.b2b ? Math.round(calc.b2b.plSinIva * calc.redFlota) : 0, "#b45309")}
+                  <div style={base.divider} />
+                  {chip("= Margen que queda", calc.margenFlotaPesos)}
+                  {chip("− Gastos prorrateados Roma", GASTOS_ROMA, C.muted)}
+                  <div style={base.divider} />
+                  <div style={base.row}>
+                    <span style={{fontSize:13,fontWeight:700}}>Margen neto flota</span>
+                    <span style={{fontSize:14,fontWeight:700,color:calc.margenFlotaNeto<0?C.red:C.text}}>{fmt(calc.margenFlotaNeto)}</span>
+                  </div>
+                </>) : (<>
+                  {chip("Margen Red bruto ("+pct(auto.margen)+")", calc.margenBruto)}
+                  {chip("− Aporte Red CE (2,5%)"+(calc.esCom?" (con IVA)":""), calc.aporteRedConIva, "#b45309")}
+                  <div style={base.divider} />
+                  {chip("= Margen post CE", calc.margenDisponible)}
+                  {calc.descNum > 0 && chip("− Desc. Pompeyo", calc.descNum, C.red)}
+                  {chip("= Margen post descuento", calc.margenNetoAuto)}
+                  {chip("− Gastos prorrateados Roma", GASTOS_ROMA, C.muted)}
+                  <div style={base.divider} />
+                  <div style={base.row}>
+                    <span style={{fontSize:13,fontWeight:700}}>Margen neto auto</span>
+                    <span style={{fontSize:14,fontWeight:700,color:calc.margenNeto<0?C.red:C.text}}>{fmt(calc.margenNeto)}</span>
+                  </div>
+                </>)}
                 <div style={{marginTop:10,marginBottom:8}}>
                   <div style={{fontSize:13,color:C.muted,marginBottom:4}}>Comisión crédito ($)</div>
                   <input type="number" inputMode="numeric" value={comisionCredito} onChange={e=>setComisionCredito(e.target.value)}
@@ -1226,15 +1261,28 @@ const defaultDocs = [
                 <div style={base.divider} />
                 <div style={base.row}>
                   <span style={{fontWeight:700}}>Utilidad Proxy</span>
-                  <span style={{fontWeight:800,fontSize:17,color:calc.utilColor}}>{calc.utilIcon} {fmt(calc.utilidadProxy)}</span>
+                  <span style={{fontWeight:800,fontSize:17,color:calc.utilColor}}>{calc.utilIcon} {fmt(calc.utilFinal)}</span>
                 </div>
                 <div style={base.row}>
-                  <span style={base.label}>% sobre precio lista</span>
+                  <span style={base.label}>% sobre precio lista{calc.esFlota?" sin IVA":""}</span>
                   <span style={{display:"inline-block",padding:"2px 8px",borderRadius:6,fontSize:12,fontWeight:700,
-                    background:calc.utilidadPct>=0.05?C.greenBg:calc.utilidadPct>=0.03?C.yellowBg:C.redBg,
-                    color:calc.utilColor}}>{pct(calc.utilidadPct)}</span>
+                    background:calc.utilPctFinal>=0.05?C.greenBg:calc.utilPctFinal>=0.03?C.yellowBg:C.redBg,
+                    color:calc.utilColor}}>{pct(calc.utilPctFinal)}</span>
                 </div>
                 {/* APC */}
+                {/* En flota no hay bonos ni CE: el reparto es quien pone cada parte del
+                    descuento. Mostrar aca las cifras de retail seria mezclar los dos mundos. */}
+                {calc.esFlota ? (
+                  <div style={{marginTop:14,padding:"12px",background:C.bg,borderRadius:8}}>
+                    <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",color:C.muted,marginBottom:8}}>Quién pone el descuento (flota, neto)</div>
+                    <div style={{paddingLeft:8}}>
+                      {chip("Aporte Stellantis ("+pct(calc.steFlota)+")", calc.aporteSteFlota, C.accent)}
+                      {chip("Aporte concesionario ("+pct(calc.redFlota)+")", calc.aporteRedFlota, "#b45309")}
+                      <div style={{...base.divider,margin:"4px 0"}} />
+                      {chip("Descuento total ("+pct(calc.trFlota ? calc.trFlota.pct : 0)+")", calc.descFlotaPesos)}
+                    </div>
+                  </div>
+                ) : (
                 <div style={{marginTop:14,padding:"12px",background:C.bg,borderRadius:8}}>
                   <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",color:C.muted,marginBottom:8}}>Distribución APC / Roma{calc.esCom ? " (bonos con IVA)" : ""}</div>
                   <div style={{fontSize:11,fontWeight:700,color:mc,marginBottom:4}}>BONOS</div>
@@ -1253,13 +1301,14 @@ const defaultDocs = [
                     {chip("Total Descuento", calc.aporteRedConIva + calc.descNum)}
                   </div>
                 </div>
+                )}
               </div>
             )}
           </div>
 
           {/* ═══ CERRAR DEAL ═══ */}
           <div style={base.section}>
-            {(pe === "cc" || pe === "ci") && !comisionCredito && (
+            {!calc.esFlota && (pe === "cc" || pe === "ci") && !comisionCredito && (
               <div style={{padding:"8px 12px",borderRadius:6,background:C.yellowBg,borderLeft:"3px solid "+C.yellow,fontSize:12,marginBottom:8}}>
                 ⚠️ Falta la Comisión Crédito (sección Utilidad Proxy). En crédito es obligatoria para cerrar: sin ella la utilidad que se comparte queda mal.
               </div>
@@ -1294,7 +1343,7 @@ const defaultDocs = [
                 </div>
                 {/* La comisión también se puede cargar acá: es el mismo dato que en Utilidad Proxy,
                     para no obligar a cancelar el cierre e ir a buscarlo a otra sección. */}
-                {(pe === "cc" || pe === "ci") && (
+                {!calc.esFlota && (pe === "cc" || pe === "ci") && (
                   <div style={{marginBottom:10}}>
                     <div style={{fontSize:13,color:C.muted,marginBottom:4}}>Comisión Crédito (obligatoria en {PL[pe]})</div>
                     <input type="number" inputMode="numeric" value={comisionCredito} onChange={e=>setComisionCredito(e.target.value)}
