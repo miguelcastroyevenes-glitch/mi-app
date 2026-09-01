@@ -34,89 +34,86 @@ const SCRIPT_URL = ""; // ← Pegar URL del Apps Script desplegado
 const CATALOGO_LOCAL = {
   Peugeot: {
     Pasajeros: [
-      {familia:"208 MCA",modelo:"208 MCA Style Gasolina 100hp MT",cit:"PG9239E60823S00-7",pl:18490000,margen:0.09,tmp:{bono:1400000,aporteRed:462250,aporteSte:937750,precio:17090000},cc:{bono:1500000,aporteRed:462250,aporteSte:937750,aporteFin:100000,precio:16990000},ci:{bono:5300000,aporteRed:462250,aporteSte:937750,aporteFin:3900000,precio:13190000},store:{adic:500000,lcdv:["1PP2A5HL6KJR2PG0003"],tmp:{bono:1900000,aporteRed:462250,aporteSte:1437750,precio:16590000},cc:{bono:2000000,aporteRed:462250,aporteSte:1437750,aporteFin:100000,precio:16490000},ci:{bono:5800000,aporteRed:462250,aporteSte:1437750,aporteFin:3900000,precio:12690000}}},
-      {familia:"208 MCA",modelo:"208 MCA Allure Hybrid 136hp AT",cit:"PG9496E60524S00-9",pl:23990000,margen:0.09,tmp:{bono:2400000,aporteRed:599750,aporteSte:1800250,precio:21590000},cc:{bono:2500000,aporteRed:599750,aporteSte:1800250,aporteFin:100000,precio:21490000},ci:{bono:4800000,aporteRed:599750,aporteSte:1800250,aporteFin:2400000,precio:19190000}},
-      {familia:"208 MCA",modelo:"208 MCA GT Electric",cit:"PG9495EL0424S00-1",pl:26590000,margen:0.09,tmp:{bono:1900000,aporteRed:664750,aporteSte:1235250,precio:24690000},cc:{bono:2800000,aporteRed:664750,aporteSte:1235250,aporteFin:900000,precio:23790000},ci:{bono:4000000,aporteRed:664750,aporteSte:1235250,aporteFin:2100000,precio:22590000}},
-      {familia:"2008 MCA",modelo:"2008 MCA Style Hybrid 136hp AT",cit:"PG9562E60724S00-5",pl:23190000,margen:0.09,tmp:{bono:3400000,aporteRed:579750,aporteSte:2820250,precio:19790000},cc:{bono:5300000,aporteRed:579750,aporteSte:2820250,aporteFin:1900000,precio:17890000},ci:{bono:6200000,aporteRed:579750,aporteSte:2820250,aporteFin:2800000,precio:16990000}},
-      {familia:"2008 MCA",modelo:"2008 MCA Allure Hybrid 136hp AT",cit:"PG9562E60724S00-5",pl:25290000,margen:0.09,tmp:{bono:4000000,aporteRed:632250,aporteSte:3367750,precio:21290000},cc:{bono:5400000,aporteRed:632250,aporteSte:3367750,aporteFin:1400000,precio:19890000},ci:{bono:6300000,aporteRed:632250,aporteSte:3367750,aporteFin:2300000,precio:18990000}},
-      {familia:"2008 MCA",modelo:"2008 MCA GT Hybrid 136hp AT",cit:"PG9562E60724S00-5",pl:28590000,margen:0.09,tmp:{bono:3800000,aporteRed:714750,aporteSte:3085250,precio:24790000},cc:{bono:5700000,aporteRed:714750,aporteSte:3085250,aporteFin:1900000,precio:22890000},ci:{bono:6600000,aporteRed:714750,aporteSte:3085250,aporteFin:2800000,precio:21990000}},
-      {familia:"2008 MCA",modelo:"2008 MCA GT Electric",cit:"PG9306EL1023S00-3",pl:29590000,margen:0.09,tmp:{bono:1900000,aporteRed:739750,aporteSte:1160250,precio:27690000},cc:{bono:2800000,aporteRed:739750,aporteSte:1160250,aporteFin:900000,precio:26790000},ci:{bono:4000000,aporteRed:739750,aporteSte:1160250,aporteFin:2100000,precio:25590000}},
-      {familia:"308",modelo:"308 Allure Gasolina 130hp AT",cit:"PG8206E60422S00-7",pl:23790000,margen:0.09,tmp:{bono:2500000,aporteRed:594750,aporteSte:1905250,precio:21290000},cc:{bono:2900000,aporteRed:594750,aporteSte:1905250,aporteFin:400000,precio:20890000},ci:{bono:3800000,aporteRed:594750,aporteSte:1905250,aporteFin:1300000,precio:19990000},store:{adic:2000000,lcdv:["1PP5A5PNP1J0A0D2000"],tmp:{bono:4500000,aporteRed:594750,aporteSte:3905250,precio:19290000},cc:{bono:4900000,aporteRed:594750,aporteSte:3905250,aporteFin:400000,precio:18890000},ci:{bono:5800000,aporteRed:594750,aporteSte:3905250,aporteFin:1300000,precio:17990000}}},
-      {familia:"308",modelo:"308 Allure Hybrid 136hp AT",cit:"PG9717E61124S00-0",pl:28290000,margen:0.09,tmp:{bono:4000000,aporteRed:707250,aporteSte:3292750,precio:24290000},cc:{bono:4400000,aporteRed:707250,aporteSte:3292750,aporteFin:400000,precio:23890000},ci:{bono:5300000,aporteRed:707250,aporteSte:3292750,aporteFin:1300000,precio:22990000},store:{adic:2000000,lcdv:["1PP5A5PJHWJ0A0E0013"],tmp:{bono:6000000,aporteRed:707250,aporteSte:5292750,precio:22290000},cc:{bono:6400000,aporteRed:707250,aporteSte:5292750,aporteFin:400000,precio:21890000},ci:{bono:7300000,aporteRed:707250,aporteSte:5292750,aporteFin:1300000,precio:20990000}}},
-      {familia:"308",modelo:"308 GT Gasolina 130hp AT",cit:"PG8206E60422S00-7",pl:27290000,margen:0.09,tmp:{bono:2300000,aporteRed:682250,aporteSte:1617750,precio:24990000},cc:{bono:2700000,aporteRed:682250,aporteSte:1617750,aporteFin:400000,precio:24590000},ci:{bono:3600000,aporteRed:682250,aporteSte:1617750,aporteFin:1300000,precio:23690000},store:{adic:2000000,lcdv:["1PP5A5TNP1J0A0C2009"],tmp:{bono:4300000,aporteRed:682250,aporteSte:3617750,precio:22990000},cc:{bono:4700000,aporteRed:682250,aporteSte:3617750,aporteFin:400000,precio:22590000},ci:{bono:5600000,aporteRed:682250,aporteSte:3617750,aporteFin:1300000,precio:21690000}}},
-      {familia:"308",modelo:"308 GT Hybrid 136hp AT",cit:"PG9717E61124S00-0",pl:31790000,margen:0.09,tmp:{bono:4000000,aporteRed:794750,aporteSte:3205250,precio:27790000},cc:{bono:4400000,aporteRed:794750,aporteSte:3205250,aporteFin:400000,precio:27390000},ci:{bono:5300000,aporteRed:794750,aporteSte:3205250,aporteFin:1300000,precio:26490000},store:{adic:2000000,lcdv:["1PP5A5TJHWJ0A0E0003"],tmp:{bono:6000000,aporteRed:794750,aporteSte:5205250,precio:25790000},cc:{bono:6400000,aporteRed:794750,aporteSte:5205250,aporteFin:400000,precio:25390000},ci:{bono:7300000,aporteRed:794750,aporteSte:5205250,aporteFin:1300000,precio:24490000}}},
-      {familia:"3008",modelo:"3008 Active Pack Gasolina 130hp MT",cit:"PG8056E60620S00-9",pl:25290000,margen:0.09,tmp:{bono:4300000,aporteRed:632250,aporteSte:3667750,precio:20990000},cc:{bono:4700000,aporteRed:632250,aporteSte:3667750,aporteFin:400000,precio:20590000},ci:{bono:5600000,aporteRed:632250,aporteSte:3667750,aporteFin:1300000,precio:19690000},store:{adic:2000000,lcdv:["1PP8SYLNPKJMA0E2132"],tmp:{bono:6300000,aporteRed:632250,aporteSte:5667750,precio:18990000},cc:{bono:6700000,aporteRed:632250,aporteSte:5667750,aporteFin:400000,precio:18590000},ci:{bono:7600000,aporteRed:632250,aporteSte:5667750,aporteFin:1300000,precio:17690000}}},
-      {familia:"New 3008",modelo:"New 3008 Allure Hybrid 136hp AT",cit:"PG9589E60724S00-2",pl:30790000,margen:0.09,tmp:{bono:3800000,aporteRed:769750,aporteSte:3030250,precio:26990000},cc:{bono:5300000,aporteRed:769750,aporteSte:3030250,aporteFin:1500000,precio:25490000},ci:{bono:6300000,aporteRed:769750,aporteSte:3030250,aporteFin:2500000,precio:24490000},store:{adic:500000,lcdv:["1PPDSYRJH7NXA0C0000"],tmp:{bono:4300000,aporteRed:769750,aporteSte:3530250,precio:26490000},cc:{bono:5800000,aporteRed:769750,aporteSte:3530250,aporteFin:1500000,precio:24990000},ci:{bono:6800000,aporteRed:769750,aporteSte:3530250,aporteFin:2500000,precio:23990000}}},
-      {familia:"New 3008",modelo:"New 3008 GT Hybrid 136hp AT",cit:"PG9589E61224S02-2",pl:37290000,margen:0.09,tmp:{bono:5300000,aporteRed:932250,aporteSte:4367750,precio:31990000},cc:{bono:6800000,aporteRed:932250,aporteSte:4367750,aporteFin:1500000,precio:30490000},ci:{bono:7800000,aporteRed:932250,aporteSte:4367750,aporteFin:2500000,precio:29490000}},
-      {familia:"New 5008",modelo:"New 5008 Allure Hybrid 136hp AT",cit:"PG9682E61024S00-2",pl:33290000,margen:0.09,tmp:{bono:4800000,aporteRed:832250,aporteSte:3967750,precio:28490000},cc:{bono:6300000,aporteRed:832250,aporteSte:3967750,aporteFin:1500000,precio:26990000},ci:{bono:7300000,aporteRed:832250,aporteSte:3967750,aporteFin:2500000,precio:25990000}},
-      {familia:"New 5008",modelo:"New 5008 GT Hybrid 136hp AT",cit:"PG9682E61024S00-2",pl:39790000,margen:0.09,tmp:{bono:5800000,aporteRed:994750,aporteSte:4805250,precio:33990000},cc:{bono:7300000,aporteRed:994750,aporteSte:4805250,aporteFin:1500000,precio:32490000},ci:{bono:8300000,aporteRed:994750,aporteSte:4805250,aporteFin:2500000,precio:31490000}},
-      {familia:"RIFTER MCA",modelo:"Rifter MCA Allure Diesel 100hp MT",cit:"PG9511E60524S00-9",pl:24590000,margen:0.09,tmp:{bono:1800000,aporteRed:614750,aporteSte:1185250,precio:22790000},cc:{bono:2100000,aporteRed:614750,aporteSte:1185250,aporteFin:300000,precio:22490000},ci:{bono:2400000,aporteRed:614750,aporteSte:1185250,aporteFin:600000,precio:22190000}},
-      {familia:"RIFTER MCA",modelo:"Rifter MCA Allure Gasolina 130hp AT",cit:"PG9596E60724S00-0",pl:22090000,margen:0.09,tmp:{bono:1800000,aporteRed:552250,aporteSte:1247750,precio:20290000},cc:{bono:2100000,aporteRed:552250,aporteSte:1247750,aporteFin:300000,precio:19990000},ci:{bono:2400000,aporteRed:552250,aporteSte:1247750,aporteFin:600000,precio:19690000}},
-      {familia:"RIFTER MCA",modelo:"Rifter MCA Allure Diesel 130hp AT",cit:"PG9514E60524S00-5",pl:26390000,margen:0.09,tmp:{bono:2300000,aporteRed:659750,aporteSte:1640250,precio:24090000},cc:{bono:2600000,aporteRed:659750,aporteSte:1640250,aporteFin:300000,precio:23790000},ci:{bono:2900000,aporteRed:659750,aporteSte:1640250,aporteFin:600000,precio:23490000}},
-      {familia:"RIFTER MCA",modelo:"Rifter MCA GT Diesel 130hp AT",cit:"PG9514E60725S01-8",pl:29790000,margen:0.09,tmp:{bono:3200000,aporteRed:744750,aporteSte:2455250,precio:26590000},cc:{bono:3500000,aporteRed:744750,aporteSte:2455250,aporteFin:300000,precio:26290000},ci:{bono:3800000,aporteRed:744750,aporteSte:2455250,aporteFin:600000,precio:25990000}},
+    {familia:"208 MCA",modelo:"208 MCA Style Gasolina 100hp MT",cit:"PG9239E60823S00-7",pl:18490000,margen:0.09,tmp:{bono:3500000,aporteRed:462250,aporteSte:3037750,precio:14990000},cc:{bono:4000000,aporteRed:462250,aporteSte:3037750,aporteFin:500000,precio:14490000},ci:{bono:5000000,aporteRed:462250,aporteSte:3037750,aporteFin:1500000,precio:13490000}},
+    {familia:"208 MCA",modelo:"208 MCA Allure Hybrid 136hp AT",cit:"PG9496E60524S00-9",pl:23990000,margen:0.09,tmp:{bono:3000000,aporteRed:599750,aporteSte:2400250,precio:20990000},cc:{bono:3500000,aporteRed:599750,aporteSte:2400250,aporteFin:500000,precio:20490000},ci:{bono:4500000,aporteRed:599750,aporteSte:2400250,aporteFin:1500000,precio:19490000}},
+    {familia:"208 MCA",modelo:"208 MCA GT Electric",cit:"PG9495EL0424S00-1",pl:26590000,margen:0.09,tmp:{bono:2500000,aporteRed:664750,aporteSte:1835250,precio:24090000},cc:{bono:3000000,aporteRed:664750,aporteSte:1835250,aporteFin:500000,precio:23590000},ci:{bono:4000000,aporteRed:664750,aporteSte:1835250,aporteFin:1500000,precio:22590000}},
+    {familia:"2008 MCA",modelo:"2008 MCA Style Hybrid 136hp AT",cit:"PG9562E60724S00-5",pl:23190000,margen:0.09,tmp:{bono:3900000,aporteRed:579750,aporteSte:3320250,precio:19290000},cc:{bono:4900000,aporteRed:579750,aporteSte:3320250,aporteFin:1000000,precio:18290000},ci:{bono:5900000,aporteRed:579750,aporteSte:3320250,aporteFin:2000000,precio:17290000}},
+    {familia:"2008 MCA",modelo:"2008 MCA Allure Hybrid 136hp AT",cit:"PG9562E60724S00-5",pl:25290000,margen:0.09,tmp:{bono:4000000,aporteRed:632250,aporteSte:3367750,precio:21290000},cc:{bono:5000000,aporteRed:632250,aporteSte:3367750,aporteFin:1000000,precio:20290000},ci:{bono:6000000,aporteRed:632250,aporteSte:3367750,aporteFin:2000000,precio:19290000}},
+    {familia:"2008 MCA",modelo:"2008 MCA GT Hybrid 136hp AT",cit:"PG9562E60724S00-5",pl:28590000,margen:0.09,tmp:{bono:4300000,aporteRed:714750,aporteSte:3585250,precio:24290000},cc:{bono:5300000,aporteRed:714750,aporteSte:3585250,aporteFin:1000000,precio:23290000},ci:{bono:6300000,aporteRed:714750,aporteSte:3585250,aporteFin:2000000,precio:22290000}},
+    {familia:"2008 MCA",modelo:"2008 MCA GT Electric",cit:"PG9306EL1023S00-3",pl:29590000,margen:0.09,tmp:{bono:2000000,aporteRed:739750,aporteSte:1260250,precio:27590000},cc:{bono:3000000,aporteRed:739750,aporteSte:1260250,aporteFin:1000000,precio:26590000},ci:{bono:4000000,aporteRed:739750,aporteSte:1260250,aporteFin:2000000,precio:25590000}},
+    {familia:"308",modelo:"308 Allure Gasolina 130hp AT",cit:"PG8206E60422S00-7",pl:23790000,margen:0.09,tmp:{bono:2800000,aporteRed:594750,aporteSte:2205250,precio:20990000},cc:{bono:3300000,aporteRed:594750,aporteSte:2205250,aporteFin:500000,precio:20490000},ci:{bono:3800000,aporteRed:594750,aporteSte:2205250,aporteFin:1000000,precio:19990000}},
+    {familia:"308",modelo:"308 Allure Hybrid 136hp AT",cit:"PG9717E61124S00-0",pl:28290000,margen:0.09,tmp:{bono:3300000,aporteRed:707250,aporteSte:2592750,precio:24990000},cc:{bono:3800000,aporteRed:707250,aporteSte:2592750,aporteFin:500000,precio:24490000},ci:{bono:4300000,aporteRed:707250,aporteSte:2592750,aporteFin:1000000,precio:23990000}},
+    {familia:"308",modelo:"308 GT Gasolina 130hp AT",cit:"PG8206E60422S00-7",pl:27290000,margen:0.09,tmp:{bono:2600000,aporteRed:682250,aporteSte:1917750,precio:24690000},cc:{bono:3100000,aporteRed:682250,aporteSte:1917750,aporteFin:500000,precio:24190000},ci:{bono:3600000,aporteRed:682250,aporteSte:1917750,aporteFin:1000000,precio:23690000}},
+    {familia:"308",modelo:"308 GT Hybrid 136hp AT",cit:"PG9717E61124S00-0",pl:31790000,margen:0.09,tmp:{bono:3300000,aporteRed:794750,aporteSte:2505250,precio:28490000},cc:{bono:3800000,aporteRed:794750,aporteSte:2505250,aporteFin:500000,precio:27990000},ci:{bono:4300000,aporteRed:794750,aporteSte:2505250,aporteFin:1000000,precio:27490000}},
+    {familia:"3008",modelo:"3008 Active Pack Gasolina 130hp MT",cit:"PG8056E60620S00-9",pl:25290000,margen:0.09,tmp:{bono:4600000,aporteRed:632250,aporteSte:3967750,precio:20690000},cc:{bono:5100000,aporteRed:632250,aporteSte:3967750,aporteFin:500000,precio:20190000},ci:{bono:5600000,aporteRed:632250,aporteSte:3967750,aporteFin:1000000,precio:19690000}},
+    {familia:"New 3008",modelo:"New 3008 Allure Hybrid 136hp AT",cit:"PG9589E60724S00-2",pl:30790000,margen:0.09,tmp:{bono:3800000,aporteRed:769750,aporteSte:3030250,precio:26990000},cc:{bono:4800000,aporteRed:769750,aporteSte:3030250,aporteFin:1000000,precio:25990000},ci:{bono:5800000,aporteRed:769750,aporteSte:3030250,aporteFin:2000000,precio:24990000}},
+    {familia:"New 3008",modelo:"New 3008 GT Hybrid 136hp AT",cit:"PG9589E61224S02-2",pl:37290000,margen:0.09,tmp:{bono:5300000,aporteRed:932250,aporteSte:4367750,precio:31990000},cc:{bono:6300000,aporteRed:932250,aporteSte:4367750,aporteFin:1000000,precio:30990000},ci:{bono:7300000,aporteRed:932250,aporteSte:4367750,aporteFin:2000000,precio:29990000}},
+    {familia:"New 5008",modelo:"New 5008 Allure Hybrid 136hp AT",cit:"PG9682E61024S00-2",pl:33290000,margen:0.09,tmp:{bono:4800000,aporteRed:832250,aporteSte:3967750,precio:28490000},cc:{bono:5800000,aporteRed:832250,aporteSte:3967750,aporteFin:1000000,precio:27490000},ci:{bono:6800000,aporteRed:832250,aporteSte:3967750,aporteFin:2000000,precio:26490000}},
+    {familia:"New 5008",modelo:"New 5008 GT Hybrid 136hp AT",cit:"PG9682E61024S00-2",pl:39790000,margen:0.09,tmp:{bono:5800000,aporteRed:994750,aporteSte:4805250,precio:33990000},cc:{bono:6800000,aporteRed:994750,aporteSte:4805250,aporteFin:1000000,precio:32990000},ci:{bono:7800000,aporteRed:994750,aporteSte:4805250,aporteFin:2000000,precio:31990000}},
+    {familia:"RIFTER MCA",modelo:"Rifter MCA Allure Diesel 100hp MT",cit:"PG9511E60524S00-9",pl:24590000,margen:0.09,tmp:{bono:1100000,aporteRed:550000,aporteSte:550000,precio:23490000},cc:{bono:1600000,aporteRed:550000,aporteSte:550000,aporteFin:500000,precio:22990000},ci:{bono:2100000,aporteRed:550000,aporteSte:550000,aporteFin:1000000,precio:22490000}},
+    {familia:"RIFTER MCA",modelo:"Rifter MCA Allure Gasolina 130hp AT",cit:"PG9596E60724S00-0",pl:22090000,margen:0.09,tmp:{bono:1400000,aporteRed:552250,aporteSte:847750,precio:20690000},cc:{bono:1900000,aporteRed:552250,aporteSte:847750,aporteFin:500000,precio:20190000},ci:{bono:2400000,aporteRed:552250,aporteSte:847750,aporteFin:1000000,precio:19690000}},
+    {familia:"RIFTER MCA",modelo:"Rifter MCA Allure Diesel 130hp AT",cit:"PG9514E60524S00-5",pl:26390000,margen:0.09,tmp:{bono:1600000,aporteRed:659750,aporteSte:940250,precio:24790000},cc:{bono:2100000,aporteRed:659750,aporteSte:940250,aporteFin:500000,precio:24290000},ci:{bono:2600000,aporteRed:659750,aporteSte:940250,aporteFin:1000000,precio:23790000}},
+    {familia:"RIFTER MCA",modelo:"Rifter MCA GT Diesel 130hp AT",cit:"PG9514E60725S01-8",pl:29790000,margen:0.09,tmp:{bono:2500000,aporteRed:744750,aporteSte:1755250,precio:27290000},cc:{bono:3000000,aporteRed:744750,aporteSte:1755250,aporteFin:500000,precio:26790000},ci:{bono:3500000,aporteRed:744750,aporteSte:1755250,aporteFin:1000000,precio:26290000}}
     ],
     Comerciales: [
-      {familia:"PARTNER MCA",modelo:"Partner MCA L1 Diesel 100hp MT",cit:"PG9508E60524S01-6",pl:23312100,margen:0.1,tmp:{bono:2380000,aporteRed:489750,aporteSte:1510250,precio:20932100},cc:{bono:2975000,aporteRed:489750,aporteSte:1510250,aporteFin:500000,precio:20337100},ci:null},
-      {familia:"PARTNER MCA",modelo:"Partner MCA L2 Diesel 100hp MT",cit:"PG9508E60524S00-2",pl:24264100,margen:0.1,tmp:{bono:2380000,aporteRed:509750,aporteSte:1490250,precio:21884100},cc:{bono:2975000,aporteRed:509750,aporteSte:1490250,aporteFin:500000,precio:21289100},ci:null},
-      {familia:"EXPERT MCA",modelo:"Expert MCA L3 Diesel 145hp MT",cit:"PG9683E61024M00-6",pl:32118100,margen:0.1,tmp:{bono:4760000,aporteRed:674750,aporteSte:3325250,precio:27358100},cc:{bono:5355000,aporteRed:674750,aporteSte:3325250,aporteFin:500000,precio:26763100},ci:null},
-      {familia:"TRAVELLER MCA",modelo:"New Traveller MCA L3 8P Diesel 180hp AT",cit:"PG9610E60824M00-2",pl:36997100,margen:0.1,tmp:{bono:5593000,aporteRed:777250,aporteSte:3922750,precio:31404100},cc:{bono:6188000,aporteRed:777250,aporteSte:3922750,aporteFin:500000,precio:30809100},ci:null},
-      {familia:"TRAVELLER MCA",modelo:"New Traveller MCA L3 9P Diesel 180hp AT",cit:"PG9610E60824M01-6",pl:37711100,margen:0.1,tmp:{bono:5593000,aporteRed:792250,aporteSte:3907750,precio:32118100},cc:{bono:6188000,aporteRed:792250,aporteSte:3907750,aporteFin:500000,precio:31523100},ci:null},
-      {familia:"BOXER MCA",modelo:"Boxer MCA Furgón  L2H2 Diesel 140hp MT",cit:"PG9962E60525M03-1",pl:37354100,margen:0.1,tmp:{bono:5117000,aporteRed:784750,aporteSte:3515250,precio:32237100},cc:{bono:6188000,aporteRed:784750,aporteSte:3515250,aporteFin:900000,precio:31166100},ci:null},
-      {familia:"BOXER MCA",modelo:"Boxer MCA Furgón  L3H2 Diesel 140hp MT",cit:"PG9962E60525M02-8",pl:38663100,margen:0.1,tmp:{bono:4760000,aporteRed:812250,aporteSte:3187750,precio:33903100},cc:{bono:5831000,aporteRed:812250,aporteSte:3187750,aporteFin:900000,precio:32832100},ci:null},
-      {familia:"BOXER MCA",modelo:"Boxer MCA Furgón L4H2 Diesel 140hp MT",cit:"PG9962E60525M00-0",pl:39853100,margen:0.1,tmp:{bono:4046000,aporteRed:837250,aporteSte:2562750,precio:35807100},cc:{bono:5117000,aporteRed:837250,aporteSte:2562750,aporteFin:900000,precio:34736100},ci:null},
-      {familia:"BOXER MCA",modelo:"Boxer MCA Cabina L3 Diesel 140hp MT",cit:"PG10094E60725M00-0",pl:35212100,margen:0.1,tmp:{bono:5712000,aporteRed:739750,aporteSte:4060250,precio:29500100},cc:{bono:6307000,aporteRed:739750,aporteSte:4060250,aporteFin:500000,precio:28905100},ci:null},
-      {familia:"LANDTREK MCA",modelo:"Landtrek MCA Action4 Diesel 200hp 4x4 AT",cit:"PG9878E60325M00-6",pl:37830100,margen:0.1,tmp:{bono:9163000,aporteRed:794750,aporteSte:6905250,precio:28667100},cc:{bono:9758000,aporteRed:794750,aporteSte:6905250,aporteFin:500000,precio:28072100},ci:{bono:10710000,aporteRed:794750,aporteSte:6905250,aporteFin:1300000,precio:27120100},store:{adic:952000,lcdv:["2PKPEKQO0DNXA030000"],tmp:{bono:10115000,aporteRed:794750,aporteSte:7705250,precio:27715100},cc:{bono:10710000,aporteRed:794750,aporteSte:7705250,aporteFin:500000,precio:27120100},ci:{bono:11662000,aporteRed:794750,aporteSte:7705250,aporteFin:1300000,precio:26168100}}},
-    ],
+    {familia:"PARTNER MCA",modelo:"Partner MCA L1 Diesel 100hp MT",cit:"PG9508E60524S01-6",pl:23312100,margen:0.1,tmp:{bono:2142000,aporteRed:489750,aporteSte:1310250,precio:21170100},cc:{bono:2737000,aporteRed:489750,aporteSte:1310250,aporteFin:500000,precio:20575100},ci:null,b2b:{plSinIva:19590000,margenFijo:0.1,t1:{pct:0.11,precio:17435100,redProf:0.035,redNoProf:0.045},t2:{pct:0.15,precio:16651500,redProf:0.055,redNoProf:0.065},gc:{pct:0.23,precio:15084300,redProf:0.08,redNoProf:0.08}}},
+    {familia:"PARTNER MCA",modelo:"Partner MCA L2 Diesel 100hp MT",cit:"PG9508E60524S00-2",pl:24264100,margen:0.1,tmp:{bono:2142000,aporteRed:509750,aporteSte:1290250,precio:22122100},cc:{bono:2737000,aporteRed:509750,aporteSte:1290250,aporteFin:500000,precio:21527100},ci:null,b2b:{plSinIva:20390000,margenFijo:0.1,t1:{pct:0.11,precio:18147100,redProf:0.035,redNoProf:0.045},t2:{pct:0.15,precio:17331500,redProf:0.055,redNoProf:0.065},gc:{pct:0.23,precio:15700300,redProf:0.08,redNoProf:0.08}}},
+    {familia:"EXPERT MCA",modelo:"Expert MCA L3 Diesel 145hp MT",cit:"PG9683E61024M00-6",pl:32118100,margen:0.1,tmp:{bono:4165000,aporteRed:674750,aporteSte:2825250,precio:27953100},cc:{bono:4760000,aporteRed:674750,aporteSte:2825250,aporteFin:500000,precio:27358100},ci:null,b2b:{plSinIva:26990000,margenFijo:0.1,t1:{pct:0.14,precio:23211400,redProf:0.035,redNoProf:0.045},t2:{pct:0.17,precio:22401700,redProf:0.055,redNoProf:0.065},gc:{pct:0.19,precio:21861900,redProf:0.07,redNoProf:0.07}}},
+    {familia:"TRAVELLER MCA",modelo:"Traveller MCA L3 8P Diesel 180hp AT",cit:"PG9610E60824M00-2",pl:36997100,margen:0.1,tmp:{bono:4998000,aporteRed:777250,aporteSte:3422750,precio:31999100},cc:{bono:5593000,aporteRed:777250,aporteSte:3422750,aporteFin:500000,precio:31404100},ci:null,b2b:{plSinIva:31090000,margenFijo:0.1,t1:{pct:0.14,precio:26737400,redProf:0.035,redNoProf:0.045},t2:{pct:0.17,precio:25804700,redProf:0.055,redNoProf:0.065},gc:{pct:0.19,precio:25182900,redProf:0.07,redNoProf:0.07}}},
+    {familia:"TRAVELLER MCA",modelo:"Traveller MCA L3 9P Diesel 180hp AT",cit:"PG9610E60824M01-6",pl:37711100,margen:0.1,tmp:{bono:4998000,aporteRed:792250,aporteSte:3407750,precio:32713100},cc:{bono:5593000,aporteRed:792250,aporteSte:3407750,aporteFin:500000,precio:32118100},ci:null,b2b:{plSinIva:31690000,margenFijo:0.1,t1:{pct:0.14,precio:27253400,redProf:0.035,redNoProf:0.045},t2:{pct:0.17,precio:26302700,redProf:0.055,redNoProf:0.065},gc:{pct:0.19,precio:25668900,redProf:0.07,redNoProf:0.07}}},
+    {familia:"BOXER MCA",modelo:"Boxer MCA Furgón L2H2 Diesel 140hp MT",cit:"PG9962E60525M03-1",pl:37354100,margen:0.1,tmp:{bono:4522000,aporteRed:784750,aporteSte:3015250,precio:32832100},cc:{bono:5593000,aporteRed:784750,aporteSte:3015250,aporteFin:900000,precio:31761100},ci:null,b2b:{plSinIva:31390000,margenFijo:0.1,t1:{pct:0.15,precio:26681500,redProf:0.035,redNoProf:0.045},t2:{pct:0.17,precio:26053700,redProf:0.055,redNoProf:0.065},gc:{pct:0.21,precio:24798100,redProf:0.07,redNoProf:0.07}}},
+    {familia:"BOXER MCA",modelo:"Boxer MCA Furgón L3H2 Diesel 140hp MT",cit:"PG9962E60525M02-8",pl:38663100,margen:0.1,tmp:{bono:4165000,aporteRed:812250,aporteSte:2687750,precio:34498100},cc:{bono:5236000,aporteRed:812250,aporteSte:2687750,aporteFin:900000,precio:33427100},ci:null,b2b:{plSinIva:32490000,margenFijo:0.1,t1:{pct:0.14,precio:27941400,redProf:0.035,redNoProf:0.045},t2:{pct:0.16,precio:27291600,redProf:0.055,redNoProf:0.065},gc:{pct:0.2,precio:25992000,redProf:0.07,redNoProf:0.07}}},
+    {familia:"BOXER MCA",modelo:"Boxer MCA Furgón L4H2 Diesel 140hp MT",cit:"PG9962E60525M00-0",pl:39853100,margen:0.1,tmp:{bono:3451000,aporteRed:837250,aporteSte:2062750,precio:36402100},cc:{bono:4522000,aporteRed:837250,aporteSte:2062750,aporteFin:900000,precio:35331100},ci:null,b2b:{plSinIva:33490000,margenFijo:0.1,t1:{pct:0.12,precio:29471200,redProf:0.035,redNoProf:0.045},t2:{pct:0.14,precio:28801400,redProf:0.055,redNoProf:0.065},gc:{pct:0.18,precio:27461800.000000004,redProf:0.07,redNoProf:0.07}}},
+    {familia:"BOXER MCA",modelo:"Boxer MCA Cabina L3 Diesel 140hp MT",cit:"PG10094E60725M00-0",pl:35212100,margen:0.1,tmp:{bono:5117000,aporteRed:739750,aporteSte:3560250,precio:30095100},cc:{bono:5712000,aporteRed:739750,aporteSte:3560250,aporteFin:500000,precio:29500100},ci:null,b2b:{plSinIva:29590000,margenFijo:0.1,t1:{pct:0.16,precio:24855600,redProf:0.035,redNoProf:0.045},t2:{pct:0.19,precio:23967900,redProf:0.055,redNoProf:0.065},gc:{pct:0.23,precio:22784300,redProf:0.07,redNoProf:0.07}}},
+    {familia:"LANDTREK MCA",modelo:"Landtrek MCA Action4 Diesel 200hp 4x4 AT",cit:"PG9878E60325M00-6",pl:37830100,margen:0.1,tmp:{bono:8330000,aporteRed:794750,aporteSte:6205250,precio:29500100},cc:{bono:9520000,aporteRed:794750,aporteSte:6205250,aporteFin:1000000,precio:28310100},ci:{bono:10115000,aporteRed:794750,aporteSte:6205250,aporteFin:1500000,precio:27715100},store:{adic:800000,lcdv:["2PKPEKQO0DNXA030000"],tmp:{bono:9282000,aporteRed:794750,aporteSte:7005250,precio:28548100},cc:{bono:10472000,aporteRed:794750,aporteSte:7005250,aporteFin:1000000,precio:27358100},ci:{bono:11067000,aporteRed:794750,aporteSte:7005250,aporteFin:1500000,precio:26763100}},b2b:{plSinIva:31790000,margenFijo:0.1,t1:{pct:0.26,precio:23524600,redProf:0.035,redNoProf:0.045},t2:{pct:0.29,precio:22570900,redProf:0.055,redNoProf:0.065},gc:{pct:0.33,precio:21299299.999999996,redProf:0.07,redNoProf:0.07}}}
+    ]
   },
   "Citroën": {
     Pasajeros: [
-      {familia:"C3",modelo:"C3 Live Pack Gasolina 82HP MT",cit:"CT8669E60622S01-7",pl:12890000,margen:0.09,tmp:{bono:1400000,aporteRed:322250,aporteSte:1077750,precio:11490000},cc:{bono:3200000,aporteRed:322250,aporteSte:1077750,aporteFin:1800000,precio:9690000},ci:{bono:4200000,aporteRed:322250,aporteSte:1077750,aporteFin:2800000,precio:8690000}},
-      {familia:"C3",modelo:"C3 Live Pack Gasolina 96HP MT",cit:"CT10477E60326S02-0",pl:12890000,margen:0.09,tmp:{bono:1600000,aporteRed:322250,aporteSte:1277750,precio:11290000},cc:{bono:2900000,aporteRed:322250,aporteSte:1277750,aporteFin:1300000,precio:9990000},ci:{bono:3900000,aporteRed:322250,aporteSte:1277750,aporteFin:2300000,precio:8990000}},
-      {familia:"C3",modelo:"C3 Feel Gasolina 82HP MT",cit:"CT8669E60622S01-7",pl:13690000,margen:0.09,tmp:{bono:1500000,aporteRed:342250,aporteSte:1157750,precio:12190000},cc:{bono:3300000,aporteRed:342250,aporteSte:1157750,aporteFin:1800000,precio:10390000},ci:{bono:4300000,aporteRed:342250,aporteSte:1157750,aporteFin:2800000,precio:9390000}},
-      {familia:"C3",modelo:"C3 Feel Gasolina 96HP MT",cit:"CT10477E60326S00-1",pl:13690000,margen:0.09,tmp:{bono:1500000,aporteRed:342250,aporteSte:1157750,precio:12190000},cc:{bono:2900000,aporteRed:342250,aporteSte:1157750,aporteFin:1400000,precio:10790000},ci:{bono:3900000,aporteRed:342250,aporteSte:1157750,aporteFin:2400000,precio:9790000}},
-      {familia:"C3",modelo:"C3 YOU Turbo 125HP AT",cit:"CT9651T3C0924S00-8",pl:16590000,margen:0.09,tmp:{bono:900000,aporteRed:414750,aporteSte:485250,precio:15690000},cc:{bono:2600000,aporteRed:414750,aporteSte:485250,aporteFin:1700000,precio:13990000},ci:{bono:3600000,aporteRed:414750,aporteSte:485250,aporteFin:2700000,precio:12990000}},
-      {familia:"BASALT",modelo:"Basalt Shine Turbo 125HP AT",cit:"CT9692T3C1024S00-0",pl:15690000,margen:0.09,tmp:{bono:700000,aporteRed:350000,aporteSte:350000,precio:14990000},cc:{bono:1200000,aporteRed:350000,aporteSte:350000,aporteFin:500000,precio:14490000},ci:{bono:1700000,aporteRed:350000,aporteSte:350000,aporteFin:1000000,precio:13990000},store:{adic:1500000,lcdv:["1CSFA5KV2ZNXA0B0209"],tmp:{bono:2200000,aporteRed:392250,aporteSte:1807750,precio:13490000},cc:{bono:2700000,aporteRed:392250,aporteSte:1807750,aporteFin:500000,precio:12990000},ci:{bono:3200000,aporteRed:392250,aporteSte:1807750,aporteFin:1000000,precio:12490000}}},
-      {familia:"C4 MCA",modelo:"C4 Plus Hybrid 136HP AT",cit:"CT9861E60225S00-6",pl:24590000,margen:0.09,tmp:{bono:2100000,aporteRed:614750,aporteSte:1485250,precio:22490000},cc:{bono:2900000,aporteRed:614750,aporteSte:1485250,aporteFin:800000,precio:21690000},ci:{bono:3400000,aporteRed:614750,aporteSte:1485250,aporteFin:1300000,precio:21190000},store:{adic:500000,lcdv:["1CLEA5KJHWJRA050209"],tmp:{bono:2600000,aporteRed:614750,aporteSte:1985250,precio:21990000},cc:{bono:3400000,aporteRed:614750,aporteSte:1985250,aporteFin:800000,precio:21190000},ci:{bono:3900000,aporteRed:614750,aporteSte:1985250,aporteFin:1300000,precio:20690000}}},
-      {familia:"C4 MCA",modelo:"C4 Max Hybrid 136HP AT",cit:"CT9861E60225S00-6",pl:26590000,margen:0.09,tmp:{bono:2100000,aporteRed:664750,aporteSte:1435250,precio:24490000},cc:{bono:2900000,aporteRed:664750,aporteSte:1435250,aporteFin:800000,precio:23690000},ci:{bono:3400000,aporteRed:664750,aporteSte:1435250,aporteFin:1300000,precio:23190000}},
-      {familia:"NEW C3 Aircross",modelo:"C3 Aircross Feel Pack 5P Gasolina 115HP MT",cit:"CT9422E60124S00-9",pl:16190000,margen:0.09,tmp:{bono:1500000,aporteRed:404750,aporteSte:1095250,precio:14690000},cc:{bono:2800000,aporteRed:404750,aporteSte:1095250,aporteFin:1300000,precio:13390000},ci:{bono:3400000,aporteRed:404750,aporteSte:1095250,aporteFin:1900000,precio:12790000},store:{adic:1500000,lcdv:["1CSLSUEEF5J0A0B2202"],tmp:{bono:3000000,aporteRed:404750,aporteSte:2595250,precio:13190000},cc:{bono:4300000,aporteRed:404750,aporteSte:2595250,aporteFin:1300000,precio:11890000},ci:{bono:4900000,aporteRed:404750,aporteSte:2595250,aporteFin:1900000,precio:11290000}}},
-      {familia:"NEW C3 Aircross",modelo:"C3 Aircross Feel Pack 5P Gasolina 96HP MT",cit:"CT10492E60326S01-5",pl:16190000,margen:0.09,tmp:{bono:1100000,aporteRed:404750,aporteSte:695250,precio:15090000},cc:{bono:2000000,aporteRed:404750,aporteSte:695250,aporteFin:900000,precio:14190000},ci:{bono:2600000,aporteRed:404750,aporteSte:695250,aporteFin:1500000,precio:13590000}},
-      {familia:"NEW C3 Aircross",modelo:"C3 Aircross Feel Pack 7P Gasolina 115HP MT",cit:"CT9422E60225S01-2",pl:17290000,margen:0.09,tmp:{bono:1500000,aporteRed:432250,aporteSte:1067750,precio:15790000},cc:{bono:3300000,aporteRed:432250,aporteSte:1067750,aporteFin:1800000,precio:13990000},ci:{bono:4000000,aporteRed:432250,aporteSte:1067750,aporteFin:2500000,precio:13290000},store:{adic:1500000,lcdv:["1CSLSUEEF5J0A0B2201"],tmp:{bono:3000000,aporteRed:432250,aporteSte:2567750,precio:14290000},cc:{bono:4800000,aporteRed:432250,aporteSte:2567750,aporteFin:1800000,precio:12490000},ci:{bono:5500000,aporteRed:432250,aporteSte:2567750,aporteFin:2500000,precio:11790000}}},
-      {familia:"NEW C3 Aircross",modelo:"C3 Aircross Shine 5P Gasolina 115HP MT",cit:"CT9422E60124S00-9",pl:16790000,margen:0.09,tmp:{bono:1800000,aporteRed:419750,aporteSte:1380250,precio:14990000},cc:{bono:3100000,aporteRed:419750,aporteSte:1380250,aporteFin:1300000,precio:13690000},ci:{bono:3600000,aporteRed:419750,aporteSte:1380250,aporteFin:1800000,precio:13190000},store:{adic:1500000,lcdv:["1CSLSUHEF5J0A0B2203"],tmp:{bono:3300000,aporteRed:419750,aporteSte:2880250,precio:13490000},cc:{bono:4600000,aporteRed:419750,aporteSte:2880250,aporteFin:1300000,precio:12190000},ci:{bono:5100000,aporteRed:419750,aporteSte:2880250,aporteFin:1800000,precio:11690000}}},
-      {familia:"NEW C3 Aircross",modelo:"C3 Aircross Shine 5P Gasolina 96HP MT",cit:"CT10492E60326S00-0",pl:16790000,margen:0.09,tmp:{bono:1400000,aporteRed:419750,aporteSte:980250,precio:15390000},cc:{bono:2300000,aporteRed:419750,aporteSte:980250,aporteFin:900000,precio:14490000},ci:{bono:2800000,aporteRed:419750,aporteSte:980250,aporteFin:1400000,precio:13990000}},
-      {familia:"NEW C3 Aircross",modelo:"C3 Aircross Shine 5P Turbo 125HP AT",cit:"CT9573T3C0724S01-9",pl:19390000,margen:0.09,tmp:{bono:1700000,aporteRed:484750,aporteSte:1215250,precio:17690000},cc:{bono:2600000,aporteRed:484750,aporteSte:1215250,aporteFin:900000,precio:16790000},ci:{bono:3100000,aporteRed:484750,aporteSte:1215250,aporteFin:1400000,precio:16290000},store:{adic:1500000,lcdv:["1CSLSUHV2ZNXA0B3237"],tmp:{bono:3200000,aporteRed:484750,aporteSte:2715250,precio:16190000},cc:{bono:4100000,aporteRed:484750,aporteSte:2715250,aporteFin:900000,precio:15290000},ci:{bono:4600000,aporteRed:484750,aporteSte:2715250,aporteFin:1400000,precio:14790000}}},
-      {familia:"NEW C3 Aircross",modelo:"C3 Aircross Shine 7P Turbo 125HP AT",cit:"CT9573T3C0724S00-4",pl:20490000,margen:0.09,tmp:{bono:1700000,aporteRed:512250,aporteSte:1187750,precio:18790000},cc:{bono:3500000,aporteRed:512250,aporteSte:1187750,aporteFin:1800000,precio:16990000},ci:{bono:4200000,aporteRed:512250,aporteSte:1187750,aporteFin:2500000,precio:16290000},store:{adic:1500000,lcdv:["1CSLSUHV2ZNXA0B3241"],tmp:{bono:3200000,aporteRed:512250,aporteSte:2687750,precio:17290000},cc:{bono:5000000,aporteRed:512250,aporteSte:2687750,aporteFin:1800000,precio:15490000},ci:{bono:5700000,aporteRed:512250,aporteSte:2687750,aporteFin:2500000,precio:14790000}}},
-      {familia:"C5 Aircross",modelo:"C5 Aircross Feel Pack Diesel 130HP AT",cit:"CT8284E60421S00-1",pl:26990000,margen:0.09,tmp:{bono:1000000,aporteRed:500000,aporteSte:500000,precio:25990000},cc:{bono:1900000,aporteRed:500000,aporteSte:500000,aporteFin:900000,precio:25090000},ci:{bono:2300000,aporteRed:500000,aporteSte:500000,aporteFin:1300000,precio:24690000}},
-      {familia:"C5 Aircross",modelo:"C5 Aircross Shine Diesel 130HP AT",cit:"CT8284E60421S00-1",pl:30990000,margen:0.09,tmp:{bono:1000000,aporteRed:500000,aporteSte:500000,precio:29990000},cc:{bono:1900000,aporteRed:500000,aporteSte:500000,aporteFin:900000,precio:29090000},ci:{bono:2300000,aporteRed:500000,aporteSte:500000,aporteFin:1300000,precio:28690000},store:{adic:500000,lcdv:["1CCESYVMK1JRA070193"],tmp:{bono:1500000,aporteRed:750000,aporteSte:750000,precio:29490000},cc:{bono:2400000,aporteRed:750000,aporteSte:750000,aporteFin:900000,precio:28590000},ci:{bono:2800000,aporteRed:750000,aporteSte:750000,aporteFin:1300000,precio:28190000}}},
-      {familia:"BERLINGO MULTISPACE MCA",modelo:"Berlingo Multispace MCA XL5 Plus Diesel 100HP MT",cit:"CT9512E60625S01-8",pl:22590000,margen:0.09,tmp:{bono:2100000,aporteRed:564750,aporteSte:1535250,precio:20490000},cc:{bono:3200000,aporteRed:564750,aporteSte:1535250,aporteFin:1100000,precio:19390000},ci:{bono:3600000,aporteRed:564750,aporteSte:1535250,aporteFin:1500000,precio:18990000}},
-      {familia:"BERLINGO MULTISPACE MCA",modelo:"Berlingo Multispace MCA Plus XL Diesel 100HP MT",cit:"CT9512E60524S00-4",pl:23090000,margen:0.09,tmp:{bono:2100000,aporteRed:577250,aporteSte:1522750,precio:20990000},cc:{bono:3200000,aporteRed:577250,aporteSte:1522750,aporteFin:1100000,precio:19890000},ci:{bono:3600000,aporteRed:577250,aporteSte:1522750,aporteFin:1500000,precio:19490000}},
-      {familia:"BERLINGO MULTISPACE MCA",modelo:"Berlingo Multispace MCA Plus XL Diesel 130HP AT",cit:"CT9515E60524S00-0",pl:25090000,margen:0.09,tmp:{bono:2100000,aporteRed:627250,aporteSte:1472750,precio:22990000},cc:{bono:3200000,aporteRed:627250,aporteSte:1472750,aporteFin:1100000,precio:21890000},ci:{bono:3600000,aporteRed:627250,aporteSte:1472750,aporteFin:1500000,precio:21490000}},
+    {familia:"C3",modelo:"C3 Live Pack Gasolina 82HP MT",cit:"CT8669E60622S01-7",pl:12890000,margen:0.09,tmp:{bono:2200000,aporteRed:322250,aporteSte:1877750,precio:10690000},cc:{bono:3200000,aporteRed:322250,aporteSte:1877750,aporteFin:1000000,precio:9690000},ci:{bono:4200000,aporteRed:322250,aporteSte:1877750,aporteFin:2000000,precio:8690000}},
+    {familia:"C3",modelo:"C3 Live Pack Gasolina 96HP MT",cit:"CT10477E60326S02-0",pl:12890000,margen:0.09,tmp:{bono:1600000,aporteRed:322250,aporteSte:1277750,precio:11290000},cc:{bono:2600000,aporteRed:322250,aporteSte:1277750,aporteFin:1000000,precio:10290000},ci:{bono:3600000,aporteRed:322250,aporteSte:1277750,aporteFin:2000000,precio:9290000}},
+    {familia:"C3",modelo:"C3 Feel Gasolina 82HP MT",cit:"CT8669E60622S01-7",pl:13690000,margen:0.09,tmp:{bono:2300000,aporteRed:342250,aporteSte:1957750,precio:11390000},cc:{bono:3300000,aporteRed:342250,aporteSte:1957750,aporteFin:1000000,precio:10390000},ci:{bono:4300000,aporteRed:342250,aporteSte:1957750,aporteFin:2000000,precio:9390000}},
+    {familia:"C3",modelo:"C3 Feel Gasolina 96HP MT",cit:"CT10477E60326S00-1",pl:13690000,margen:0.09,tmp:{bono:1600000,aporteRed:342250,aporteSte:1257750,precio:12090000},cc:{bono:2600000,aporteRed:342250,aporteSte:1257750,aporteFin:1000000,precio:11090000},ci:{bono:3600000,aporteRed:342250,aporteSte:1257750,aporteFin:2000000,precio:10090000}},
+    {familia:"C3",modelo:"C3 YOU Turbo 125HP AT",cit:"CT9651T3C0924S00-8",pl:16590000,margen:0.09,tmp:{bono:1300000,aporteRed:414750,aporteSte:885250,precio:15290000},cc:{bono:2300000,aporteRed:414750,aporteSte:885250,aporteFin:1000000,precio:14290000},ci:{bono:3300000,aporteRed:414750,aporteSte:885250,aporteFin:2000000,precio:13290000}},
+    {familia:"BASALT",modelo:"Basalt Shine Turbo 125HP AT",cit:"CT9692T3C1024S00-0",pl:15690000,margen:0.09,tmp:{bono:700000,aporteRed:350000,aporteSte:350000,precio:14990000},cc:{bono:1200000,aporteRed:350000,aporteSte:350000,aporteFin:500000,precio:14490000},ci:{bono:1700000,aporteRed:350000,aporteSte:350000,aporteFin:1000000,precio:13990000},store:{adic:1500000,lcdv:["1CSFA5KV2ZNXA0B0209"],tmp:{bono:2200000,aporteRed:392250,aporteSte:1807750,precio:13490000},cc:{bono:2700000,aporteRed:392250,aporteSte:1807750,aporteFin:500000,precio:12990000},ci:{bono:3200000,aporteRed:392250,aporteSte:1807750,aporteFin:1000000,precio:12490000}}},
+    {familia:"C4 MCA",modelo:"C4 Plus Hybrid 136HP AT",cit:"CT9861E60225S00-6",pl:24590000,margen:0.09,tmp:{bono:1500000,aporteRed:614750,aporteSte:885250,precio:23090000},cc:{bono:2500000,aporteRed:614750,aporteSte:885250,aporteFin:1000000,precio:22090000},ci:{bono:3000000,aporteRed:614750,aporteSte:885250,aporteFin:1500000,precio:21590000},store:{adic:500000,lcdv:["1CLEA5KJHWJRA050209"],tmp:{bono:2000000,aporteRed:614750,aporteSte:1385250,precio:22590000},cc:{bono:3000000,aporteRed:614750,aporteSte:1385250,aporteFin:1000000,precio:21590000},ci:{bono:3500000,aporteRed:614750,aporteSte:1385250,aporteFin:1500000,precio:21090000}}},
+    {familia:"C4 MCA",modelo:"C4 Max Hybrid 136HP AT",cit:"CT9861E60225S00-6",pl:26590000,margen:0.09,tmp:{bono:1500000,aporteRed:664750,aporteSte:835250,precio:25090000},cc:{bono:2500000,aporteRed:664750,aporteSte:835250,aporteFin:1000000,precio:24090000},ci:{bono:3000000,aporteRed:664750,aporteSte:835250,aporteFin:1500000,precio:23590000}},
+    {familia:"C3 Aircross",modelo:"C3 Aircross Feel Pack 5P Gasolina 115HP MT",cit:"CT9422E60124S00-9",pl:16190000,margen:0.09,tmp:{bono:1900000,aporteRed:404750,aporteSte:1495250,precio:14290000},cc:{bono:2900000,aporteRed:404750,aporteSte:1495250,aporteFin:1000000,precio:13290000},ci:{bono:3400000,aporteRed:404750,aporteSte:1495250,aporteFin:1500000,precio:12790000},store:{adic:1500000,lcdv:["1CSLSUEEF5J0A0B2202"],tmp:{bono:3400000,aporteRed:404750,aporteSte:2995250,precio:12790000},cc:{bono:4400000,aporteRed:404750,aporteSte:2995250,aporteFin:1000000,precio:11790000},ci:{bono:4900000,aporteRed:404750,aporteSte:2995250,aporteFin:1500000,precio:11290000}}},
+    {familia:"C3 Aircross",modelo:"C3 Aircross Feel Pack 5P Gasolina 96HP MT",cit:"CT10492E60326S01-5",pl:16190000,margen:0.09,tmp:{bono:800000,aporteRed:400000,aporteSte:400000,precio:15390000},cc:{bono:1800000,aporteRed:400000,aporteSte:400000,aporteFin:1000000,precio:14390000},ci:{bono:2300000,aporteRed:400000,aporteSte:400000,aporteFin:1500000,precio:13890000}},
+    {familia:"C3 Aircross",modelo:"C3 Aircross Feel Pack 7P Gasolina 115HP MT",cit:"CT9422E60225S01-2",pl:17290000,margen:0.09,tmp:{bono:2500000,aporteRed:432250,aporteSte:2067750,precio:14790000},cc:{bono:3500000,aporteRed:432250,aporteSte:2067750,aporteFin:1000000,precio:13790000},ci:{bono:4000000,aporteRed:432250,aporteSte:2067750,aporteFin:1500000,precio:13290000},store:{adic:1500000,lcdv:["1CSLSUEEF5J0A0B2201"],tmp:{bono:4000000,aporteRed:432250,aporteSte:3567750,precio:13290000},cc:{bono:5000000,aporteRed:432250,aporteSte:3567750,aporteFin:1000000,precio:12290000},ci:{bono:5500000,aporteRed:432250,aporteSte:3567750,aporteFin:1500000,precio:11790000}}},
+    {familia:"C3 Aircross",modelo:"C3 Aircross Shine 5P Gasolina 115HP MT",cit:"CT9422E60124S00-9",pl:16790000,margen:0.09,tmp:{bono:2100000,aporteRed:419750,aporteSte:1680250,precio:14690000},cc:{bono:3100000,aporteRed:419750,aporteSte:1680250,aporteFin:1000000,precio:13690000},ci:{bono:3600000,aporteRed:419750,aporteSte:1680250,aporteFin:1500000,precio:13190000},store:{adic:1500000,lcdv:["1CSLSUHEF5J0A0B2203"],tmp:{bono:3600000,aporteRed:419750,aporteSte:3180250,precio:13190000},cc:{bono:4600000,aporteRed:419750,aporteSte:3180250,aporteFin:1000000,precio:12190000},ci:{bono:5100000,aporteRed:419750,aporteSte:3180250,aporteFin:1500000,precio:11690000}}},
+    {familia:"C3 Aircross",modelo:"C3 Aircross Shine 5P Gasolina 96HP MT",cit:"CT10492E60326S00-0",pl:16790000,margen:0.09,tmp:{bono:1000000,aporteRed:419750,aporteSte:580250,precio:15790000},cc:{bono:2000000,aporteRed:419750,aporteSte:580250,aporteFin:1000000,precio:14790000},ci:{bono:2500000,aporteRed:419750,aporteSte:580250,aporteFin:1500000,precio:14290000}},
+    {familia:"C3 Aircross",modelo:"C3 Aircross Shine 5P Turbo 125HP AT",cit:"CT9573T3C0724S01-9",pl:19390000,margen:0.09,tmp:{bono:1300000,aporteRed:484750,aporteSte:815250,precio:18090000},cc:{bono:2300000,aporteRed:484750,aporteSte:815250,aporteFin:1000000,precio:17090000},ci:{bono:2800000,aporteRed:484750,aporteSte:815250,aporteFin:1500000,precio:16590000},store:{adic:1500000,lcdv:["1CSLSUHV2ZNXA0B3237"],tmp:{bono:2800000,aporteRed:484750,aporteSte:2315250,precio:16590000},cc:{bono:3800000,aporteRed:484750,aporteSte:2315250,aporteFin:1000000,precio:15590000},ci:{bono:4300000,aporteRed:484750,aporteSte:2315250,aporteFin:1500000,precio:15090000}}},
+    {familia:"C3 Aircross",modelo:"C3 Aircross Shine 7P Turbo 125HP AT",cit:"CT9573T3C0724S00-4",pl:20490000,margen:0.09,tmp:{bono:2700000,aporteRed:512250,aporteSte:2187750,precio:17790000},cc:{bono:3700000,aporteRed:512250,aporteSte:2187750,aporteFin:1000000,precio:16790000},ci:{bono:4200000,aporteRed:512250,aporteSte:2187750,aporteFin:1500000,precio:16290000},store:{adic:1500000,lcdv:["1CSLSUHV2ZNXA0B3241"],tmp:{bono:4200000,aporteRed:512250,aporteSte:3687750,precio:16290000},cc:{bono:5200000,aporteRed:512250,aporteSte:3687750,aporteFin:1000000,precio:15290000},ci:{bono:5700000,aporteRed:512250,aporteSte:3687750,aporteFin:1500000,precio:14790000}}},
+    {familia:"C5 Aircross",modelo:"C5 Aircross Feel Pack Diesel 130HP AT",cit:"CT8284E60421S00-1",pl:26990000,margen:0.09,tmp:{bono:1300000,aporteRed:650000,aporteSte:650000,precio:25690000},cc:{bono:1800000,aporteRed:650000,aporteSte:650000,aporteFin:500000,precio:25190000},ci:{bono:2300000,aporteRed:650000,aporteSte:650000,aporteFin:1000000,precio:24690000}},
+    {familia:"C5 Aircross",modelo:"C5 Aircross Shine Diesel 130HP AT",cit:"CT8284E60421S00-1",pl:30990000,margen:0.09,tmp:{bono:1300000,aporteRed:650000,aporteSte:650000,precio:29690000},cc:{bono:1800000,aporteRed:650000,aporteSte:650000,aporteFin:500000,precio:29190000},ci:{bono:2300000,aporteRed:650000,aporteSte:650000,aporteFin:1000000,precio:28690000},store:{adic:500000,lcdv:["1CCESYVMK1JRA070193"],tmp:{bono:1800000,aporteRed:774750,aporteSte:1025250,precio:29190000},cc:{bono:2300000,aporteRed:774750,aporteSte:1025250,aporteFin:500000,precio:28690000},ci:{bono:2800000,aporteRed:774750,aporteSte:1025250,aporteFin:1000000,precio:28190000}}},
+    {familia:"BERLINGO MULTISPACE MCA",modelo:"Berlingo Multispace MCA XL5 Plus Diesel 100HP MT",cit:"CT9512E60625S01-8",pl:22590000,margen:0.09,tmp:{bono:2300000,aporteRed:564750,aporteSte:1735250,precio:20290000},cc:{bono:2800000,aporteRed:564750,aporteSte:1735250,aporteFin:500000,precio:19790000},ci:{bono:3300000,aporteRed:564750,aporteSte:1735250,aporteFin:1000000,precio:19290000}},
+    {familia:"BERLINGO MULTISPACE MCA",modelo:"Berlingo Multispace MCA Plus XL Diesel 100HP MT",cit:"CT9512E60524S00-4",pl:23090000,margen:0.09,tmp:{bono:2300000,aporteRed:577250,aporteSte:1722750,precio:20790000},cc:{bono:2800000,aporteRed:577250,aporteSte:1722750,aporteFin:500000,precio:20290000},ci:{bono:3300000,aporteRed:577250,aporteSte:1722750,aporteFin:1000000,precio:19790000}},
+    {familia:"BERLINGO MULTISPACE MCA",modelo:"Berlingo Multispace MCA Plus XL Diesel 130HP AT",cit:"CT9515E60524S00-0",pl:25090000,margen:0.09,tmp:{bono:2300000,aporteRed:627250,aporteSte:1672750,precio:22790000},cc:{bono:2800000,aporteRed:627250,aporteSte:1672750,aporteFin:500000,precio:22290000},ci:{bono:3300000,aporteRed:627250,aporteSte:1672750,aporteFin:1000000,precio:21790000}}
     ],
     Comerciales: [
-      {familia:"BERLINGO MCA",modelo:"Berlingo MCA M Diesel 100HP MT",cit:"CT9509E60524S01-1",pl:23074100,margen:0.1,tmp:{bono:2975000,aporteRed:484750,aporteSte:2015250,precio:20099100},cc:{bono:3570000,aporteRed:484750,aporteSte:2015250,aporteFin:500000,precio:19504100},ci:null},
-      {familia:"BERLINGO MCA",modelo:"Berlingo MCA XL Diesel 100HP MT",cit:"CT9509E60524S00-8",pl:24026100,margen:0.1,tmp:{bono:2975000,aporteRed:504750,aporteSte:1995250,precio:21051100},cc:{bono:3570000,aporteRed:504750,aporteSte:1995250,aporteFin:500000,precio:20456100},ci:null},
-      {familia:"JUMPY MCA",modelo:"Jumpy MCA XL Diesel 145HP MT",cit:"CT9684E61024M00-1",pl:31404100,margen:0.1,tmp:{bono:4760000,aporteRed:659750,aporteSte:3340250,precio:26644100},cc:{bono:5355000,aporteRed:659750,aporteSte:3340250,aporteFin:500000,precio:26049100},ci:null},
-      {familia:"SPACETOURER MCA",modelo:"Spacetourer MCA 8P Diesel 180HP AT",cit:"CT9611E60824M00-8",pl:36640100,margen:0.1,tmp:{bono:5593000,aporteRed:769750,aporteSte:3930250,precio:31047100},cc:{bono:6188000,aporteRed:769750,aporteSte:3930250,aporteFin:500000,precio:30452100},ci:null},
-      {familia:"SPACETOURER MCA",modelo:"Spacetourer MCA 9P Diesel 180HP AT",cit:"CT9611E60824M01-1",pl:36759100,margen:0.1,tmp:{bono:5593000,aporteRed:772250,aporteSte:3927750,precio:31166100},cc:{bono:6188000,aporteRed:772250,aporteSte:3927750,aporteFin:500000,precio:30571100},ci:null},
-      {familia:"JUMPER MCA",modelo:"Jumper MCA L2H2 Diesel 140HP MT",cit:"CT9964E60525M03-2",pl:36640100,margen:0.1,tmp:{bono:5593000,aporteRed:769750,aporteSte:3930250,precio:31047100},cc:{bono:6188000,aporteRed:769750,aporteSte:3930250,aporteFin:500000,precio:30452100},ci:null},
-      {familia:"JUMPER MCA",modelo:"Jumper MCA L3H2 Diesel 140HP MT",cit:"CT9964E60525M02-9",pl:37949100,margen:0.1,tmp:{bono:5236000,aporteRed:797250,aporteSte:3602750,precio:32713100},cc:{bono:5831000,aporteRed:797250,aporteSte:3602750,aporteFin:500000,precio:32118100},ci:null},
-      {familia:"JUMPER MCA",modelo:"Jumper MCA L4H2 Diesel 140HP MT",cit:"CT9964E60525M00-1",pl:39139100,margen:0.1,tmp:{bono:4522000,aporteRed:822250,aporteSte:2977750,precio:34617100},cc:{bono:5117000,aporteRed:822250,aporteSte:2977750,aporteFin:500000,precio:34022100},ci:null},
-    ],
-  },
+    {familia:"BERLINGO MCA",modelo:"Berlingo MCA M Diesel 100HP MT",cit:"CT9509E60524S01-1",pl:23074100,margen:0.1,tmp:{bono:2737000,aporteRed:484750,aporteSte:1815250,precio:20337100},cc:{bono:3332000,aporteRed:484750,aporteSte:1815250,aporteFin:500000,precio:19742100},ci:null,b2b:{plSinIva:19390000,margenFijo:0.1,t1:{pct:0.13,precio:16869300,redProf:0.035,redNoProf:0.045},t2:{pct:0.17,precio:16093700,redProf:0.055,redNoProf:0.065},gc:{pct:0.25,precio:14542500,redProf:0.07,redNoProf:0.07}}},
+    {familia:"BERLINGO MCA",modelo:"Berlingo MCA XL Diesel 100HP MT",cit:"CT9509E60524S00-8",pl:24026100,margen:0.1,tmp:{bono:2737000,aporteRed:504750,aporteSte:1795250,precio:21289100},cc:{bono:3332000,aporteRed:504750,aporteSte:1795250,aporteFin:500000,precio:20694100},ci:null,b2b:{plSinIva:20190000,margenFijo:0.1,t1:{pct:0.13,precio:17565300,redProf:0.035,redNoProf:0.045},t2:{pct:0.17,precio:16757700,redProf:0.055,redNoProf:0.065},gc:{pct:0.25,precio:15142500,redProf:0.07,redNoProf:0.07}}},
+    {familia:"JUMPY MCA",modelo:"Jumpy MCA XL Diesel 145HP MT",cit:"CT9684E61024M00-1",pl:31404100,margen:0.1,tmp:{bono:4284000,aporteRed:659750,aporteSte:2940250,precio:27120100},cc:{bono:4879000,aporteRed:659750,aporteSte:2940250,aporteFin:500000,precio:26525100},ci:null,b2b:{plSinIva:26390000,margenFijo:0.1,t1:{pct:0.15,precio:22431500,redProf:0.035,redNoProf:0.045},t2:{pct:0.18,precio:21639800,redProf:0.055,redNoProf:0.065},gc:{pct:0.2,precio:21112000,redProf:0.07,redNoProf:0.07}}},
+    {familia:"SPACETOURER MCA",modelo:"Spacetourer MCA 8P Diesel 180HP AT",cit:"CT9611E60824M00-8",pl:36640100,margen:0.1,tmp:{bono:5117000,aporteRed:769750,aporteSte:3530250,precio:31523100},cc:{bono:5712000,aporteRed:769750,aporteSte:3530250,aporteFin:500000,precio:30928100},ci:null,b2b:{plSinIva:30790000,margenFijo:0.1,t1:{pct:0.15,precio:26171500,redProf:0.035,redNoProf:0.045},t2:{pct:0.18,precio:25247800.000000004,redProf:0.055,redNoProf:0.065},gc:{pct:0.2,precio:24632000,redProf:0.07,redNoProf:0.07}}},
+    {familia:"SPACETOURER MCA",modelo:"Spacetourer MCA 9P Diesel 180HP AT",cit:"CT9611E60824M01-1",pl:36759100,margen:0.1,tmp:{bono:5117000,aporteRed:772250,aporteSte:3527750,precio:31642100},cc:{bono:5712000,aporteRed:772250,aporteSte:3527750,aporteFin:500000,precio:31047100},ci:null,b2b:{plSinIva:30890000,margenFijo:0.1,t1:{pct:0.15,precio:26256500,redProf:0.035,redNoProf:0.045},t2:{pct:0.18,precio:25329800.000000004,redProf:0.055,redNoProf:0.065},gc:{pct:0.2,precio:24712000,redProf:0.07,redNoProf:0.07}}},
+    {familia:"JUMPER MCA",modelo:"Jumper MCA L2H2 Diesel 140HP MT",cit:"CT9964E60525M03-2",pl:36640100,margen:0.1,tmp:{bono:4998000,aporteRed:769750,aporteSte:3430250,precio:31642100},cc:{bono:5593000,aporteRed:769750,aporteSte:3430250,aporteFin:500000,precio:31047100},ci:null,b2b:{plSinIva:30790000,margenFijo:0.1,t1:{pct:0.15,precio:26171500,redProf:0.035,redNoProf:0.045},t2:{pct:0.17,precio:25555700,redProf:0.055,redNoProf:0.065},gc:{pct:0.21,precio:24324100,redProf:0.07,redNoProf:0.07}}},
+    {familia:"JUMPER MCA",modelo:"Jumper MCA L3H2 Diesel 140HP MT",cit:"CT9964E60525M02-9",pl:37949100,margen:0.1,tmp:{bono:4641000,aporteRed:797250,aporteSte:3102750,precio:33308100},cc:{bono:5236000,aporteRed:797250,aporteSte:3102750,aporteFin:500000,precio:32713100},ci:null,b2b:{plSinIva:31890000,margenFijo:0.1,t1:{pct:0.14,precio:27425400,redProf:0.035,redNoProf:0.045},t2:{pct:0.16,precio:26787600,redProf:0.055,redNoProf:0.065},gc:{pct:0.2,precio:25512000,redProf:0.07,redNoProf:0.07}}},
+    {familia:"JUMPER MCA",modelo:"Jumper MCA L4H2 Diesel 140HP MT",cit:"CT9964E60525M00-1",pl:39139100,margen:0.1,tmp:{bono:3927000,aporteRed:822250,aporteSte:2477750,precio:35212100},cc:{bono:4522000,aporteRed:822250,aporteSte:2477750,aporteFin:500000,precio:34617100},ci:null,b2b:{plSinIva:32890000,margenFijo:0.1,t1:{pct:0.12,precio:28943200,redProf:0.035,redNoProf:0.045},t2:{pct:0.14,precio:28285400,redProf:0.055,redNoProf:0.065},gc:{pct:0.18,precio:26969800.000000004,redProf:0.07,redNoProf:0.07}}}
+    ]
+  }
 };
 
 const GASTOS_ROMA = 204500;
-const PUSH_VIN = {vigencia:"2026-08-23", data:{
-  "2008 MCA Allure Hybrid 136hp AT":[{v:"VR3USHPY6VJ009629",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY2VJ009630",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY4VJ009631",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY0VJ009626",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY6VJ009632",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY8VJ009633",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY7VJ009638",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY5VJ009637",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY2VJ009627",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY1VJ009649",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY8VJ009468",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY2VJ009403",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY5VJ009816",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY5VJ009685",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY4VJ010004",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:12},{v:"VR3USHPY3VJ009877",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY7VJ009011",m:800000,mk:400000,ce:400000,u:"IN COUNTRY",a:47},{v:"VR3USHPY0VJ009688",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14}],
-  "2008 MCA GT Hybrid 136hp AT":[{v:"VR3USHPYXVJ009911",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY0VJ010310",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:12}],
-  "2008 MCA Style Hybrid 136hp AT":[{v:"VR3USHPY0VJ009190",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY7VJ009199",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY8VJ009356",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY0VJ008167",m:800000,mk:400000,ce:400000,u:"IN COUNTRY",a:47},{v:"VR3USHPY4VJ008169",m:800000,mk:400000,ce:400000,u:"IN COUNTRY",a:47},{v:"VR3USHPY2VJ009787",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY0VJ009786",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:14},{v:"VR3USHPY0VJ008668",m:800000,mk:400000,ce:400000,u:"IN COUNTRY",a:47},{v:"VR3USHPY1VJ008680",m:800000,mk:400000,ce:400000,u:"IN COUNTRY",a:47},{v:"VR3USHPY3VJ008650",m:800000,mk:400000,ce:400000,u:"IN COUNTRY",a:47},{v:"VR3USHPY1VJ010445",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:12}],
-  "208 MCA Allure Hybrid 136hp AT":[{v:"VR3UPHPY1V4000076",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:118},{v:"VR3UPHPY2V5000078",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:43},{v:"VR3UPHPY7V5000058",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:74},{v:"VR3UPHPY9V5000059",m:800000,mk:400000,ce:400000,u:"IN COUNTRY",a:74},{v:"VR3UPHPY5V5000060",m:800000,mk:400000,ce:400000,u:"IN COUNTRY",a:74},{v:"VR3UPHPY2V5000064",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:43},{v:"VR3UPHPY5V5000091",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:74},{v:"VR3UPHPY9V5000093",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:74},{v:"VR3UPHPY5V5000088",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:74}],
-  "C4 Max Hybrid 136HP AT":[{v:"VR7BAHPY2TE001333",m:1200000,mk:600000,ce:600000,u:"GRIS MERCURY",a:null},{v:"VR7BAHPY6TE001304",m:1200000,mk:600000,ce:600000,u:"GRIS MERCURY",a:null},{v:"VR7BAHPY9TE001832",m:1200000,mk:600000,ce:600000,u:"NEGRO PERLA NERA",a:null},{v:"VR7BAHPY9VE000456",m:1200000,mk:600000,ce:600000,u:"GRIS MERCURY",a:null},{v:"VR7BAHPY3VE000453",m:1200000,mk:600000,ce:600000,u:"GRIS MERCURY",a:null}],
-  "C4 Plus Hybrid 136HP AT":[{v:"VR7BAHPY0TE000374",m:1200000,mk:600000,ce:600000,u:"BLANCO OKENITE",a:null},{v:"VR7BAHPY1TE000402",m:1200000,mk:600000,ce:600000,u:"GRIS MERCURY",a:null},{v:"VR7BAHPY3TE000420",m:1200000,mk:600000,ce:600000,u:"BLANCO OKENITE",a:null},{v:"VR7BAHPY5TE000418",m:1200000,mk:600000,ce:600000,u:"BLANCO OKENITE",a:null},{v:"VR7BAHPY1TE000478",m:1200000,mk:600000,ce:600000,u:"BLANCO OKENITE",a:null},{v:"VR7BAHPY6TE000461",m:1200000,mk:600000,ce:600000,u:"GRIS MERCURY",a:null}],
-  "New 3008 Allure Hybrid 136hp AT":[{v:"VR3KAHPY8VS001343",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:78},{v:"VR3KAHPYXVS001358",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:61},{v:"VR3KAHPY1VS001359",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:61},{v:"VR3KAHPY8VS001360",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:76},{v:"VR3KAHPYXVS001361",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:78},{v:"VR3KAHPY3VS001315",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:78},{v:"VR3KAHPYXVS001456",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:61},{v:"VR3KAHPY1VS001457",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:61},{v:"VR3KAHPY9VS002646",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:6},{v:"VR3KAHPY0VS002647",m:800000,mk:400000,ce:400000,u:"IN COUNTRY",a:5},{v:"VR3KAHPY8VS002718",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:61},{v:"VR3KAHPYXVS002719",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:61}],
-  "New 3008 GT Hybrid 136hp AT":[{v:"VR3KAHPY9VS002419",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:13},{v:"VR3KAHPY5VS002420",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:13},{v:"VR3KAHPY5VS003065",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY6VS003074",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY7VS003066",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY3VS003064",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY2VS003069",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY1VS003080",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY9VS003084",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY7VS003083",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY5VS003079",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY5VS003082",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY2VS003055",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY4VS003056",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY4VS002733",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY8VS002735",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPYXVS003966",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY7VS003973",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY8VS003979",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY6VS003978",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY4VS003980",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY6VS003981",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY2VS003976",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY4VS003977",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY1VS003953",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPY8VS003948",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0},{v:"VR3KAHPYXVS003949",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:0}],
-  "New 5008 Allure Hybrid 136hp AT":[{v:"VR3KAHPY1VS000163",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:153},{v:"VR3KAHPY5VS000182",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:153},{v:"VR3KAHPY9VS000234",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:61},{v:"VR3KAHPY0VS000235",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:61},{v:"VR3KAHPY6VS000241",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:61},{v:"VR3KAHPY6VS000658",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:61},{v:"VR3KAHPYXVS000808",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:61},{v:"VR3KAHPY1VS000812",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:96},{v:"VR3KAHPY5VS000800",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:103},{v:"VR3KAHPY7VS000829",m:700000,mk:350000,ce:350000,u:"DEALER STOCK",a:103}],
-  "New 5008 GT Hybrid 136hp AT":[{v:"VR3KAHPY1VS003743",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:6},{v:"VR3KAHPYXVS003711",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:6},{v:"VR3KAHPY4VS004028",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:6},{v:"VR3KAHPY0VS004026",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:6},{v:"VR3KAHPY9VS003991",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:4},{v:"VR3KAHPY4VS003607",m:1000000,mk:500000,ce:500000,u:"IN TRANSIT",a:4}],
-}};
+// Clasificacion del concesionario para VENTA FLOTA (B2B). El descuento que ve el cliente es
+// el mismo en "professional" y "no_professional" (verificado en las 38 comparaciones de la
+// lista de descuentos), pero cambia cuanto pone la casa: en no_professional el aporte RED es
+// 1 punto mayor, o sea queda 1 punto menos de margen. Cambiar aca si Pompeyo no es Professional.
+const CONCESIONARIO_B2B = "professional";
+// PUSH_VIN vacio: la campana de push por VIN vencio el 23-08-2026 y no hay uno nuevo.
+// Al quedar sin datos, el panel de push no se muestra y no bloquea el cierre. Para
+// reactivarlo el proximo mes basta con volver a llenar 'vigencia' y 'data'.
+const PUSH_VIN = {vigencia:"", data:{}};
 const PUSH_VIGENTE = (new Date().toISOString().slice(0,10) <= PUSH_VIN.vigencia);
 // ─── PROX_MES: comparativo de precio "Precio Desde" (CI/CC neto) del boletín Stellantis
 // Nº 09/1-2026 (vigente 1-6 sept) vs el catálogo de agosto embebido. Solo informativo para
@@ -181,9 +178,15 @@ const PROX_MES = {boletin:"Nº 09/1 - 2026", vigencia:"1 al 6 de septiembre 2026
   "Jumper MCA L3H2 Diesel 140HP MT":{ago:26990000,sept:27590000,delta:600000},
   "Jumper MCA L4H2 Diesel 140HP MT":{ago:28590000,sept:29190000,delta:600000},
 }};
-const APP_VERSION = "2026-08-19 · v11"; // ← actualizar cada vez que se sube una nueva versión
+const APP_VERSION = "2026-09-01 · v14"; // ← actualizar cada vez que se sube una nueva versión
 const fmt = (n) => "$" + Math.round(n).toLocaleString("es-CL");
 const pct = (n) => (n * 100).toFixed(1) + "%";
+// RUT chileno: se usa como llave para encontrar el deal despues, asi que se valida el
+// digito verificador al tipear. Un RUT mal escrito rompe la busqueda mas adelante.
+const limpiarRut = (v) => String(v||"").replace(/[^0-9kK]/g, "").toUpperCase();
+const dvRut = (cuerpo) => { let s=0,m=2; for(let i=cuerpo.length-1;i>=0;i--){s+=parseInt(cuerpo[i])*m;m=m===7?2:m+1;} const r=11-(s%11); return r===11?"0":r===10?"K":String(r); };
+const formatearRut = (v) => { const c=limpiarRut(v); if(c.length<2) return c; return c.slice(0,-1).replace(/\B(?=(\d{3})+(?!\d))/g,".")+"-"+c.slice(-1); };
+const rutValido = (v) => { const c=limpiarRut(v); if(c.length<8) return false; const b=c.slice(0,-1); return /^\d+$/.test(b) && dvRut(b)===c.slice(-1); };
 const parsePesos = (v) => { const s = String(v||"").replace(/\./g,"").replace(/,/g,""); return parseInt(s) || 0; };
 
 // ─── localStorage helpers ───────────────────────────────────────────────────
@@ -245,6 +248,9 @@ function DealFinal() {
   const [showUtil, setShowUtil] = useState(false);
   const [vendedor, setVendedor] = useState(lsGet("vendedor") || "");
   const [cliente, setCliente] = useState("");
+  const [rutCliente, setRutCliente] = useState("");
+  const [modoVenta, setModoVenta] = useState("retail"); // "retail" | "flota"
+  const [tramoFlota, setTramoFlota] = useState("t1");   // t1 | t2 | gc
   const [confirmCierre, setConfirmCierre] = useState(false);
   const [editingDealId, setEditingDealId] = useState(null);
   const [postCierreMsg, setPostCierreMsg] = useState(null);
@@ -254,17 +260,19 @@ function DealFinal() {
   const [pushDispoOk, setPushDispoOk] = useState(false);
 
   // Documentation items
-  const defaultDocs = [
+  // El Grabado se cotiza como accesorio, no como documento: viene cargado por defecto en
+// todos los deals y no se puede quitar.
+const ACC_FIJOS = [{id:900,nombre:"Grabado",monto:35000,fijo:true}];
+const defaultDocs = [
     {id:1,nombre:"SOAP",monto:18400,activo:true},
     {id:2,nombre:"Inscripción",monto:89560,activo:true},
     {id:3,nombre:"Trámite",monto:50000,activo:true},
     {id:4,nombre:"TAG",monto:15000,activo:true},
-    {id:5,nombre:"GRAB",monto:35000,activo:true},
     {id:6,nombre:"Permiso Circulación",monto:0,activo:true},
     {id:7,nombre:"Impuesto Verde",monto:0,activo:true},
   ];
   const [docItems, setDocItems] = useState(defaultDocs);
-  const [accItems, setAccItems] = useState([]);
+  const [accItems, setAccItems] = useState(ACC_FIJOS.map(a=>({...a})));
   const [newAccNombre, setNewAccNombre] = useState("");
   const [newAccMonto, setNewAccMonto] = useState("");
 
@@ -327,13 +335,17 @@ function DealFinal() {
     const descPompeyoPct = auto.pl > 0 ? descNum / auto.pl : 0;
     const bonoZonalNum = parsePesos(bonoZonal);
     const aporteRedPesos = fp.aporteRed || 0;
-    const cePct = auto.pl > 0 ? aporteRedPesos / auto.pl : 0;
-    const totalDadoPct = descPompeyoPct + cePct;
     // Cada aporte se muestra SIEMPRE con IVA incluido (comerciales: los aportes vienen netos del
     // catalogo, se multiplican x1.19; pasajeros: ya vienen con IVA, no se tocan). Aporte
     // Stellantis absorbe el resto para que la suma cuadre siempre exacto con fp.bono (evita
     // descuadres de $1 por redondeo independiente en cada linea).
     const aporteRedConIva = esCom ? Math.round(aporteRedPesos * 1.19) : aporteRedPesos;
+    // El % de CE se calcula contra el precio lista, que SIEMPRE viene con IVA. Por eso hay que
+    // usar el aporte con IVA: en comerciales el aporte del catalogo es neto y dividirlo directo
+    // por el precio lista subestimaba el CE en ~0.40 puntos (2.10% en vez del tope real 2.5%),
+    // lo que ademas impedia que saltara la alerta amarilla del 4% de total dado.
+    const cePct = auto.pl > 0 ? aporteRedConIva / auto.pl : 0;
+    const totalDadoPct = descPompeyoPct + cePct;
     const aporteFinConIva = esCom ? Math.round((fp.aporteFin||0) * 1.19) : (fp.aporteFin||0);
     const aporteSteConIva = esCom ? (fp.bono - aporteRedConIva - aporteFinConIva) : (fp.aporteSte||0);
     const precioAuto = auto.pl - fp.bono - descNum - bonoZonalNum;
@@ -345,6 +357,23 @@ function DealFinal() {
     const margenDisponible = margenBruto - aporteRedConIva;
     const margenNetoAuto = margenDisponible - descNum;
     const margenNeto = margenNetoAuto - GASTOS_ROMA;
+    // ─── VENTA FLOTA (B2B) ───────────────────────────────────────────────────
+    // Base de calculo distinta a retail: parte del precio lista SIN IVA y le aplica el % del
+    // tramo por volumen. No hay bono ni CE. Lo que le queda a la casa es el margen fijo menos
+    // su propio aporte (RED). Los valores del catalogo b2b vienen todos netos.
+    const esFlota = modoVenta === "flota";
+    const b2b = auto.b2b || null;
+    const trFlota = (esFlota && b2b && b2b[tramoFlota]) ? b2b[tramoFlota] : null;
+    const redFlota = trFlota ? (CONCESIONARIO_B2B === "professional" ? trFlota.redProf : trFlota.redNoProf) : 0;
+    const precioFlotaNeto = trFlota ? trFlota.precio : 0;
+    const precioFlotaConIva = trFlota ? Math.round(trFlota.precio * 1.19) : 0;
+    const descFlotaPesos = (trFlota && b2b) ? (b2b.plSinIva - trFlota.precio) : 0;
+    const margenFlotaPct = (trFlota && b2b) ? (b2b.margenFijo - redFlota) : 0;
+    const margenFlotaPesos = (trFlota && b2b) ? Math.round(b2b.plSinIva * margenFlotaPct) : 0;
+
+    const precioAutoFinal = (esFlota && trFlota) ? precioFlotaConIva : precioAuto;
+    const totalClienteFinal = precioAutoFinal + totalDoc + totalAcc;
+
     const comCredNum = parsePesos(comisionCredito);
     const utilidadProxy = margenNeto + comCredNum;
     const utilidadPct = auto.pl > 0 ? utilidadProxy / auto.pl : 0;
@@ -357,8 +386,13 @@ function DealFinal() {
     return { fp, esCom, descNum, descPompeyoPct, totalDadoPct, cePct, maxDescPesos, bonoZonalNum,
       aporteRedConIva, aporteSteConIva, aporteFinConIva, precioAuto, precioNeto, totalDoc, totalAcc, totalCliente,
       margenBruto, aporteRedPesos, margenDisponible, margenNetoAuto, margenNeto,
-      comCredNum, utilidadProxy, utilidadPct, alertaDesc, utilColor, utilIcon };
-  }, [auto, pe, descPesos, bonoZonal, docItems, accItems, comisionCredito, tipo]);
+      comCredNum, utilidadProxy, utilidadPct, alertaDesc, utilColor, utilIcon,
+      esFlota, b2b, trFlota, redFlota, precioFlotaNeto, precioFlotaConIva,
+      descFlotaPesos, margenFlotaPct, margenFlotaPesos,
+      // Lo que efectivamente paga el cliente. En flota es el precio del tramo llevado a IVA;
+      // en retail es el de siempre. Nunca se suman los dos.
+      precioAutoFinal, totalClienteFinal };
+  }, [auto, pe, descPesos, bonoZonal, docItems, accItems, comisionCredito, tipo, modoVenta, tramoFlota]);
 
   // ─── Actions ───
   const mc = marca === "Peugeot" ? C.peugeot : marca === "Citroën" ? C.citroen : C.accent;
@@ -366,7 +400,7 @@ function DealFinal() {
   const resetCalc = useCallback(() => {
     setMarca(null);setTipo(null);setMIdx(null);setPago("tmp");
     setDescPesos("");setBonoZonal("");setComisionCredito("");
-    setShowUtil(false);setAccItems([]);setCliente("");setConfirmCierre(false);
+    setShowUtil(false);setAccItems(ACC_FIJOS.map(a=>({...a})));setCliente("");setRutCliente("");setModoVenta("retail");setTramoFlota("t1");setConfirmCierre(false);
     setDocItems(defaultDocs.map(d=>({...d})));
     setEditingDealId(null);setPushVin("");setPushDispoOk(false);
   }, []);
@@ -394,8 +428,11 @@ function DealFinal() {
     setBonoZonal(deal.bonoZonal ? String(deal.bonoZonal) : "");
     setComisionCredito(deal.comisionCredito ? String(deal.comisionCredito) : "");
     setDocItems(deal.docItems ? deal.docItems.map(d=>({...d})) : defaultDocs.map(d=>({...d})));
-    setAccItems(deal.accItems ? deal.accItems.map(a=>({...a})) : []);
+    setAccItems(deal.accItems && deal.accItems.length ? deal.accItems.map(a=>({...a})) : ACC_FIJOS.map(a=>({...a})));
     setCliente(deal.cliente || "");
+    setRutCliente(deal.rutCliente || "");
+    setModoVenta(deal.modoVenta || "retail");
+    setTramoFlota(deal.tramoFlota || "t1");
     setPushVin(deal.pushVin || "");
     setPushDispoOk(deal.pushVin ? true : false);
     setShowUtil(false);
@@ -418,7 +455,7 @@ function DealFinal() {
     setAccItems(a=>[...a,{id:uid(),nombre:newAccNombre.trim(),monto:parsePesos(newAccMonto)}]);
     setNewAccNombre("");setNewAccMonto("");
   };
-  const removeAcc = (id) => setAccItems(a=>a.filter(x=>x.id!==id));
+  const removeAcc = (id) => setAccItems(a=>a.filter(x=>x.id!==id || x.fijo));
   const updateAccMonto = (id,v) => setAccItems(a=>a.map(x=>x.id===id?{...x,monto:parsePesos(v)}:x));
 
   // ─── Compartir: usa el share nativo del celular; si no está disponible, copia al portapapeles ───
@@ -453,9 +490,28 @@ function DealFinal() {
     L.push(`Fecha: ${deal.fecha}${deal.editado ? " (editado)" : ""}`);
     L.push(`Vendedor: ${deal.vendedor}`);
     L.push(`Cliente: ${deal.cliente}`);
+    if (deal.rutCliente) L.push(`RUT: ${deal.rutCliente}`);
     L.push("");
     L.push(`Modelo: ${deal.modelo}`);
     L.push(`CIT: ${deal.cit}`);
+    // Un deal de flota se lee distinto: no tiene bono ni descuento Pompeyo, y el precio
+    // de referencia es neto. El resumen que se comparte tiene que decirlo desde arriba.
+    const esFlotaDeal = deal.modoVenta === "flota";
+    if (esFlotaDeal) {
+      const TR = {t1:"Tramo 1 (1 a 5 un.)", t2:"Tramo 2 (6 a 99 un.)", gc:"Grandes Cuentas (+100 un.)"};
+      L.push(`VENTA FLOTA (B2B) · ${TR[deal.tramoFlota] || deal.tramoFlota}`);
+      L.push("");
+      L.push("--- PRECIO FLOTA (la lista B2B va SIN IVA) ---");
+      L.push(`Precio flota NETO: ${fmt(deal.precioFlotaNeto)}`);
+      L.push(`Equivalente con IVA: ${fmt(deal.precioFlotaConIva)}`);
+      L.push("");
+      L.push(`Documentación: ${fmt(deal.totalDoc)}`);
+      if (deal.totalAcc > 0) L.push(`Accesorios: ${fmt(deal.totalAcc)}`);
+      L.push(`TOTAL CLIENTE (con IVA): ${fmt(deal.totalCliente)}`);
+      L.push("");
+      L.push(`Código: ${code}`);
+      return L.join("\n");
+    }
     L.push(`Forma de pago: ${deal.formaPago}`);
     L.push("");
     L.push("--- BONO ---" + (deal.esCom ? " (con IVA)" : ""));
@@ -490,8 +546,13 @@ function DealFinal() {
   };
 
   // ─── Cerrar (o actualizar) Deal ───
+  // Para cerrar hacen falta: vendedor, nombre, RUT valido y — si es credito — la comision.
+  const comisionOk = !(pe === "cc" || pe === "ci") || !!comisionCredito;
+  const puedeCerrar = !!cliente.trim() && !!vendedor.trim() && rutValido(rutCliente) && comisionOk;
+
   const cerrarDeal = () => {
     if (!auto || !calc) return;
+    if (!puedeCerrar) return;
     const prevDeal = editingDealId ? (deals.find(d=>d.id===editingDealId) || {}) : {};
     const deal = {
       ...prevDeal,
@@ -499,12 +560,16 @@ function DealFinal() {
       fecha: prevDeal.fecha || new Date().toLocaleDateString("es-CL"),
       editado: !!editingDealId,
       fechaEdicion: editingDealId ? new Date().toLocaleDateString("es-CL") : (prevDeal.fechaEdicion || null),
-      vendedor, cliente, marca, tipo, modelo: auto.modelo, cit: auto.cit,
+      vendedor, cliente, rutCliente, marca, tipo, modelo: auto.modelo, cit: auto.cit,
+      modoVenta, tramoFlota: calc.esFlota ? tramoFlota : null,
+      precioFlotaNeto: calc.esFlota ? calc.precioFlotaNeto : 0,
+      precioFlotaConIva: calc.esFlota ? calc.precioFlotaConIva : 0,
       formaPago: PL[pe], pagoKey: pe, precioLista: auto.pl, bonoTotal: calc.fp.bono,
       descPompeyo: calc.descNum, descPompeyoPct: calc.descPompeyoPct, cePct: calc.cePct,
       totalDadoPct: calc.totalDadoPct, bonoZonal: calc.bonoZonalNum,
-      precioAuto: calc.precioAuto, totalDoc: calc.totalDoc,
-      totalAcc: calc.totalAcc, totalCliente: calc.totalCliente,
+      precioAuto: calc.precioAutoFinal, totalDoc: calc.totalDoc,
+      totalAcc: calc.totalAcc, totalCliente: calc.totalClienteFinal,
+      precioAutoRetail: calc.precioAuto,
       utilidadProxy: calc.utilidadProxy, utilidadPct: calc.utilidadPct,
       margenNeto: calc.margenNeto, comisionCredito: calc.comCredNum,
       esCom: calc.esCom, aporteRed: calc.aporteRedConIva, aporteSte: calc.aporteSteConIva,
@@ -542,8 +607,9 @@ function DealFinal() {
   const deleteDeal = (id) => { lsDeleteDeal(id); setDeals(lsGetDeals()); };
 
   const copyRegistro = () => {
-    const header = "Fecha\tVendedor\tCliente\tModelo\tPago\tPrecio Lista\tBono\tDesc\tZonal\tPrecio Auto\tDoc\tAcc\tTotal Cliente";
-    const rows = deals.map(d=>`${d.fecha}\t${d.vendedor}\t${d.cliente}\t${d.modelo}\t${d.formaPago}\t${d.precioLista}\t${d.bonoTotal}\t${d.descPompeyo}\t${d.bonoZonal}\t${d.precioAuto}\t${d.totalDoc}\t${d.totalAcc}\t${d.totalCliente}`);
+    // Se agregan RUT, modo y tramo para poder cruzar el registro con otras planillas.
+    const header = "Fecha\tVendedor\tCliente\tRUT\tModelo\tModo\tTramo\tPago\tPrecio Lista\tBono\tDesc\tZonal\tPrecio Auto\tDoc\tAcc\tTotal Cliente";
+    const rows = deals.map(d=>`${d.fecha}\t${d.vendedor}\t${d.cliente}\t${d.rutCliente||""}\t${d.modelo}\t${d.modoVenta==="flota"?"Flota":"Retail"}\t${d.tramoFlota?String(d.tramoFlota).toUpperCase():""}\t${d.modoVenta==="flota"?"":d.formaPago}\t${d.precioLista}\t${d.bonoTotal}\t${d.descPompeyo}\t${d.bonoZonal}\t${d.precioAuto}\t${d.totalDoc}\t${d.totalAcc}\t${d.totalCliente}`);
     navigator.clipboard.writeText(header+"\n"+rows.join("\n"))
       .then(()=>{ setCopyMsg("✅ Copiado"); setTimeout(()=>setCopyMsg(""),2000); })
       .catch(()=>{ setCopyMsg("❌ Error"); setTimeout(()=>setCopyMsg(""),2000); });
@@ -569,8 +635,13 @@ function DealFinal() {
         <div>
           <div style={{fontSize:17,fontWeight:700,letterSpacing:"-0.02em"}}>Deal Final</div>
           <div style={{fontSize:11,opacity:0.6}}>
-            {view==="calc" && auto ? auto.modelo : view==="calc" && marca ? `${marca} · ${tipo||""}` : `Catálogo ${catSource} · ${modelCount} modelos · ${APP_VERSION}`}
+            {view==="calc" && auto ? auto.modelo : view==="calc" && marca ? `${marca} · ${tipo||""}` : `Catálogo ${catSource} · ${modelCount} modelos`}
           </div>
+          {/* La version y la fecha de actualizacion se muestran SIEMPRE, en todas las vistas.
+              Antes solo aparecian en el inicio y se perdian al entrar a un modelo, que es
+              justo cuando el vendedor necesita poder confirmar que no quedo con la version
+              vieja en cache del celular. */}
+          <div style={{fontSize:10,opacity:0.45,letterSpacing:"0.02em"}}>{APP_VERSION}</div>
         </div>
         <div style={{display:"flex",gap:8}}>
           {view !== "home" && <div onClick={goHome} style={{cursor:"pointer",fontSize:12,opacity:0.8,padding:"5px 10px",border:"1px solid rgba(255,255,255,.3)",borderRadius:6}}>Inicio</div>}
@@ -661,8 +732,13 @@ function DealFinal() {
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
                   <div>
                     <div style={{fontSize:13,fontWeight:700}}>{d.modelo}</div>
-                    <div style={{fontSize:11,color:C.muted}}>{d.fecha}{d.editado?" (editado)":""} · {d.vendedor} · {d.cliente}</div>
-                    <div style={{fontSize:12,marginTop:4}}>{d.formaPago} · Total: <b>{fmt(d.totalCliente)}</b></div>
+                    <div style={{fontSize:11,color:C.muted}}>{d.fecha}{d.editado?" (editado)":""} · {d.vendedor} · {d.cliente}{d.rutCliente?" · "+d.rutCliente:""}</div>
+                    {/* Un deal de flota no tiene forma de pago: rotularlo "TMP" confunde. */}
+                    <div style={{fontSize:12,marginTop:4}}>
+                      {d.modoVenta === "flota"
+                        ? <span style={{fontWeight:700,color:mc}}>🚚 Flota {String(d.tramoFlota||"").toUpperCase()}</span>
+                        : d.formaPago} · Total: <b>{fmt(d.totalCliente)}</b>
+                    </div>
                   </div>
                   <div onClick={(e)=>{e.stopPropagation();deleteDeal(d.id);}} style={{cursor:"pointer",fontSize:16,color:C.red,padding:"0 4px"}}>×</div>
                 </div>
@@ -731,7 +807,7 @@ function DealFinal() {
               <div key={fam} style={{marginBottom:12}}>
                 <div style={{fontSize:11,fontWeight:700,color:mc,marginBottom:4,textTransform:"uppercase",letterSpacing:"0.04em"}}>{fam}</div>
                 {items.map(m=>(
-                  <div key={m.idx} onClick={()=>{setMIdx(m.idx);setPago("tmp");setDescPesos("");setBonoZonal("");setComisionCredito("");setAccItems([]);setShowUtil(false);setConfirmCierre(false);setPushVin("");setPushDispoOk(false);}}
+                  <div key={m.idx} onClick={()=>{setMIdx(m.idx);setPago("tmp");setDescPesos("");setBonoZonal("");setComisionCredito("");setAccItems(ACC_FIJOS.map(a=>({...a})));setShowUtil(false);setConfirmCierre(false);setPushVin("");setPushDispoOk(false);}}
                     style={{padding:"10px 14px",borderRadius:8,border:"1px solid "+C.border,background:C.card,marginBottom:5,cursor:"pointer"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
                       <div style={{fontSize:13,fontWeight:600}}>{m.modelo.replace(m.familia+" ","")}</div>
@@ -779,9 +855,45 @@ function DealFinal() {
             </div>
           )}
 
-          {/* Forma de Pago */}
+          {/* ═══ TIPO DE VENTA: Retail (B2C) o Flota (B2B) ═══ */}
+          {/* Son dos mundos distintos: retail trabaja con bonos y descuento Pompeyo sobre el
+              precio con IVA; flota va por tramo de volumen sobre el precio neto. No se mezclan. */}
           <div style={base.section}>
-            <div style={base.secTitle}>Forma de Pago</div>
+            <div style={base.secTitle}>Tipo de venta</div>
+            <div style={{display:"flex",gap:6}}>
+              {[["retail","🏠 Venta Retail"],["flota","🚚 Venta Flota"]].map(([k,label])=>(
+                <div key={k} onClick={()=>setModoVenta(k)}
+                  style={{flex:1,padding:"10px 8px",borderRadius:8,border:"2px solid "+(modoVenta===k?mc:C.border),background:modoVenta===k?mc+"10":C.card,color:modoVenta===k?mc:C.muted,fontWeight:modoVenta===k?700:500,fontSize:12,textAlign:"center",cursor:"pointer"}}>
+                  {label}
+                </div>
+              ))}
+            </div>
+            {calc.esFlota && !calc.b2b && (
+              <div style={{marginTop:8,padding:"8px 12px",borderRadius:6,background:C.redBg,borderLeft:"3px solid "+C.red,fontSize:12}}>
+                Este modelo no tiene descuentos de flota publicados. La lista B2B solo trae comerciales, Rifter y Berlingo Multispace.
+              </div>
+            )}
+          </div>
+
+          {/* Forma de Pago (retail) / Tramo de flota (B2B) */}
+          <div style={base.section}>
+            <div style={base.secTitle}>{calc.esFlota ? "Tramo de flota (por volumen)" : "Forma de Pago"}</div>
+            {calc.esFlota ? (
+              calc.b2b ? (
+                <div style={{display:"flex",gap:6}}>
+                  {[["t1","T1","1 a 5 un."],["t2","T2","6 a 99 un."],["gc","GC","+100 un."]].map(([k,lab,rango])=>{
+                    const hay = !!calc.b2b[k];
+                    return (
+                      <div key={k} onClick={()=>{ if(hay) setTramoFlota(k); }}
+                        style={{flex:1,padding:"10px 8px",borderRadius:8,border:"2px solid "+(tramoFlota===k?mc:C.border),background:tramoFlota===k?mc+"10":C.card,color:tramoFlota===k?mc:C.muted,fontWeight:tramoFlota===k?700:500,textAlign:"center",cursor:hay?"pointer":"not-allowed",opacity:hay?1:0.35}}>
+                        <div style={{fontSize:14,fontWeight:800}}>{lab}</div>
+                        <div style={{fontSize:10}}>{rango}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null
+            ) : (
             <div style={{display:"flex",gap:6}}>
               {formasPago.map(fp=>(
                 <div key={fp} onClick={()=>setPago(fp)}
@@ -790,6 +902,7 @@ function DealFinal() {
                 </div>
               ))}
             </div>
+            )}
           </div>
 
           {/* ═══ PUSH VIN (unidades específicas con bono zonal adicional, campaña 13-23 ago) ═══ */}
@@ -828,7 +941,8 @@ function DealFinal() {
             </div>
           )}
 
-          {/* Desglose Bonos */}
+          {/* Desglose Bonos — solo retail: en flota no hay bono ni CE */}
+          {!calc.esFlota && (
           <div style={base.section}>
             <div style={base.secTitle}>Desglose Bono {PL[pe]}{calc.esCom ? " (con IVA)" : ""}</div>
             <div style={base.card}>
@@ -842,8 +956,10 @@ function DealFinal() {
               </div>
             </div>
           </div>
+          )}
 
-          {/* Descuentos */}
+          {/* Descuentos — solo retail: en flota el descuento lo fija el tramo, no el vendedor */}
+          {!calc.esFlota && (
           <div style={base.section}>
             <div style={base.secTitle}>Descuentos</div>
             <div style={base.card}>
@@ -893,8 +1009,51 @@ function DealFinal() {
               </div>
             </div>
           </div>
+          )}
 
-          {/* Precio Vehículo */}
+          {/* ═══ PRECIO FLOTA (B2B) ═══ */}
+          {/* La lista B2B publica todo NETO. Los vendedores estan acostumbrados a hablar con IVA,
+              asi que se muestran las dos cifras y se avisa cual es cual. */}
+          {calc.esFlota && calc.trFlota && (
+            <div style={base.section}>
+              <div style={base.secTitle}>Precio Flota</div>
+              <div style={{padding:"8px 12px",borderRadius:6,background:C.yellowBg,borderLeft:"3px solid "+C.yellow,fontSize:12,marginBottom:8}}>
+                ⚠️ En flota la lista entrega <b>todos los valores SIN IVA</b>. Abajo va el neto y su equivalente con IVA.
+              </div>
+              <div style={{...base.card,background:mc+"06"}}>
+                <div style={base.row}><span style={base.label}>Precio lista sin IVA</span><span style={base.val}>{fmt(calc.b2b.plSinIva)}</span></div>
+                <div style={base.row}>
+                  <span style={{fontSize:12,color:C.red}}>− Descuento flota ({pct(calc.trFlota.pct)})</span>
+                  <span style={{fontSize:12,color:C.red,fontWeight:600}}>−{fmt(calc.descFlotaPesos)}</span>
+                </div>
+                <div style={base.divider} />
+                <div style={base.row}>
+                  <span style={{fontSize:15,fontWeight:700}}>Precio flota NETO</span>
+                  <span style={{fontSize:18,fontWeight:800}}>{fmt(calc.precioFlotaNeto)}</span>
+                </div>
+                <div style={base.row}>
+                  <span style={{fontSize:13,color:C.muted}}>Equivalente con IVA (19%)</span>
+                  <span style={{fontSize:14,fontWeight:700,color:C.muted}}>{fmt(calc.precioFlotaConIva)}</span>
+                </div>
+              </div>
+              <div style={{...base.card,marginTop:8}}>
+                <div style={{fontSize:11,textTransform:"uppercase",letterSpacing:"0.06em",opacity:0.6,marginBottom:6}}>Interno · no mostrar al cliente</div>
+                <div style={base.row}><span style={base.label}>Margen fijo de lista</span><span style={base.val}>{pct(calc.b2b.margenFijo)}</span></div>
+                <div style={base.row}><span style={base.label}>− Aporte RED (concesionario)</span><span style={base.val}>{pct(calc.redFlota)}</span></div>
+                <div style={base.divider} />
+                <div style={base.row}>
+                  <span style={{fontSize:14,fontWeight:700}}>Margen que queda</span>
+                  <span style={{fontSize:15,fontWeight:800}}>{fmt(calc.margenFlotaPesos)} <span style={{fontSize:12,opacity:0.7}}>({pct(calc.margenFlotaPct)})</span></span>
+                </div>
+                <div style={{fontSize:11,color:C.muted,marginTop:6}}>
+                  Calculado como concesionario <b>{CONCESIONARIO_B2B === "professional" ? "Professional" : "No Professional"}</b>. El precio al cliente es el mismo en ambos casos; lo que cambia es cuánto pone la casa.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Precio Vehículo — solo retail; en flota manda la tarjeta Precio Flota de arriba */}
+          {!calc.esFlota && (
           <div style={base.section}>
             <div style={base.secTitle}>Precio Vehículo</div>
             <div style={{...base.card,background:mc+"06"}}>
@@ -918,6 +1077,7 @@ function DealFinal() {
               <div style={base.row}><span style={base.label}>Neto sin IVA</span><span style={{fontSize:12,color:C.muted}}>{fmt(calc.precioNeto)}</span></div>
             </div>
           </div>
+          )}
 
           {/* Documentación */}
           <div style={base.section}>
@@ -950,11 +1110,19 @@ function DealFinal() {
             <div style={base.card}>
               {accItems.map(a => (
                 <div key={a.id} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0"}}>
-                  <div onClick={()=>removeAcc(a.id)}
-                    style={{width:22,height:22,borderRadius:6,background:C.redBg,color:C.red,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:14,fontWeight:700,flexShrink:0}}>
-                    ×
-                  </div>
-                  <span style={{flex:1,fontSize:13}}>{a.nombre}</span>
+                  {/* Los accesorios obligatorios (Grabado) llevan candado en vez de la × */}
+                  {a.fijo ? (
+                    <div title="Accesorio obligatorio"
+                      style={{width:22,height:22,borderRadius:6,background:C.border,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,flexShrink:0}}>
+                      🔒
+                    </div>
+                  ) : (
+                    <div onClick={()=>removeAcc(a.id)}
+                      style={{width:22,height:22,borderRadius:6,background:C.redBg,color:C.red,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:14,fontWeight:700,flexShrink:0}}>
+                      ×
+                    </div>
+                  )}
+                  <span style={{flex:1,fontSize:13}}>{a.nombre}{a.fijo && <span style={{fontSize:10,color:C.muted,marginLeft:5}}>obligatorio</span>}</span>
                   <input type="number" inputMode="numeric" value={a.monto||""} onChange={e=>updateAccMonto(a.id,e.target.value)}
                     style={{width:100,padding:"6px 8px",borderRadius:6,border:"1px solid "+C.border,fontSize:13,textAlign:"right",fontFamily:"inherit",outline:"none"}} />
                 </div>
@@ -983,11 +1151,18 @@ function DealFinal() {
           {/* Total Cliente */}
           <div style={base.section}>
             <div style={{...base.card,background:C.primary,color:"#fff",border:"none"}}>
-              <div style={{fontSize:11,textTransform:"uppercase",letterSpacing:"0.06em",opacity:0.6,marginBottom:6}}>Valor Total Cliente</div>
-              <div style={{fontSize:26,fontWeight:800,marginBottom:4}}>{fmt(calc.totalCliente)}</div>
-              <div style={{fontSize:11,opacity:0.5}}>
-                Auto {fmt(calc.precioAuto)} + Doc {fmt(calc.totalDoc)}{calc.totalAcc>0?" + Acc "+fmt(calc.totalAcc):""}
+              <div style={{fontSize:11,textTransform:"uppercase",letterSpacing:"0.06em",opacity:0.6,marginBottom:6}}>
+                Valor Total Cliente{calc.esFlota ? " · Flota (con IVA)" : ""}
               </div>
+              <div style={{fontSize:26,fontWeight:800,marginBottom:4}}>{fmt(calc.totalClienteFinal)}</div>
+              <div style={{fontSize:11,opacity:0.5}}>
+                Auto {fmt(calc.precioAutoFinal)} + Doc {fmt(calc.totalDoc)}{calc.totalAcc>0?" + Acc "+fmt(calc.totalAcc):""}
+              </div>
+              {calc.esFlota && calc.trFlota && (
+                <div style={{fontSize:11,opacity:0.5,marginTop:4}}>
+                  Vehículo neto sin IVA: {fmt(calc.precioFlotaNeto)}
+                </div>
+              )}
             </div>
           </div>
 
@@ -1061,7 +1236,7 @@ function DealFinal() {
           <div style={base.section}>
             {(pe === "cc" || pe === "ci") && !comisionCredito && (
               <div style={{padding:"8px 12px",borderRadius:6,background:C.yellowBg,borderLeft:"3px solid "+C.yellow,fontSize:12,marginBottom:8}}>
-                ⚠️ No ingresaste la Comisión Crédito (sección Utilidad Proxy) — la utilidad que se comparte no la está considerando. Podés cerrar igual.
+                ⚠️ Falta la Comisión Crédito (sección Utilidad Proxy). En crédito es obligatoria para cerrar: sin ella la utilidad que se comparte queda mal.
               </div>
             )}
             {!confirmCierre ? (
@@ -1083,9 +1258,25 @@ function DealFinal() {
                   <input type="text" value={cliente} onChange={e=>setCliente(e.target.value)}
                     placeholder="Nombre del cliente" style={base.input} />
                 </div>
-                {(pe === "cc" || pe === "ci") && !comisionCredito && (
-                  <div style={{padding:"8px 12px",borderRadius:6,background:C.yellowBg,borderLeft:"3px solid "+C.yellow,fontSize:12,marginBottom:10}}>
-                    ⚠️ Sin Comisión Crédito ingresada — se comparte igual, pero la utilidad puede quedar incompleta.
+                {/* El RUT es la llave para reencontrar el deal despues, por eso se valida el DV. */}
+                <div style={{marginBottom:10}}>
+                  <div style={{fontSize:13,color:C.muted,marginBottom:4}}>RUT del cliente</div>
+                  <input type="text" value={rutCliente} onChange={e=>setRutCliente(formatearRut(e.target.value))}
+                    placeholder="12.345.678-9" style={{...base.input, border:"1px solid "+(rutCliente && !rutValido(rutCliente) ? C.red : C.border)}} />
+                  {rutCliente && !rutValido(rutCliente) && (
+                    <div style={{fontSize:11,color:C.red,marginTop:4}}>RUT inválido — revisá el dígito verificador.</div>
+                  )}
+                </div>
+                {/* La comisión también se puede cargar acá: es el mismo dato que en Utilidad Proxy,
+                    para no obligar a cancelar el cierre e ir a buscarlo a otra sección. */}
+                {(pe === "cc" || pe === "ci") && (
+                  <div style={{marginBottom:10}}>
+                    <div style={{fontSize:13,color:C.muted,marginBottom:4}}>Comisión Crédito (obligatoria en {PL[pe]})</div>
+                    <input type="number" inputMode="numeric" value={comisionCredito} onChange={e=>setComisionCredito(e.target.value)}
+                      placeholder="0" style={{...base.input, border:"1px solid "+(comisionCredito ? C.border : C.yellow)}} />
+                    {!comisionCredito && (
+                      <div style={{fontSize:11,color:C.yellow,marginTop:4}}>Sin este dato la utilidad que se comparte queda mal, por eso no deja cerrar.</div>
+                    )}
                   </div>
                 )}
                 <div style={{fontSize:12,color:C.muted,marginBottom:10}}>
@@ -1097,7 +1288,7 @@ function DealFinal() {
                     Cancelar
                   </div>
                   <div onClick={cerrarDeal}
-                    style={{flex:1,padding:"12px",borderRadius:8,background:C.green,color:"#fff",textAlign:"center",cursor:"pointer",fontWeight:700,fontSize:13,opacity:cliente.trim()&&vendedor.trim()?1:0.4,pointerEvents:cliente.trim()&&vendedor.trim()?"auto":"none"}}>
+                    style={{flex:1,padding:"12px",borderRadius:8,background:C.green,color:"#fff",textAlign:"center",cursor:"pointer",fontWeight:700,fontSize:13,opacity:puedeCerrar?1:0.4,pointerEvents:puedeCerrar?"auto":"none"}}>
                     {editingDealId ? "Confirmar y Compartir" : "Confirmar y Compartir"}
                   </div>
                 </div>
