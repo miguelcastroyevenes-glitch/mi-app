@@ -118,67 +118,12 @@ const PUSH_VIGENTE = (new Date().toISOString().slice(0,10) <= PUSH_VIN.vigencia)
 // ─── PROX_MES: comparativo de precio "Precio Desde" (CI/CC neto) del boletín Stellantis
 // Nº 09/1-2026 (vigente 1-6 sept) vs el catálogo de agosto embebido. Solo informativo para
 // el vendedor, no reemplaza ni modifica CATALOGO_LOCAL ni los cálculos de la app.
-const PROX_MES = {boletin:"Nº 09/1 - 2026", vigencia:"1 al 6 de septiembre 2026", data:{
-  "208 MCA Style Gasolina 100hp MT":{ago:13190000,sept:13590000,delta:400000},
-  "208 MCA Allure Hybrid 136hp AT":{ago:19190000,sept:19590000,delta:400000},
-  "208 MCA GT Electric":{ago:22590000,sept:22590000,delta:0},
-  "2008 MCA Style Hybrid 136hp AT":{ago:16990000,sept:17390000,delta:400000},
-  "2008 MCA Allure Hybrid 136hp AT":{ago:18990000,sept:19390000,delta:400000},
-  "2008 MCA GT Hybrid 136hp AT":{ago:21990000,sept:22390000,delta:400000},
-  "2008 MCA GT Electric":{ago:25590000,sept:25590000,delta:0},
-  "308 Allure Gasolina 130hp AT":{ago:19990000,sept:19990000,delta:0},
-  "308 Allure Hybrid 136hp AT":{ago:22990000,sept:24190000,delta:1200000},
-  "308 GT Gasolina 130hp AT":{ago:23690000,sept:23690000,delta:0},
-  "308 GT Hybrid 136hp AT":{ago:26490000,sept:27690000,delta:1200000},
-  "3008 Active Pack Gasolina 130hp MT":{ago:19690000,sept:19690000,delta:0},
-  "New 3008 Allure Hybrid 136hp AT":{ago:24490000,sept:25090000,delta:600000},
-  "New 3008 GT Hybrid 136hp AT":{ago:29490000,sept:30090000,delta:600000},
-  "New 5008 Allure Hybrid 136hp AT":{ago:25990000,sept:26590000,delta:600000},
-  "New 5008 GT Hybrid 136hp AT":{ago:31490000,sept:32090000,delta:600000},
-  "Rifter MCA Allure Diesel 100hp MT":{ago:22190000,sept:22590000,delta:400000},
-  "Rifter MCA Allure Gasolina 130hp AT":{ago:19690000,sept:19690000,delta:0},
-  "Rifter MCA Allure Diesel 130hp AT":{ago:23490000,sept:23890000,delta:400000},
-  "Rifter MCA GT Diesel 130hp AT":{ago:25990000,sept:26390000,delta:400000},
-  "Partner MCA L1 Diesel 100hp MT":{ago:17090000,sept:17390000,delta:300000},
-  "Partner MCA L2 Diesel 100hp MT":{ago:17890000,sept:18190000,delta:300000},
-  "Expert MCA L3 Diesel 145hp MT":{ago:22490000,sept:23090000,delta:600000},
-  "New Traveller MCA L3 8P Diesel 180hp AT":{ago:25890000,sept:26490000,delta:600000},
-  "New Traveller MCA L3 9P Diesel 180hp AT":{ago:26490000,sept:27090000,delta:600000},
-  "Boxer MCA Furgón  L2H2 Diesel 140hp MT":{ago:26190000,sept:26790000,delta:600000},
-  "Boxer MCA Furgón  L3H2 Diesel 140hp MT":{ago:27590000,sept:28190000,delta:600000},
-  "Boxer MCA Furgón L4H2 Diesel 140hp MT":{ago:29190000,sept:29790000,delta:600000},
-  "Boxer MCA Cabina L3 Diesel 140hp MT":{ago:24290000,sept:24890000,delta:600000},
-  "Landtrek MCA Action4 Diesel 200hp 4x4 AT":{ago:22790000,sept:23390000,delta:600000},
-  "C3 Live Pack Gasolina 82HP MT":{ago:8690000,sept:8690000,delta:0},
-  "C3 Live Pack Gasolina 96HP MT":{ago:8990000,sept:9390000,delta:400000},
-  "C3 Feel Gasolina 82HP MT":{ago:9390000,sept:9390000,delta:0},
-  "C3 Feel Gasolina 96HP MT":{ago:9790000,sept:10190000,delta:400000},
-  "C3 YOU Turbo 125HP AT":{ago:12990000,sept:13390000,delta:400000},
-  "Basalt Shine Turbo 125HP AT":{ago:13990000,sept:13990000,delta:0},
-  "C4 Plus Hybrid 136HP AT":{ago:21190000,sept:21690000,delta:500000},
-  "C4 Max Hybrid 136HP AT":{ago:23190000,sept:23690000,delta:500000},
-  "C3 Aircross Feel Pack 5P Gasolina 115HP MT":{ago:12790000,sept:12790000,delta:0},
-  "C3 Aircross Feel Pack 5P Gasolina 96HP MT":{ago:13590000,sept:13990000,delta:400000},
-  "C3 Aircross Feel Pack 7P Gasolina 115HP MT":{ago:13290000,sept:13290000,delta:0},
-  "C3 Aircross Shine 5P Gasolina 115HP MT":{ago:13190000,sept:13190000,delta:0},
-  "C3 Aircross Shine 5P Gasolina 96HP MT":{ago:13990000,sept:14390000,delta:400000},
-  "C3 Aircross Shine 5P Turbo 125HP AT":{ago:16290000,sept:16690000,delta:400000},
-  "C3 Aircross Shine 7P Turbo 125HP AT":{ago:16290000,sept:16290000,delta:0},
-  "C5 Aircross Feel Pack Diesel 130HP AT":{ago:24690000,sept:24690000,delta:0},
-  "C5 Aircross Shine Diesel 130HP AT":{ago:28690000,sept:28690000,delta:0},
-  "Berlingo Multispace MCA XL5 Plus Diesel 100HP MT":{ago:18990000,sept:19390000,delta:400000},
-  "Berlingo Multispace MCA Plus XL Diesel 100HP MT":{ago:19490000,sept:19890000,delta:400000},
-  "Berlingo Multispace MCA Plus XL Diesel 130HP AT":{ago:21490000,sept:21890000,delta:400000},
-  "Berlingo MCA M Diesel 100HP MT":{ago:16390000,sept:16690000,delta:300000},
-  "Berlingo MCA XL Diesel 100HP MT":{ago:17190000,sept:17490000,delta:300000},
-  "Jumpy MCA XL Diesel 145HP MT":{ago:21890000,sept:22390000,delta:500000},
-  "Spacetourer MCA 8P Diesel 180HP AT":{ago:25590000,sept:26090000,delta:500000},
-  "Spacetourer MCA 9P Diesel 180HP AT":{ago:25690000,sept:26190000,delta:500000},
-  "Jumper MCA L2H2 Diesel 140HP MT":{ago:25590000,sept:26190000,delta:600000},
-  "Jumper MCA L3H2 Diesel 140HP MT":{ago:26990000,sept:27590000,delta:600000},
-  "Jumper MCA L4H2 Diesel 140HP MT":{ago:28590000,sept:29190000,delta:600000},
-}};
-const APP_VERSION = "2026-09-01 · v16"; // ← actualizar cada vez que se sube una nueva versión
+const PROX_MES = {boletin:"", vigencia:"", hasta:"", data:{}};
+// El aviso solo se muestra hasta la fecha "hasta" (AAAA-MM-DD). Asi un aviso del mes
+// pasado no queda colgado en pantalla si a alguien se le olvida vaciarlo: cuando el mes
+// nuevo empieza, el precio del catalogo YA es el nuevo y el aviso no tiene nada que avisar.
+const PROX_MES_VIGENTE = !!PROX_MES.hasta && (new Date().toISOString().slice(0,10) <= PROX_MES.hasta);
+const APP_VERSION = "2026-09-01 · v17"; // ← actualizar cada vez que se sube una nueva versión
 const fmt = (n) => "$" + Math.round(n).toLocaleString("es-CL");
 const pct = (n) => (n * 100).toFixed(1) + "%";
 // RUT chileno: se usa como llave para encontrar el deal despues, asi que se valida el
@@ -315,7 +260,7 @@ const defaultDocs = [
   const auto = mIdx !== null ? modelos[mIdx] : null;
   const pushList = (auto && PUSH_VIGENTE) ? (PUSH_VIN.data[auto.modelo] || null) : null;
   const pushSel = (pushVin && pushList) ? (pushList.find(x=>x.v===pushVin) || null) : null;
-  const proxMes = (auto && PROX_MES.data[auto.modelo] && PROX_MES.data[auto.modelo].delta > 0) ? PROX_MES.data[auto.modelo] : null;
+  const proxMes = (auto && PROX_MES_VIGENTE && PROX_MES.data[auto.modelo] && PROX_MES.data[auto.modelo].delta > 0) ? PROX_MES.data[auto.modelo] : null;
   const formasPago = useMemo(() => {
     if (!auto) return ["tmp","cc"];
     const fps = ["tmp","cc"];
@@ -880,12 +825,12 @@ const defaultDocs = [
           {proxMes && (
             <div style={base.section}>
               <div style={{...base.card, border:"2px solid #ea580c", background:"#fff7ed"}}>
-                <div style={{fontSize:13,fontWeight:800,color:"#c2410c"}}>📈 Sube en septiembre</div>
+                <div style={{fontSize:13,fontWeight:800,color:"#c2410c"}}>📈 Sube de precio</div>
                 <div style={{fontSize:12,color:C.muted,marginTop:2,marginBottom:6}}>
-                  Este modelo sube <b style={{color:"#c2410c"}}>{fmt(proxMes.delta)}</b> desde el 1 de septiembre (hoy {fmt(proxMes.ago)} → septiembre {fmt(proxMes.sept)}).
+                  Este modelo sube <b style={{color:"#c2410c"}}>{fmt(proxMes.delta)}</b> (hoy {fmt(proxMes.ago)} → {fmt(proxMes.sept)}).
                 </div>
                 <div style={{fontSize:10,color:C.light}}>
-                  Fuente: boletín Stellantis {PROX_MES.boletin}, vigente {PROX_MES.vigencia}. Puede volver a actualizarse a mitad de mes — no lo prometas como precio final de todo septiembre.
+                  Fuente: boletín Stellantis {PROX_MES.boletin}, vigente {PROX_MES.vigencia}. Puede volver a actualizarse a mitad de mes — no lo prometas como precio final del mes.
                 </div>
               </div>
             </div>
@@ -1080,19 +1025,8 @@ const defaultDocs = [
                   <span style={{fontSize:14,fontWeight:700,color:C.muted}}>{fmt(calc.precioFlotaConIva)}</span>
                 </div>
               </div>
-              <div style={{...base.card,marginTop:8}}>
-                <div style={{fontSize:11,textTransform:"uppercase",letterSpacing:"0.06em",opacity:0.6,marginBottom:6}}>Interno · no mostrar al cliente</div>
-                <div style={base.row}><span style={base.label}>Margen fijo de lista</span><span style={base.val}>{pct(calc.b2b.margenFijo)}</span></div>
-                <div style={base.row}><span style={base.label}>− Aporte concesionario (ya está en el descuento)</span><span style={base.val}>{pct(calc.redFlota)}</span></div>
-                <div style={base.divider} />
-                <div style={base.row}>
-                  <span style={{fontSize:14,fontWeight:700}}>Margen que queda</span>
-                  <span style={{fontSize:15,fontWeight:800}}>{fmt(calc.margenFlotaPesos)} <span style={{fontSize:12,opacity:0.7}}>({pct(calc.margenFlotaPct)})</span></span>
-                </div>
-                <div style={{fontSize:11,color:C.muted,marginTop:6}}>
-                  Calculado como concesionario <b>{CONCESIONARIO_B2B === "professional" ? "Professional" : "No Professional"}</b>. El precio al cliente es el mismo en ambos casos; lo que cambia es cuánto pone la casa.
-                </div>
-              </div>
+              {/* El margen no va aca: esta seccion es para calibrar el precio de la negociacion.
+                  El desglose completo, con Roma y la utilidad final, esta en Utilidad Proxy. */}
             </div>
           )}
 
@@ -1238,6 +1172,9 @@ const defaultDocs = [
                   <div style={base.row}>
                     <span style={{fontSize:13,fontWeight:700}}>Margen neto flota</span>
                     <span style={{fontSize:14,fontWeight:700,color:calc.margenFlotaNeto<0?C.red:C.text}}>{fmt(calc.margenFlotaNeto)}</span>
+                  </div>
+                  <div style={{fontSize:11,color:C.muted,marginTop:4}}>
+                    Calculado como concesionario <b>{CONCESIONARIO_B2B === "professional" ? "Professional" : "No Professional"}</b>. El precio al cliente es el mismo en ambos casos; lo que cambia es cuánto pone la casa.
                   </div>
                 </>) : (<>
                   {chip("Margen Red bruto ("+pct(auto.margen)+")", calc.margenBruto)}
