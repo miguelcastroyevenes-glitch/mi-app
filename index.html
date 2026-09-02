@@ -123,7 +123,7 @@ const PROX_MES = {boletin:"", vigencia:"", hasta:"", data:{}};
 // pasado no queda colgado en pantalla si a alguien se le olvida vaciarlo: cuando el mes
 // nuevo empieza, el precio del catalogo YA es el nuevo y el aviso no tiene nada que avisar.
 const PROX_MES_VIGENTE = !!PROX_MES.hasta && (new Date().toISOString().slice(0,10) <= PROX_MES.hasta);
-const APP_VERSION = "2026-09-01 · v17"; // ← actualizar cada vez que se sube una nueva versión
+const APP_VERSION = "2026-09-01 · v18"; // ← actualizar cada vez que se sube una nueva versión
 const fmt = (n) => "$" + Math.round(n).toLocaleString("es-CL");
 const pct = (n) => (n * 100).toFixed(1) + "%";
 // RUT chileno: se usa como llave para encontrar el deal despues, asi que se valida el
@@ -196,6 +196,10 @@ function DealFinal() {
   const [rutCliente, setRutCliente] = useState("");
   const [modoVenta, setModoVenta] = useState("retail"); // "retail" | "flota"
   const [tramoFlota, setTramoFlota] = useState("t1");   // t1 | t2 | gc
+  // Descuento extra que el supervisor autoriza caso a caso. Va en pesos NETOS, igual que
+  // todo lo de la lista B2B. Solo se ofrece en T1 y T2: en Grandes Cuentas el descuento
+  // de lista ya llega al tope y no hay margen para dar mas.
+  const [cesAdicional, setCesAdicional] = useState("");
   const [confirmCierre, setConfirmCierre] = useState(false);
   const [editingDealId, setEditingDealId] = useState(null);
   const [postCierreMsg, setPostCierreMsg] = useState(null);
@@ -314,15 +318,28 @@ const defaultDocs = [
     // suma da exactamente el % del tramo (verificado en las 95 filas de la planilla).
     const redFlota = trFlota ? (CONCESIONARIO_B2B === "professional" ? trFlota.redProf : trFlota.redNoProf) : 0;
     const steFlota = trFlota ? (CONCESIONARIO_B2B === "professional" ? trFlota.steProf : trFlota.steNoProf) : 0;
-    const precioFlotaNeto = trFlota ? trFlota.precio : 0;
-    const precioFlotaConIva = trFlota ? Math.round(trFlota.precio * 1.19) : 0;
-    const descFlotaPesos = (trFlota && b2b) ? (b2b.plSinIva - trFlota.precio) : 0;
+    // El CES adicional solo se admite en T1 y T2.
+    const permiteCes = esFlota && (tramoFlota === "t1" || tramoFlota === "t2");
+    const cesPedido = parsePesos(cesAdicional);
+    const cesAplicado = (permiteCes && trFlota) ? cesPedido : 0;
+
+    // Precio de lista del tramo, antes del CES: se muestra en el desglose.
+    const precioFlotaLista = trFlota ? trFlota.precio : 0;
+    const precioFlotaNeto = trFlota ? (trFlota.precio - cesAplicado) : 0;
+    const precioFlotaConIva = trFlota ? Math.round(precioFlotaNeto * 1.19) : 0;
+    const descFlotaLista = (trFlota && b2b) ? (b2b.plSinIva - precioFlotaLista) : 0;
+    const descFlotaPesos = descFlotaLista + cesAplicado;
+    const descFlotaPct = (trFlota && b2b && b2b.plSinIva > 0) ? descFlotaPesos / b2b.plSinIva : 0;
     const aporteSteFlota = (trFlota && b2b) ? Math.round(b2b.plSinIva * steFlota) : 0;
     // El aporte de la casa se calcula por diferencia para que los dos sumen exacto el
-    // descuento y no queden pesos sueltos por redondeo.
-    const aporteRedFlota = trFlota ? (descFlotaPesos - aporteSteFlota) : 0;
-    const margenFlotaPct = (trFlota && b2b) ? (b2b.margenFijo - redFlota) : 0;
-    const margenFlotaPesos = (trFlota && b2b) ? Math.round(b2b.plSinIva * margenFlotaPct) : 0;
+    // descuento y no queden pesos sueltos por redondeo. Ojo: se resta del descuento DE LISTA,
+    // no del total: el CES autorizado se muestra en su propia linea y sumarlo aca haria que
+    // este aporte dejara de coincidir con el % que lo rotula.
+    const aporteRedFlota = trFlota ? (descFlotaLista - aporteSteFlota) : 0;
+    // El aporte de la casa que ya trae la lista, mas el extra autorizado.
+    const margenFlotaLista = (trFlota && b2b) ? Math.round(b2b.plSinIva * (b2b.margenFijo - redFlota)) : 0;
+    const margenFlotaPesos = margenFlotaLista - cesAplicado;
+    const margenFlotaPct = (trFlota && b2b && b2b.plSinIva > 0) ? margenFlotaPesos / b2b.plSinIva : 0;
 
     const precioAutoFinal = (esFlota && trFlota) ? precioFlotaConIva : precioAuto;
     const totalClienteFinal = precioAutoFinal + totalDoc + totalAcc;
@@ -353,12 +370,13 @@ const defaultDocs = [
       comCredNum, utilidadProxy, utilidadPct, alertaDesc, utilColor, utilIcon,
       esFlota, b2b, trFlota, redFlota, steFlota, aporteSteFlota, aporteRedFlota,
       precioFlotaNeto, precioFlotaConIva,
-      descFlotaPesos, margenFlotaPct, margenFlotaPesos,
+      descFlotaPesos, descFlotaPct, descFlotaLista, precioFlotaLista,
+      permiteCes, cesAplicado, margenFlotaLista, margenFlotaPct, margenFlotaPesos,
       margenFlotaNeto, utilidadFlota, utilidadFlotaPct, utilFinal, utilPctFinal,
       // Lo que efectivamente paga el cliente. En flota es el precio del tramo llevado a IVA;
       // en retail es el de siempre. Nunca se suman los dos.
       precioAutoFinal, totalClienteFinal };
-  }, [auto, pe, descPesos, bonoZonal, docItems, accItems, comisionCredito, tipo, modoVenta, tramoFlota]);
+  }, [auto, pe, descPesos, bonoZonal, docItems, accItems, comisionCredito, tipo, modoVenta, tramoFlota, cesAdicional]);
 
   // ─── Actions ───
   const mc = marca === "Peugeot" ? C.peugeot : marca === "Citroën" ? C.citroen : C.accent;
@@ -366,7 +384,7 @@ const defaultDocs = [
   const resetCalc = useCallback(() => {
     setMarca(null);setTipo(null);setMIdx(null);setPago("tmp");
     setDescPesos("");setBonoZonal("");setComisionCredito("");
-    setShowUtil(false);setAccItems(ACC_FIJOS.map(a=>({...a})));setCliente("");setRutCliente("");setModoVenta("retail");setTramoFlota("t1");setConfirmCierre(false);
+    setShowUtil(false);setAccItems(ACC_FIJOS.map(a=>({...a})));setCliente("");setRutCliente("");setModoVenta("retail");setTramoFlota("t1");setCesAdicional("");setConfirmCierre(false);
     setDocItems(defaultDocs.map(d=>({...d})));
     setEditingDealId(null);setPushVin("");setPushDispoOk(false);
   }, []);
@@ -399,6 +417,7 @@ const defaultDocs = [
     setRutCliente(deal.rutCliente || "");
     setModoVenta(deal.modoVenta || "retail");
     setTramoFlota(deal.tramoFlota || "t1");
+    setCesAdicional(deal.cesAdicional ? String(deal.cesAdicional) : "");
     setPushVin(deal.pushVin || "");
     setPushDispoOk(deal.pushVin ? true : false);
     setShowUtil(false);
@@ -471,6 +490,7 @@ const defaultDocs = [
       if (deal.aporteSteFlota) {
         L.push(`Aporte Stellantis: ${fmt(deal.aporteSteFlota)}`);
         L.push(`Aporte concesionario: ${fmt(deal.aporteRedFlota)}`);
+        if (deal.cesAdicional > 0) L.push(`Descuento CES autorizado: ${fmt(deal.cesAdicional)}`);
         L.push(`Descuento total: ${fmt(deal.descFlotaPesos)}`);
       }
       L.push(`Precio flota NETO: ${fmt(deal.precioFlotaNeto)}`);
@@ -540,6 +560,7 @@ const defaultDocs = [
       vendedor, cliente, rutCliente, marca, tipo, modelo: auto.modelo, cit: auto.cit,
       modoVenta, tramoFlota: calc.esFlota ? tramoFlota : null,
       precioFlotaNeto: calc.esFlota ? calc.precioFlotaNeto : 0,
+      cesAdicional: calc.esFlota ? calc.cesAplicado : 0,
       aporteSteFlota: calc.esFlota ? calc.aporteSteFlota : 0,
       aporteRedFlota: calc.esFlota ? calc.aporteRedFlota : 0,
       descFlotaPesos: calc.esFlota ? calc.descFlotaPesos : 0,
@@ -589,8 +610,8 @@ const defaultDocs = [
 
   const copyRegistro = () => {
     // Se agregan RUT, modo y tramo para poder cruzar el registro con otras planillas.
-    const header = "Fecha\tVendedor\tCliente\tRUT\tModelo\tModo\tTramo\tPago\tPrecio Lista\tBono\tDesc\tZonal\tPrecio Auto\tDoc\tAcc\tTotal Cliente";
-    const rows = deals.map(d=>`${d.fecha}\t${d.vendedor}\t${d.cliente}\t${d.rutCliente||""}\t${d.modelo}\t${d.modoVenta==="flota"?"Flota":"Retail"}\t${d.tramoFlota?String(d.tramoFlota).toUpperCase():""}\t${d.modoVenta==="flota"?"":d.formaPago}\t${d.precioLista}\t${d.bonoTotal}\t${d.descPompeyo}\t${d.bonoZonal}\t${d.precioAuto}\t${d.totalDoc}\t${d.totalAcc}\t${d.totalCliente}`);
+    const header = "Fecha\tVendedor\tCliente\tRUT\tModelo\tModo\tTramo\tCES adic.\tPago\tPrecio Lista\tBono\tDesc\tZonal\tPrecio Auto\tDoc\tAcc\tTotal Cliente";
+    const rows = deals.map(d=>`${d.fecha}\t${d.vendedor}\t${d.cliente}\t${d.rutCliente||""}\t${d.modelo}\t${d.modoVenta==="flota"?"Flota":"Retail"}\t${d.tramoFlota?String(d.tramoFlota).toUpperCase():""}\t${d.cesAdicional||""}\t${d.modoVenta==="flota"?"":d.formaPago}\t${d.precioLista}\t${d.bonoTotal}\t${d.descPompeyo}\t${d.bonoZonal}\t${d.precioAuto}\t${d.totalDoc}\t${d.totalAcc}\t${d.totalCliente}`);
     navigator.clipboard.writeText(header+"\n"+rows.join("\n"))
       .then(()=>{ setCopyMsg("✅ Copiado"); setTimeout(()=>setCopyMsg(""),2000); })
       .catch(()=>{ setCopyMsg("❌ Error"); setTimeout(()=>setCopyMsg(""),2000); });
@@ -1011,8 +1032,14 @@ const defaultDocs = [
                   <span style={{fontSize:12,color:"#b45309"}}>− Aporte concesionario ({pct(calc.redFlota)})</span>
                   <span style={{fontSize:12,color:"#b45309",fontWeight:600}}>−{fmt(calc.aporteRedFlota)}</span>
                 </div>
+                {calc.cesAplicado > 0 && (
+                  <div style={base.row}>
+                    <span style={{fontSize:12,color:C.red}}>− Descuento CES autorizado</span>
+                    <span style={{fontSize:12,color:C.red,fontWeight:600}}>−{fmt(calc.cesAplicado)}</span>
+                  </div>
+                )}
                 <div style={base.row}>
-                  <span style={{fontSize:12,color:C.red,fontWeight:700}}>= Descuento total ({pct(calc.trFlota.pct)})</span>
+                  <span style={{fontSize:12,color:C.red,fontWeight:700}}>= Descuento total ({pct(calc.descFlotaPct)})</span>
                   <span style={{fontSize:12,color:C.red,fontWeight:700}}>−{fmt(calc.descFlotaPesos)}</span>
                 </div>
                 <div style={base.divider} />
@@ -1025,6 +1052,40 @@ const defaultDocs = [
                   <span style={{fontSize:14,fontWeight:700,color:C.muted}}>{fmt(calc.precioFlotaConIva)}</span>
                 </div>
               </div>
+
+              {/* ─── Descuento CES adicional ─── */}
+              {/* Es plata de la casa: no la pone Stellantis, sale del margen. Por eso se avisa
+                  cuando se pasa de lo que hay, y en Grandes Cuentas directamente no se ofrece. */}
+              {calc.trFlota && (
+                <div style={{...base.card,marginTop:8}}>
+                  <div style={{fontSize:13,color:C.muted,marginBottom:4}}>
+                    Descuento CES adicional {calc.permiteCes ? "(neto, requiere autorización)" : ""}
+                  </div>
+                  {calc.permiteCes ? (<>
+                    <input type="number" inputMode="numeric" value={cesAdicional} onChange={e=>setCesAdicional(e.target.value)}
+                      placeholder="0" style={{...base.input, border:"1px solid "+(calc.margenFlotaPesos<0?C.red:C.border)}} />
+                    <div style={{fontSize:11,color:C.muted,marginTop:4}}>
+                      Se ingresa <b>sin IVA</b>. {calc.cesAplicado > 0
+                        ? <>Equivale a {fmt(Math.round(calc.cesAplicado*1.19))} con IVA · {pct(calc.b2b.plSinIva>0?calc.cesAplicado/calc.b2b.plSinIva:0)} más de descuento.</>
+                        : <>Sale del margen de la casa, no del aporte Stellantis.</>}
+                    </div>
+                    {calc.cesAplicado > 0 && calc.margenFlotaPesos < 0 && (
+                      <div style={{padding:"8px 12px",borderRadius:6,background:C.redBg,borderLeft:"3px solid "+C.red,fontSize:12,marginTop:8}}>
+                        🚫 Con este descuento el margen queda en {fmt(calc.margenFlotaPesos)}. Estás dando más de lo que hay.
+                      </div>
+                    )}
+                    {calc.cesAplicado > 0 && calc.margenFlotaPesos >= 0 && calc.margenFlotaPesos < calc.margenFlotaLista * 0.4 && (
+                      <div style={{padding:"8px 12px",borderRadius:6,background:C.yellowBg,borderLeft:"3px solid "+C.yellow,fontSize:12,marginTop:8}}>
+                        ⚠️ Queda {fmt(calc.margenFlotaPesos)} de margen, antes de gastos Roma.
+                      </div>
+                    )}
+                  </>) : (
+                    <div style={{padding:"8px 12px",borderRadius:6,background:C.yellowBg,borderLeft:"3px solid "+C.yellow,fontSize:12}}>
+                      En Grandes Cuentas el descuento de lista ya viene al tope: no se puede cargar uno adicional. Está disponible en Tramo 1 y Tramo 2.
+                    </div>
+                  )}
+                </div>
+              )}
               {/* El margen no va aca: esta seccion es para calibrar el precio de la negociacion.
                   El desglose completo, con Roma y la utilidad final, esta en Utilidad Proxy. */}
             </div>
@@ -1166,6 +1227,7 @@ const defaultDocs = [
                   {chip("Margen fijo de lista ("+pct(calc.b2b ? calc.b2b.margenFijo : 0)+")", calc.b2b ? Math.round(calc.b2b.plSinIva * calc.b2b.margenFijo) : 0)}
                   {chip("− Aporte concesionario ("+pct(calc.redFlota)+")", calc.b2b ? Math.round(calc.b2b.plSinIva * calc.redFlota) : 0, "#b45309")}
                   <div style={base.divider} />
+                  {calc.cesAplicado > 0 && chip("− Descuento CES autorizado", calc.cesAplicado, C.red)}
                   {chip("= Margen que queda", calc.margenFlotaPesos)}
                   {chip("− Gastos prorrateados Roma", GASTOS_ROMA, C.muted)}
                   <div style={base.divider} />
@@ -1211,12 +1273,36 @@ const defaultDocs = [
                     descuento. Mostrar aca las cifras de retail seria mezclar los dos mundos. */}
                 {calc.esFlota ? (
                   <div style={{marginTop:14,padding:"12px",background:C.bg,borderRadius:8}}>
-                    <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",color:C.muted,marginBottom:8}}>Quién pone el descuento (flota, neto)</div>
-                    <div style={{paddingLeft:8}}>
-                      {chip("Aporte Stellantis ("+pct(calc.steFlota)+")", calc.aporteSteFlota, C.accent)}
-                      {chip("Aporte concesionario ("+pct(calc.redFlota)+")", calc.aporteRedFlota, "#b45309")}
-                      <div style={{...base.divider,margin:"4px 0"}} />
-                      {chip("Descuento total ("+pct(calc.trFlota ? calc.trFlota.pct : 0)+")", calc.descFlotaPesos)}
+                    <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",color:C.muted,marginBottom:8}}>Quién pone el descuento</div>
+                    {/* Dos columnas: la lista B2B trabaja en neto, pero el vendedor negocia
+                        con IVA. Tener las dos al lado evita hacer la cuenta de cabeza. */}
+                    <div style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:"0 12px",alignItems:"baseline"}}>
+                      <span style={{fontSize:10,textTransform:"uppercase",letterSpacing:"0.05em",color:C.light}}></span>
+                      <span style={{fontSize:10,textTransform:"uppercase",letterSpacing:"0.05em",color:C.light,textAlign:"right"}}>Sin IVA</span>
+                      <span style={{fontSize:10,textTransform:"uppercase",letterSpacing:"0.05em",color:C.light,textAlign:"right"}}>Con IVA</span>
+
+                      <span style={{fontSize:12,color:C.accent,paddingTop:5}}>Aporte Stellantis ({pct(calc.steFlota)})</span>
+                      <span style={{fontSize:12,color:C.accent,fontWeight:600,textAlign:"right",paddingTop:5}}>{fmt(calc.aporteSteFlota)}</span>
+                      <span style={{fontSize:12,color:C.accent,fontWeight:600,textAlign:"right",paddingTop:5}}>{fmt(Math.round(calc.aporteSteFlota*1.19))}</span>
+
+                      <span style={{fontSize:12,color:"#b45309",paddingTop:5}}>Aporte concesionario ({pct(calc.redFlota)})</span>
+                      <span style={{fontSize:12,color:"#b45309",fontWeight:600,textAlign:"right",paddingTop:5}}>{fmt(calc.aporteRedFlota)}</span>
+                      <span style={{fontSize:12,color:"#b45309",fontWeight:600,textAlign:"right",paddingTop:5}}>{fmt(Math.round(calc.aporteRedFlota*1.19))}</span>
+
+                      {calc.cesAplicado > 0 && (<>
+                        <span style={{fontSize:12,color:C.red,paddingTop:5}}>Descuento CES autorizado</span>
+                        <span style={{fontSize:12,color:C.red,fontWeight:600,textAlign:"right",paddingTop:5}}>{fmt(calc.cesAplicado)}</span>
+                        <span style={{fontSize:12,color:C.red,fontWeight:600,textAlign:"right",paddingTop:5}}>{fmt(Math.round(calc.cesAplicado*1.19))}</span>
+                      </>)}
+
+                      <span style={{gridColumn:"1 / -1",height:1,background:C.border,margin:"6px 0"}}></span>
+
+                      <span style={{fontSize:13,fontWeight:700}}>Descuento total ({pct(calc.descFlotaPct)})</span>
+                      <span style={{fontSize:13,fontWeight:800,textAlign:"right"}}>{fmt(calc.descFlotaPesos)}</span>
+                      {/* El total con IVA se suma de las mismas lineas de arriba y no del neto
+                          total: redondear cada una por separado dejaba un peso de diferencia
+                          al sumar la columna a mano. */}
+                      <span style={{fontSize:13,fontWeight:800,textAlign:"right"}}>{fmt(Math.round(calc.aporteSteFlota*1.19) + Math.round(calc.aporteRedFlota*1.19) + Math.round(calc.cesAplicado*1.19))}</span>
                     </div>
                   </div>
                 ) : (
