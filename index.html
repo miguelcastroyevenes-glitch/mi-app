@@ -123,7 +123,7 @@ const PROX_MES = {boletin:"", vigencia:"", hasta:"", data:{}};
 // pasado no queda colgado en pantalla si a alguien se le olvida vaciarlo: cuando el mes
 // nuevo empieza, el precio del catalogo YA es el nuevo y el aviso no tiene nada que avisar.
 const PROX_MES_VIGENTE = !!PROX_MES.hasta && (new Date().toISOString().slice(0,10) <= PROX_MES.hasta);
-const APP_VERSION = "2026-09-03 · v20"; // ← actualizar cada vez que se sube una nueva versión
+const APP_VERSION = "2026-09-03 · v21"; // ← actualizar cada vez que se sube una nueva versión
 
 // Valor UTM base para el cálculo del Permiso de Circulación. Las municipalidades usan la
 // UTM de enero para el permiso del año; se mantiene fija todo el año (no la del mes en curso).
@@ -229,9 +229,6 @@ function DealFinal() {
   const [showDetalle, setShowDetalle] = useState(false);
   const [pushVin, setPushVin] = useState("");
   const [pushDispoOk, setPushDispoOk] = useState(false);
-  // Fecha de la factura del auto nuevo. Prellenada con el día de hoy; define cuántos
-  // meses de Permiso de Circulación se cobran (del mes de compra a diciembre).
-  const [fechaFactura, setFechaFactura] = useState(new Date().toISOString().slice(0,10));
   // Marca si el vendedor editó a mano el Permiso de Circulación para no pisarle el valor.
   const permisoRef = useRef({ modelo: null, tocado: false });
 
@@ -330,11 +327,11 @@ const defaultDocs = [
     // ─── PERMISO DE CIRCULACIÓN PROPORCIONAL (auto nuevo) ─────────────────────
     // Base: el valor neto sin IVA (mismo que ve el cliente como "Neto sin IVA").
     // 1) tasación en UTM  2) escala progresiva  3) piso legal 0,5 UTM
-    // 4) proporción por los meses que faltan del año, contando el mes de la factura.
+    // 4) proporción por los meses que faltan del año, contando el mes en curso
+    //    (se usa la fecha del sistema; el vendedor no ingresa fecha).
     const tasacionUTM = VALOR_UTM > 0 ? precioNeto / VALOR_UTM : 0;
     const permAnualUTM = Math.max(permisoAnualUTM(tasacionUTM), 0.5);
-    const fFact = new Date(fechaFactura + "T00:00:00");
-    const mesCompra = isNaN(fFact) ? (new Date().getMonth() + 1) : (fFact.getMonth() + 1);
+    const mesCompra = new Date().getMonth() + 1;
     const mesesRestantes = (12 - mesCompra) + 1; // incluye el mes en curso
     const permProporcionalUTM = permAnualUTM * (mesesRestantes / 12);
     const permisoCircPesos = Math.round(permProporcionalUTM * VALOR_UTM);
@@ -406,7 +403,7 @@ const defaultDocs = [
     else if (utilPctFinal < 0.05) { utilColor = C.yellow; utilIcon = "🟡"; }
     return { fp, esCom, descNum, descPompeyoPct, totalDadoPct, cePct, maxDescPesos, bonoZonalNum,
       aporteRedConIva, aporteSteConIva, aporteFinConIva, precioAuto, precioNeto, totalDoc, totalAcc, totalCliente,
-      tasacionUTM, permAnualUTM, mesesRestantes, permProporcionalUTM, permisoCircPesos,
+      permisoCircPesos,
       margenBruto, aporteRedPesos, margenDisponible, margenNetoAuto, margenNeto,
       comCredNum, utilidadProxy, utilidadPct, alertaDesc, utilColor, utilIcon,
       esFlota, b2b, trFlota, redFlota, steFlota, aporteSteFlota, aporteRedFlota,
@@ -417,7 +414,7 @@ const defaultDocs = [
       // Lo que efectivamente paga el cliente. En flota es el precio del tramo llevado a IVA;
       // en retail es el de siempre. Nunca se suman los dos.
       precioAutoFinal, totalClienteFinal };
-  }, [auto, pe, descPesos, bonoZonal, docItems, accItems, comisionCredito, tipo, modoVenta, tramoFlota, cesAdicional, fechaFactura]);
+  }, [auto, pe, descPesos, bonoZonal, docItems, accItems, comisionCredito, tipo, modoVenta, tramoFlota, cesAdicional]);
 
   // Autocompleta el Permiso de Circulación calculado en el ítem de Documentación (id 6),
   // salvo que el vendedor ya lo haya editado a mano o se esté reabriendo un deal cerrado.
@@ -437,7 +434,6 @@ const defaultDocs = [
     setShowUtil(false);setAccItems(ACC_FIJOS.map(a=>({...a})));setCliente("");setRutCliente("");setModoVenta("retail");setTramoFlota("t1");setCesAdicional("");setConfirmCierre(false);
     setDocItems(defaultDocs.map(d=>({...d})));
     setEditingDealId(null);setPushVin("");setPushDispoOk(false);
-    setFechaFactura(new Date().toISOString().slice(0,10));
     permisoRef.current = { modelo: null, tocado: false };
   }, []);
 
@@ -472,7 +468,6 @@ const defaultDocs = [
     setCesAdicional(deal.cesAdicional ? String(deal.cesAdicional) : "");
     setPushVin(deal.pushVin || "");
     setPushDispoOk(deal.pushVin ? true : false);
-    setFechaFactura(deal.fechaFactura || new Date().toISOString().slice(0,10));
     permisoRef.current = { modelo: deal.modelo, tocado: true };
     setShowUtil(false);
     setConfirmCierre(false);
@@ -609,8 +604,7 @@ const defaultDocs = [
       ...prevDeal,
       id: editingDealId || Date.now(),
       fecha: prevDeal.fecha || new Date().toLocaleDateString("es-CL"),
-      fechaFactura,
-      permisoCircPesos: calc.permisoCircPesos, permisoMesesRestantes: calc.mesesRestantes,
+      permisoCircPesos: calc.permisoCircPesos,
       editado: !!editingDealId,
       fechaEdicion: editingDealId ? new Date().toLocaleDateString("es-CL") : (prevDeal.fechaEdicion || null),
       vendedor, cliente, rutCliente, marca, tipo, modelo: auto.modelo, cit: auto.cit,
@@ -1178,12 +1172,6 @@ const defaultDocs = [
           <div style={base.section}>
             <div style={base.secTitle}>Documentación</div>
             <div style={base.card}>
-              <div style={{display:"flex",alignItems:"center",gap:8,padding:"2px 0 8px"}}>
-                <span style={{flex:1,fontSize:13,color:C.text}}>Fecha factura</span>
-                <input type="date" value={fechaFactura} onChange={e=>{ setFechaFactura(e.target.value); permisoRef.current.tocado = false; }}
-                  style={{padding:"6px 8px",borderRadius:6,border:"1px solid "+C.border,fontSize:13,fontFamily:"inherit",outline:"none",background:C.card}} />
-              </div>
-              <div style={base.divider} />
               {docItems.map(d => (
                 <div key={d.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",opacity:d.activo?1:0.4}}>
                   <div onClick={()=>toggleDoc(d.id)}
@@ -1202,18 +1190,6 @@ const defaultDocs = [
                 <span style={{fontWeight:700,fontSize:13}}>Total Documentación</span>
                 <span style={{fontWeight:700,fontSize:14}}>{fmt(calc.totalDoc)}</span>
               </div>
-            </div>
-
-            {/* Estimación municipal (auto nuevo) — referencia, el vendedor puede ajustar arriba */}
-            <div style={{...base.card, marginTop:8, background:"#f8fafc"}}>
-              <div style={{fontSize:11,textTransform:"uppercase",letterSpacing:"0.06em",opacity:0.6,marginBottom:6}}>Estimación municipal</div>
-              <div style={base.row}><span style={base.label}>Meses proporcionales</span><span style={{fontSize:12}}>{calc.mesesRestantes} de 12</span></div>
-              <div style={base.row}><span style={base.label}>Tasación</span><span style={{fontSize:12,color:C.muted}}>{calc.tasacionUTM.toFixed(2)} UTM</span></div>
-              <div style={base.row}><span style={base.label}>Permiso de Circulación</span><span style={{fontSize:12}}>{fmt(calc.permisoCircPesos)}</span></div>
-              <div style={base.row}><span style={base.label}>Impuesto Verde</span><span style={{fontSize:12,color:C.muted}}>manual</span></div>
-              <div style={base.divider} />
-              <div style={base.row}><span style={{fontWeight:700,fontSize:13}}>Total estimado municipalidad</span><span style={{fontWeight:700,fontSize:14}}>{fmt(calc.permisoCircPesos + parsePesos((docItems.find(d=>d.id===7)||{}).monto))}</span></div>
-              <div style={{fontSize:10,opacity:0.5,marginTop:4}}>UTM ${VALOR_UTM.toLocaleString("es-CL")} · escala Ley de Rentas Municipales · piso 0,5 UTM</div>
             </div>
           </div>
 
