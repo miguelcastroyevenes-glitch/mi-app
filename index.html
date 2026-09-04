@@ -123,13 +123,12 @@ const PROX_MES = {boletin:"", vigencia:"", hasta:"", data:{}};
 // pasado no queda colgado en pantalla si a alguien se le olvida vaciarlo: cuando el mes
 // nuevo empieza, el precio del catalogo YA es el nuevo y el aviso no tiene nada que avisar.
 const PROX_MES_VIGENTE = !!PROX_MES.hasta && (new Date().toISOString().slice(0,10) <= PROX_MES.hasta);
-const APP_VERSION = "2026-09-03 · v19"; // ← actualizar cada vez que se sube una nueva versión
+const APP_VERSION = "2026-09-03 · v20"; // ← actualizar cada vez que se sube una nueva versión
 
-// Valor UTM del mes de la factura. Actualizar a mano cada mes, igual que APP_VERSION,
-// con el valor oficial que publica el SII. TODO el cálculo del permiso escala con esto.
-// Verificado contra Municipalidad de Las Condes (CIT PG9239E60823S00-7, neto $12.596.639,
-// factura septiembre → $82.977) con UTM = 71.649.
-const VALOR_UTM = 71649;
+// Valor UTM base para el cálculo del Permiso de Circulación. Las municipalidades usan la
+// UTM de enero para el permiso del año; se mantiene fija todo el año (no la del mes en curso).
+// Actualizar en enero de cada año con el valor oficial del SII.
+const VALOR_UTM = 69751; // enero 2026
 
 // Permiso de Circulación anual en UTM según la escala progresiva del Art. 12 letra a) del
 // DL 3.063 (Ley de Rentas Municipales). La tasación (valor neto de factura / UTM) se reparte
