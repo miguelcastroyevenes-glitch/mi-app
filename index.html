@@ -123,7 +123,7 @@ const PROX_MES = {boletin:"", vigencia:"", hasta:"", data:{}};
 // pasado no queda colgado en pantalla si a alguien se le olvida vaciarlo: cuando el mes
 // nuevo empieza, el precio del catalogo YA es el nuevo y el aviso no tiene nada que avisar.
 const PROX_MES_VIGENTE = !!PROX_MES.hasta && (new Date().toISOString().slice(0,10) <= PROX_MES.hasta);
-const APP_VERSION = "2026-09-03 · v21"; // ← actualizar cada vez que se sube una nueva versión
+const APP_VERSION = "2026-09-03 · v22"; // ← actualizar cada vez que se sube una nueva versión
 
 // Valor UTM base para el cálculo del Permiso de Circulación. Las municipalidades usan la
 // UTM de enero para el permiso del año; se mantiene fija todo el año (no la del mes en curso).
@@ -145,6 +145,73 @@ function permisoAnualUTM(t){
   if (t <= 250) return 60*0.01 + 60*0.02 + (t - 120)*0.03;
   if (t <= 400) return 60*0.01 + 60*0.02 + 130*0.03 + (t - 250)*0.04;
   return          60*0.01 + 60*0.02 + 130*0.03 + 150*0.04 + (t - 400)*0.045;
+}
+
+// ─── IMPUESTO VERDE (pago único SII, autos nuevos) ──────────────────────────
+// Datos de homologación (rendimiento urbano km/l + NOx g/km) por código CIT, sacados
+// del CSV oficial "VehiculosHomologados" del Ministerio de Transporte / SII. Varias
+// versiones comparten CIT (mismo informe técnico) → misma fila. Al cambiar el catálogo
+// mensual hay que revisar que los CIT nuevos estén acá; si falta uno, el impuesto sale 0.
+const IMPUESTO_VERDE = {
+  "CT10477E60326S00-1":{rend:12.2,nox:0.01412},
+  "CT10477E60326S02-0":{rend:12.2,nox:0.01412},
+  "CT10492E60326S00-0":{rend:12.2,nox:0.01039},
+  "CT10492E60326S01-5":{rend:12.2,nox:0.01039},
+  "CT8284E60421S00-1":{rend:21.5,nox:0.02508},
+  "CT8669E60622S01-7":{rend:13.4,nox:0.0155},
+  "CT9422E60124S00-9":{rend:11.2,nox:0.005},
+  "CT9422E60225S01-2":{rend:11.2,nox:0.005},
+  "CT9509E60524S00-8":{rend:16.5,nox:0.04638},
+  "CT9509E60524S01-1":{rend:16.5,nox:0.04638},
+  "CT9512E60524S00-4":{rend:16.6,nox:0.04945},
+  "CT9512E60625S01-8":{rend:16.6,nox:0.04945},
+  "CT9515E60524S00-0":{rend:18,nox:0.0381},
+  "CT9573T3C0724S00-4":{rend:10.3,nox:0.01034},
+  "CT9573T3C0724S01-9":{rend:10.3,nox:0.01034},
+  "CT9611E60824M00-8":{rend:11.4,nox:0.01278},
+  "CT9611E60824M01-1":{rend:11.4,nox:0.01278},
+  "CT9651T3C0924S00-8":{rend:11.1,nox:0.02517},
+  "CT9684E61024M00-1":{rend:12.3,nox:0.01698},
+  "CT9692T3C1024S00-0":{rend:10.8,nox:0.0333},
+  "CT9861E60225S00-6":{rend:26.4,nox:0.00976},
+  "CT9964E60525M00-1":{rend:9.8,nox:0.01437},
+  "CT9964E60525M02-9":{rend:9.8,nox:0.01437},
+  "CT9964E60525M03-2":{rend:9.8,nox:0.01437},
+  "PG10094E60725M00-0":{rend:8,nox:0.01437},
+  "PG8056E60620S00-9":{rend:15.5,nox:0.02501},
+  "PG8206E60422S00-7":{rend:16.5,nox:0.02562},
+  "PG9239E60823S00-7":{rend:16.1,nox:0.01354},
+  "PG9306EL1023S00-3":{rend:0,nox:0},
+  "PG9495EL0424S00-1":{rend:0,nox:0},
+  "PG9496E60524S00-9":{rend:30.3,nox:0.00786},
+  "PG9508E60524S00-2":{rend:16.5,nox:0.04638},
+  "PG9508E60524S01-6":{rend:16.5,nox:0.04638},
+  "PG9511E60524S00-9":{rend:16.6,nox:0.04945},
+  "PG9514E60524S00-5":{rend:18,nox:0.0381},
+  "PG9514E60725S01-8":{rend:18,nox:0.0381},
+  "PG9562E60724S00-5":{rend:29.4,nox:0.00879},
+  "PG9589E60724S00-2":{rend:23.5,nox:0.01763},
+  "PG9589E61224S02-2":{rend:23.5,nox:0.01763},
+  "PG9596E60724S00-0":{rend:10.9,nox:0.01526},
+  "PG9610E60824M00-2":{rend:11.4,nox:0.01278},
+  "PG9610E60824M01-6":{rend:11.4,nox:0.01278},
+  "PG9682E61024S00-2":{rend:21.6,nox:0.01763},
+  "PG9683E61024M00-6":{rend:12.3,nox:0.01698},
+  "PG9717E61124S00-0":{rend:26.4,nox:0.00787},
+  "PG9878E60325M00-6":{rend:9.7,nox:0.01406},
+  "PG9962E60525M00-0":{rend:9.8,nox:0.01437},
+  "PG9962E60525M02-8":{rend:9.8,nox:0.01437},
+  "PG9962E60525M03-1":{rend:9.8,nox:0.01437}
+};
+
+// Impuesto Verde en UTM. Fórmula vigente del SII (desde 2017):
+//   [ (35 / rendimiento urbano km/l) + (120 × NOx g/km) ] × (precio neto × 0,00000006)
+function impuestoVerdeUTM(rendUrbano, nox, valorNeto){
+  // Eléctricos (rend 0 en la homologación) y datos faltantes: exentos → 0, y de paso
+  // evita el 35/0 = Infinity. Si algún día se les cobra un mínimo, se cambia acá.
+  if (rendUrbano <= 0) return 0;
+  const base = (35 / rendUrbano) + (120 * nox);
+  return base * (valorNeto * 0.00000006);
 }
 const fmt = (n) => "$" + Math.round(n).toLocaleString("es-CL");
 const pct = (n) => (n * 100).toFixed(1) + "%";
@@ -231,6 +298,8 @@ function DealFinal() {
   const [pushDispoOk, setPushDispoOk] = useState(false);
   // Marca si el vendedor editó a mano el Permiso de Circulación para no pisarle el valor.
   const permisoRef = useRef({ modelo: null, tocado: false });
+  // Igual que permisoRef pero para el Impuesto Verde (ítem id 7).
+  const verdeRef = useRef({ modelo: null, tocado: false });
 
   // Documentation items
   // El Grabado se cotiza como accesorio, no como documento: viene cargado por defecto en
@@ -336,6 +405,11 @@ const defaultDocs = [
     const permProporcionalUTM = permAnualUTM * (mesesRestantes / 12);
     const permisoCircPesos = Math.round(permProporcionalUTM * VALOR_UTM);
 
+    // ─── IMPUESTO VERDE (pago único) ─────────────────────────────────────────
+    // Se busca la homologación por CIT; si el modelo no está en la tabla, sale 0.
+    const iv = IMPUESTO_VERDE[auto.cit] || null;
+    const impuestoVerdePesos = iv ? Math.round(impuestoVerdeUTM(iv.rend, iv.nox, precioNeto) * VALOR_UTM) : 0;
+
     const totalDoc = docItems.filter(d=>d.activo).reduce((s,d)=>s+parsePesos(d.monto), 0);
     const totalAcc = accItems.reduce((s,a)=>s+parsePesos(a.monto), 0);
     const totalCliente = precioAuto + totalDoc + totalAcc;
@@ -403,7 +477,7 @@ const defaultDocs = [
     else if (utilPctFinal < 0.05) { utilColor = C.yellow; utilIcon = "🟡"; }
     return { fp, esCom, descNum, descPompeyoPct, totalDadoPct, cePct, maxDescPesos, bonoZonalNum,
       aporteRedConIva, aporteSteConIva, aporteFinConIva, precioAuto, precioNeto, totalDoc, totalAcc, totalCliente,
-      permisoCircPesos,
+      permisoCircPesos, impuestoVerdePesos,
       margenBruto, aporteRedPesos, margenDisponible, margenNetoAuto, margenNeto,
       comCredNum, utilidadProxy, utilidadPct, alertaDesc, utilColor, utilIcon,
       esFlota, b2b, trFlota, redFlota, steFlota, aporteSteFlota, aporteRedFlota,
@@ -425,6 +499,14 @@ const defaultDocs = [
     setDocItems(ds => ds.map(x => x.id === 6 ? { ...x, monto: calc.permisoCircPesos } : x));
   }, [auto, editingDealId, calc && calc.permisoCircPesos]);
 
+  // Ídem para el Impuesto Verde (id 7).
+  useEffect(() => {
+    if (!auto || !calc || editingDealId) return;
+    if (verdeRef.current.modelo !== auto.modelo) verdeRef.current = { modelo: auto.modelo, tocado: false };
+    if (verdeRef.current.tocado) return;
+    setDocItems(ds => ds.map(x => x.id === 7 ? { ...x, monto: calc.impuestoVerdePesos } : x));
+  }, [auto, editingDealId, calc && calc.impuestoVerdePesos]);
+
   // ─── Actions ───
   const mc = marca === "Peugeot" ? C.peugeot : marca === "Citroën" ? C.citroen : C.accent;
 
@@ -435,6 +517,7 @@ const defaultDocs = [
     setDocItems(defaultDocs.map(d=>({...d})));
     setEditingDealId(null);setPushVin("");setPushDispoOk(false);
     permisoRef.current = { modelo: null, tocado: false };
+    verdeRef.current = { modelo: null, tocado: false };
   }, []);
 
   const goHome = () => { resetCalc(); setView("home"); };
@@ -469,6 +552,7 @@ const defaultDocs = [
     setPushVin(deal.pushVin || "");
     setPushDispoOk(deal.pushVin ? true : false);
     permisoRef.current = { modelo: deal.modelo, tocado: true };
+    verdeRef.current = { modelo: deal.modelo, tocado: true };
     setShowUtil(false);
     setConfirmCierre(false);
     setView("calc");
@@ -483,7 +567,7 @@ const defaultDocs = [
     else { setBonoZonal(""); setDescPesos(""); }
   };
   const toggleDoc = (id) => setDocItems(d=>d.map(x=>x.id===id?{...x,activo:!x.activo}:x));
-  const updateDocMonto = (id,v) => { if (id === 6) permisoRef.current.tocado = true; setDocItems(d=>d.map(x=>x.id===id?{...x,monto:v}:x)); };
+  const updateDocMonto = (id,v) => { if (id === 6) permisoRef.current.tocado = true; if (id === 7) verdeRef.current.tocado = true; setDocItems(d=>d.map(x=>x.id===id?{...x,monto:v}:x)); };
   const addAcc = () => {
     if (!newAccNombre.trim()) return;
     setAccItems(a=>[...a,{id:uid(),nombre:newAccNombre.trim(),monto:parsePesos(newAccMonto)}]);
@@ -604,7 +688,7 @@ const defaultDocs = [
       ...prevDeal,
       id: editingDealId || Date.now(),
       fecha: prevDeal.fecha || new Date().toLocaleDateString("es-CL"),
-      permisoCircPesos: calc.permisoCircPesos,
+      permisoCircPesos: calc.permisoCircPesos, impuestoVerdePesos: calc.impuestoVerdePesos,
       editado: !!editingDealId,
       fechaEdicion: editingDealId ? new Date().toLocaleDateString("es-CL") : (prevDeal.fechaEdicion || null),
       vendedor, cliente, rutCliente, marca, tipo, modelo: auto.modelo, cit: auto.cit,
