@@ -123,16 +123,15 @@ const PROX_MES = {boletin:"", vigencia:"", hasta:"", data:{}};
 // pasado no queda colgado en pantalla si a alguien se le olvida vaciarlo: cuando el mes
 // nuevo empieza, el precio del catalogo YA es el nuevo y el aviso no tiene nada que avisar.
 const PROX_MES_VIGENTE = !!PROX_MES.hasta && (new Date().toISOString().slice(0,10) <= PROX_MES.hasta);
-const APP_VERSION = "2026-09-04 · v23"; // ← actualizar cada vez que se sube una nueva versión
+const APP_VERSION = "2026-09-04 · v24"; // ← actualizar cada vez que se sube una nueva versión
 
-// UTM para el PERMISO DE CIRCULACIÓN: por ley se usa la UTM de ENERO, fija todo el año.
-// Actualizar solo en enero de cada año con el valor oficial del SII.
-const VALOR_UTM = 69751; // enero 2026
-
-// UTM para el IMPUESTO VERDE: el SII usa la UTM del MES en que se paga el giro.
-// Actualizar cada mes (SII la publica al inicio del mes). Verificado contra la
-// calculadora del SII: CIT CT9861E60225S00-6, neto $18.563.025 → 2,78 UTM → $199.384.
-const VALOR_UTM_MES = 71721; // septiembre 2026
+// Valor UTM del MES EN CURSO, para el Permiso de Circulación proporcional y el Impuesto
+// Verde. Ambos se pagan al momento de inscribir el auto nuevo, así que usan la UTM
+// vigente (no la de enero: esa aplica a la renovación anual del permiso, que no es este
+// caso). ACTUALIZAR CADA MES con el valor oficial que publica el SII al inicio del mes.
+// Verificado sept-2026: Impuesto Verde CIT CT9861E60225S00-6, neto $18.563.025 → 2,78 UTM
+// → $199.384, idéntico a la calculadora del SII.
+const VALOR_UTM = 71721; // septiembre 2026
 
 // Permiso de Circulación anual en UTM según la escala progresiva del Art. 12 letra a) del
 // DL 3.063 (Ley de Rentas Municipales). La tasación (valor neto de factura / UTM) se reparte
@@ -411,11 +410,10 @@ const defaultDocs = [
 
     // ─── IMPUESTO VERDE (pago único) ─────────────────────────────────────────
     // Se busca la homologación por CIT; si el modelo no está en la tabla, sale 0.
-    // El SII redondea el impuesto a 2 decimales de UTM y recién ahí lo pasa a pesos
-    // con la UTM del mes en curso (no la de enero como el permiso).
+    // El SII redondea el impuesto a 2 decimales de UTM y recién ahí lo pasa a pesos.
     const iv = IMPUESTO_VERDE[auto.cit] || null;
     const ivUTM = iv ? Math.round(impuestoVerdeUTM(iv.rend, iv.nox, precioNeto) * 100) / 100 : 0;
-    const impuestoVerdePesos = Math.round(ivUTM * VALOR_UTM_MES);
+    const impuestoVerdePesos = Math.round(ivUTM * VALOR_UTM);
 
     const totalDoc = docItems.filter(d=>d.activo).reduce((s,d)=>s+parsePesos(d.monto), 0);
     const totalAcc = accItems.reduce((s,a)=>s+parsePesos(a.monto), 0);
