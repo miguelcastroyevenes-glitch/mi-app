@@ -101,6 +101,17 @@ const CATALOGO_LOCAL = {
     {familia:"JUMPER MCA",modelo:"Jumper MCA L3H2 Diesel 140HP MT",cit:"CT9964E60525M02-9",pl:37949100,margen:0.1,tmp:{bono:4641000,aporteRed:797250,aporteSte:3102750,precio:33308100},cc:{bono:5236000,aporteRed:797250,aporteSte:3102750,aporteFin:500000,precio:32713100},ci:null,b2b:{plSinIva:31890000,margenFijo:0.1,t1:{pct:0.14,precio:27425400,redProf:0.035,redNoProf:0.045,steProf:0.105,steNoProf:0.095},t2:{pct:0.16,precio:26787600,redProf:0.055,redNoProf:0.065,steProf:0.105,steNoProf:0.095},gc:{pct:0.2,precio:25512000,redProf:0.07,redNoProf:0.07,steProf:0.13,steNoProf:0.13}}},
     {familia:"JUMPER MCA",modelo:"Jumper MCA L4H2 Diesel 140HP MT",cit:"CT9964E60525M00-1",pl:39139100,margen:0.1,tmp:{bono:3927000,aporteRed:822250,aporteSte:2477750,precio:35212100},cc:{bono:4522000,aporteRed:822250,aporteSte:2477750,aporteFin:500000,precio:34617100},ci:null,b2b:{plSinIva:32890000,margenFijo:0.1,t1:{pct:0.12,precio:28943200,redProf:0.035,redNoProf:0.045,steProf:0.085,steNoProf:0.075},t2:{pct:0.14,precio:28285400,redProf:0.055,redNoProf:0.065,steProf:0.085,steNoProf:0.075},gc:{pct:0.18,precio:26969800.000000004,redProf:0.07,redNoProf:0.07,steProf:0.11,steNoProf:0.11}}}
     ]
+  },
+  // Leapmotor entra con la lista Nº 09-2026. Es marca 100% pasajeros: no tiene lista
+  // comercial ni lista B2B/flota, por eso no lleva la llave Comerciales ni bloque b2b.
+  // El selector de tipo se arma desde estas llaves, asi que no ofrece "Comerciales".
+  Leapmotor: {
+    Pasajeros: [
+    {familia:"B10",modelo:"B10 BEV Life",cit:"LP10228EL0825S00-9",pl:24990000,margen:0.09,tmp:{bono:3500000,aporteRed:624750,aporteSte:2875250,precio:21490000},cc:{bono:4000000,aporteRed:624750,aporteSte:2875250,aporteFin:500000,precio:20990000},ci:{bono:4500000,aporteRed:624750,aporteSte:2875250,aporteFin:1000000,precio:20490000}},
+    {familia:"B10",modelo:"B10 REEV Design",cit:"LP10517E60426S00-4",pl:25990000,margen:0.09,tmp:{bono:3500000,aporteRed:649750,aporteSte:2850250,precio:22490000},cc:{bono:4000000,aporteRed:649750,aporteSte:2850250,aporteFin:500000,precio:21990000},ci:{bono:4500000,aporteRed:649750,aporteSte:2850250,aporteFin:1000000,precio:21490000}},
+    {familia:"C10",modelo:"C10 BEV Design",cit:"LP9634EL0924S01-6",pl:29490000,margen:0.1,tmp:{bono:2000000,aporteRed:737250,aporteSte:1262750,precio:27490000},cc:{bono:2500000,aporteRed:737250,aporteSte:1262750,aporteFin:500000,precio:26990000},ci:{bono:3000000,aporteRed:737250,aporteSte:1262750,aporteFin:1000000,precio:26490000}},
+    {familia:"C10",modelo:"C10 REEV Design",cit:"LP9991E60525S00-1",pl:30990000,margen:0.1,tmp:{bono:4000000,aporteRed:774750,aporteSte:3225250,precio:26990000},cc:{bono:4500000,aporteRed:774750,aporteSte:3225250,aporteFin:500000,precio:26490000},ci:{bono:5000000,aporteRed:774750,aporteSte:3225250,aporteFin:1000000,precio:25990000},store:{adic:1000000,lcdv:["B1185R1MCLLSCAG000"],tmp:{bono:5000000,aporteRed:774750,aporteSte:4225250,precio:25990000},cc:{bono:5500000,aporteRed:774750,aporteSte:4225250,aporteFin:500000,precio:25490000},ci:{bono:6000000,aporteRed:774750,aporteSte:4225250,aporteFin:1000000,precio:24990000}}}
+    ]
   }
 };
 
@@ -123,7 +134,7 @@ const PROX_MES = {boletin:"", vigencia:"", hasta:"", data:{}};
 // pasado no queda colgado en pantalla si a alguien se le olvida vaciarlo: cuando el mes
 // nuevo empieza, el precio del catalogo YA es el nuevo y el aviso no tiene nada que avisar.
 const PROX_MES_VIGENTE = !!PROX_MES.hasta && (new Date().toISOString().slice(0,10) <= PROX_MES.hasta);
-const APP_VERSION = "2026-09-08 · v25"; // ← actualizar cada vez que se sube una nueva versión
+const APP_VERSION = "2026-09-08 · v26"; // ← actualizar cada vez que se sube una nueva versión
 
 // Valor UTM del MES EN CURSO, para el Permiso de Circulación proporcional y el Impuesto
 // Verde. Ambos se pagan al momento de inscribir el auto nuevo, así que usan la UTM
@@ -187,6 +198,13 @@ const IMPUESTO_VERDE = {
   "CT9964E60525M00-1":{rend:9.8,nox:0.01437},
   "CT9964E60525M02-9":{rend:9.8,nox:0.01437},
   "CT9964E60525M03-2":{rend:9.8,nox:0.01437},
+  // Leapmotor (lista Nº 09-2026). Los 4 CIT calzaron 4/4 en VehiculosHomologados.csv.
+  // Los BEV van con rend 0 → impuestoVerdeUTM corta y devuelve 0 (electricos exentos).
+  // Los REEV si tienen motor a combustion y quedaron homologados como "Automovil".
+  "LP10228EL0825S00-9":{rend:0,nox:0},
+  "LP10517E60426S00-4":{rend:27.6,nox:0.00921},
+  "LP9634EL0924S01-6":{rend:0,nox:0},
+  "LP9991E60525S00-1":{rend:25,nox:0.01731},
   "PG10094E60725M00-0":{rend:8,nox:0.01437},
   "PG8056E60620S00-9":{rend:15.5,nox:0.02501},
   "PG8206E60422S00-7":{rend:16.5,nox:0.02562},
@@ -252,8 +270,13 @@ const C = {
   primary:"#18181b", accent:"#2563eb", accentLight:"#dbeafe",
   text:"#18181b", muted:"#64748b", light:"#94a3b8",
   green:"#16a34a", greenBg:"#dcfce7", yellow:"#ca8a04", yellowBg:"#fef9c3",
-  red:"#dc2626", redBg:"#fee2e2", peugeot:"#0f2b5b", citroen:"#c4161c",
+  red:"#dc2626", redBg:"#fee2e2", peugeot:"#0f2b5b", citroen:"#c4161c", leapmotor:"#166534",
 };
+
+// Color por marca en un solo lugar: el header, las tarjetas de marca y los titulos de
+// familia leen todos de aca. Agregar una marca al catalogo = agregar su color aca.
+const MARCA_COLOR = { "Peugeot": C.peugeot, "Citroën": C.citroen, "Leapmotor": C.leapmotor };
+const colorMarca = (m) => MARCA_COLOR[m] || C.accent;
 
 const base = {
   input:{width:"100%",padding:"10px 12px",borderRadius:8,border:"1px solid "+C.border,fontSize:14,fontFamily:"inherit",boxSizing:"border-box",outline:"none",background:C.card},
@@ -520,7 +543,7 @@ const defaultDocs = [
   }, [auto, editingDealId, calc && calc.impuestoVerdePesos]);
 
   // ─── Actions ───
-  const mc = marca === "Peugeot" ? C.peugeot : marca === "Citroën" ? C.citroen : C.accent;
+  const mc = colorMarca(marca);
 
   const resetCalc = useCallback(() => {
     setMarca(null);setTipo(null);setMIdx(null);setPago("tmp");
@@ -924,10 +947,12 @@ const defaultDocs = [
         {!marca && (
           <div style={base.section}>
             <div style={base.secTitle}>Selecciona marca</div>
-            <div style={{display:"flex",gap:10}}>
-              {["Peugeot","Citroën"].map(m=>(
+            {/* Las marcas salen del catalogo, no de una lista fija: si manana entra otra
+                marca basta con cargarla en CATALOGO_LOCAL y darle color en MARCA_COLOR. */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3, 1fr)",gap:8}}>
+              {Object.keys(catalogo).map(m=>(
                 <div key={m} onClick={()=>{setMarca(m);setTipo(null);setMIdx(null);}}
-                  style={{flex:1,padding:"20px 12px",borderRadius:10,border:"2px solid "+(m==="Peugeot"?C.peugeot:C.citroen),background:C.card,textAlign:"center",cursor:"pointer",fontWeight:700,fontSize:16,color:m==="Peugeot"?C.peugeot:C.citroen}}>
+                  style={{padding:"20px 6px",borderRadius:10,border:"2px solid "+colorMarca(m),background:C.card,textAlign:"center",cursor:"pointer",fontWeight:700,fontSize:15,color:colorMarca(m)}}>
                   {m}
                 </div>
               ))}
@@ -938,7 +963,9 @@ const defaultDocs = [
           <div style={base.section}>
             <div style={base.secTitle}>Tipo de vehículo</div>
             <div style={{display:"flex",gap:10}}>
-              {["Pasajeros","Comerciales"].map(t=>(
+              {/* Solo los tipos que la marca realmente tiene: Leapmotor no vende comerciales,
+                  y ofrecer el boton llevaria a una lista vacia. */}
+              {["Pasajeros","Comerciales"].filter(t=>(catalogo[marca]?.[t]||[]).length>0).map(t=>(
                 <div key={t} onClick={()=>{setTipo(t);setMIdx(null);}}
                   style={{flex:1,padding:"16px",borderRadius:10,border:"2px solid "+mc,background:C.card,textAlign:"center",cursor:"pointer",fontWeight:600,fontSize:15,color:mc}}>
                   {t}
@@ -1111,11 +1138,16 @@ const defaultDocs = [
           <div style={base.section}>
             <div style={base.secTitle}>Descuentos</div>
             <div style={base.card}>
-              <div style={{marginBottom:10}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                  <span style={{fontSize:13,color:C.muted}}>Descuento Pompeyo ($)</span>
+              {/* El Descuento Pompeyo es LA decision del vendedor: es la unica plata que sale
+                  del margen de la casa. Va destacado —panel propio, redondeado, con sombra y
+                  tipografia mas grande— para que no se lea como un campo mas del formulario. */}
+              <div style={{marginBottom:10,padding:"14px 14px 12px",borderRadius:16,
+                background:"linear-gradient(180deg,#fbfcfe 0%,#f4f6fa 100%)",
+                border:"1px solid "+C.border,boxShadow:"0 4px 14px rgba(15,23,42,0.10)"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,gap:8}}>
+                  <span style={{fontSize:15,fontWeight:700,color:C.text,letterSpacing:"-0.01em"}}>Descuento Pompeyo ($)</span>
                   {calc.descNum > 0 && (
-                    <span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:6,
+                    <span style={{fontSize:13,fontWeight:800,padding:"4px 10px",borderRadius:999,whiteSpace:"nowrap",
                       background:calc.totalDadoPct>0.04?C.yellowBg:C.greenBg,
                       color:calc.totalDadoPct>0.04?C.yellow:C.green}}>
                       {pct(calc.totalDadoPct)} dado
@@ -1123,27 +1155,29 @@ const defaultDocs = [
                   )}
                 </div>
                 <input type="number" inputMode="numeric" value={descPesos} onChange={e=>setDescPesos(e.target.value)}
-                  placeholder="Monto en pesos" style={base.input} />
+                  placeholder="Monto en pesos"
+                  style={{...base.input,fontSize:22,fontWeight:800,padding:"14px 14px",borderRadius:12,
+                    border:"2px solid "+C.border,boxShadow:"inset 0 1px 3px rgba(15,23,42,0.06)"}} />
                 {calc.descNum > 0 && (
-                  <div style={{fontSize:11,color:C.muted,marginTop:4,display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
+                  <div style={{fontSize:13,color:C.muted,marginTop:8,display:"flex",gap:5,flexWrap:"wrap",alignItems:"center"}}>
                     <span>Pompeyo {pct(calc.descPompeyoPct)}</span>
                     <span style={{color:C.light}}>+</span>
                     <span style={{color:"#b45309"}}>CE {pct(calc.cePct)}</span>
                     <span style={{color:C.light}}>=</span>
-                    <span style={{fontWeight:700}}>Total {pct(calc.totalDadoPct)}</span>
+                    <span style={{fontWeight:800,color:C.text}}>Total {pct(calc.totalDadoPct)}</span>
                   </div>
                 )}
                 {calc.alertaDesc === "amarilla" && (
-                  <div style={{padding:"8px 12px",borderRadius:6,background:C.yellowBg,borderLeft:"3px solid "+C.yellow,fontSize:12,marginTop:6}}>
+                  <div style={{padding:"9px 12px",borderRadius:8,background:C.yellowBg,borderLeft:"4px solid "+C.yellow,fontSize:14,fontWeight:600,marginTop:8}}>
                     ⚠️ Total dado sobre 4% (Pompeyo + CE) — requiere autorización
                   </div>
                 )}
                 {calc.alertaDesc === "roja" && (
-                  <div style={{padding:"8px 12px",borderRadius:6,background:C.redBg,borderLeft:"3px solid "+C.red,fontSize:12,marginTop:6}}>
+                  <div style={{padding:"9px 12px",borderRadius:8,background:C.redBg,borderLeft:"4px solid "+C.red,fontSize:14,fontWeight:600,marginTop:8}}>
                     🚫 Tope: margen Red {fmt(calc.maxDescPesos)} ({pct(auto.margen)})
                   </div>
                 )}
-                <div style={{fontSize:11,color:C.light,marginTop:4}}>
+                <div style={{fontSize:13,color:C.muted,marginTop:8}}>
                   Margen Red: {fmt(calc.maxDescPesos)} · Post CE: {fmt(calc.margenDisponible)} · Post Roma: {fmt(calc.margenDisponible - GASTOS_ROMA)}
                 </div>
               </div>
