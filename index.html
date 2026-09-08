@@ -112,6 +112,30 @@ const CATALOGO_LOCAL = {
     {familia:"C10",modelo:"C10 BEV Design",cit:"LP9634EL0924S01-6",pl:29490000,margen:0.1,tmp:{bono:2000000,aporteRed:737250,aporteSte:1262750,precio:27490000},cc:{bono:2500000,aporteRed:737250,aporteSte:1262750,aporteFin:500000,precio:26990000},ci:{bono:3000000,aporteRed:737250,aporteSte:1262750,aporteFin:1000000,precio:26490000}},
     {familia:"C10",modelo:"C10 REEV Design",cit:"LP9991E60525S00-1",pl:30990000,margen:0.1,tmp:{bono:4000000,aporteRed:774750,aporteSte:3225250,precio:26990000},cc:{bono:4500000,aporteRed:774750,aporteSte:3225250,aporteFin:500000,precio:26490000},ci:{bono:5000000,aporteRed:774750,aporteSte:3225250,aporteFin:1000000,precio:25990000},store:{adic:1000000,lcdv:["B1185R1MCLLSCAG000"],tmp:{bono:5000000,aporteRed:774750,aporteSte:4225250,precio:25990000},cc:{bono:5500000,aporteRed:774750,aporteSte:4225250,aporteFin:500000,precio:25490000},ci:{bono:6000000,aporteRed:774750,aporteSte:4225250,aporteFin:1000000,precio:24990000}}}
     ]
+  },
+  // Opel entra con la lista Nº 09-2026. En Comerciales tiene un solo modelo (Combo Lite),
+  // que sigue la misma convencion que Berlingo/Partner: 'pl' y 'bono' van CON IVA, mientras
+  // que aporteRed/aporteSte y todo el bloque b2b van NETOS.
+  Opel: {
+    Pasajeros: [
+    {familia:"CORSA MCA",modelo:"Corsa Edition Gasolina 100HP MT",cit:"OP9883E60325S00-6",pl:17390000,margen:0.09,tmp:{bono:1400000,aporteRed:434750,aporteSte:965250,precio:15990000},cc:{bono:2400000,aporteRed:434750,aporteSte:965250,aporteFin:1000000,precio:14990000},ci:{bono:3400000,aporteRed:434750,aporteSte:965250,aporteFin:2000000,precio:13990000}},
+    {familia:"CORSA MCA",modelo:"Corsa Edition Gasolina 100HP AT",cit:"OP9007E60323S00-0",pl:18690000,margen:0.09,tmp:{bono:1300000,aporteRed:467250,aporteSte:832750,precio:17390000},cc:{bono:2300000,aporteRed:467250,aporteSte:832750,aporteFin:1000000,precio:16390000},ci:{bono:3300000,aporteRed:467250,aporteSte:832750,aporteFin:2000000,precio:15390000}},
+    {familia:"CORSA MCA",modelo:"Corsa GS Gasolina 100HP AT",cit:"OP9007E60323S00-0",pl:20490000,margen:0.09,tmp:{bono:1600000,aporteRed:512250,aporteSte:1087750,precio:18890000},cc:{bono:2600000,aporteRed:512250,aporteSte:1087750,aporteFin:1000000,precio:17890000},ci:{bono:3600000,aporteRed:512250,aporteSte:1087750,aporteFin:2000000,precio:16890000}},
+    {familia:"NEW CROSSLAND",modelo:"New Crossland GS 5P Hybrid 136HP AT",cit:"OP9928E60425S00-9",pl:22390000,margen:0.09,tmp:{bono:900000,aporteRed:450000,aporteSte:450000,precio:21490000},cc:{bono:1400000,aporteRed:450000,aporteSte:450000,aporteFin:500000,precio:20990000},ci:{bono:1900000,aporteRed:450000,aporteSte:450000,aporteFin:1000000,precio:20490000}},
+    {familia:"NEW CROSSLAND",modelo:"New Crossland GS 7P Hybrid 136HP AT",cit:"OP9928E60425S01-2",pl:23390000,margen:0.09,tmp:{bono:900000,aporteRed:450000,aporteSte:450000,precio:22490000},cc:{bono:1400000,aporteRed:450000,aporteSte:450000,aporteFin:500000,precio:21990000},ci:{bono:1900000,aporteRed:450000,aporteSte:450000,aporteFin:1000000,precio:21490000},store:{adic:500000,lcdv:["1GO3SUPJHWGLA0B0346"],tmp:{bono:1400000,aporteRed:584750,aporteSte:815250,precio:21990000},cc:{bono:1900000,aporteRed:584750,aporteSte:815250,aporteFin:500000,precio:21490000},ci:{bono:2400000,aporteRed:584750,aporteSte:815250,aporteFin:1000000,precio:20990000}}},
+    {familia:"NEW CROSSLAND",modelo:"New Crossland GS Electric",cit:"OP9757EL1224S00-6",pl:27090000,margen:0.09,tmp:{bono:4100000,aporteRed:677250,aporteSte:3422750,precio:22990000},cc:{bono:4600000,aporteRed:677250,aporteSte:3422750,aporteFin:500000,precio:22490000},ci:{bono:5100000,aporteRed:677250,aporteSte:3422750,aporteFin:1000000,precio:21990000}},
+    {familia:"MOKKA",modelo:"Mokka Elegance Gasolina 130HP AT",cit:"OP9014E60323S00-9",pl:22890000,margen:0.09,tmp:{bono:2500000,aporteRed:572250,aporteSte:1927750,precio:20390000},cc:{bono:3000000,aporteRed:572250,aporteSte:1927750,aporteFin:500000,precio:19890000},ci:{bono:4000000,aporteRed:572250,aporteSte:1927750,aporteFin:1500000,precio:18890000}},
+    {familia:"MOKKA MCA",modelo:"Mokka MCA Edition Plus Gasolina 130HP MT",cit:"OP9015E61124S01-9",pl:21690000,margen:0.09,tmp:{bono:3400000,aporteRed:542250,aporteSte:2857750,precio:18290000},cc:{bono:3900000,aporteRed:542250,aporteSte:2857750,aporteFin:500000,precio:17790000},ci:{bono:4900000,aporteRed:542250,aporteSte:2857750,aporteFin:1500000,precio:16790000}},
+    {familia:"MOKKA MCA",modelo:"Mokka MCA Edition Gasolina 130HP AT",cit:"OP9014E61124S01-3",pl:21690000,margen:0.09,tmp:{bono:2900000,aporteRed:542250,aporteSte:2357750,precio:18790000},cc:{bono:3400000,aporteRed:542250,aporteSte:2357750,aporteFin:500000,precio:18290000},ci:{bono:4400000,aporteRed:542250,aporteSte:2357750,aporteFin:1500000,precio:17290000},store:{adic:500000,lcdv:["1GQOSYKM61JRA050000"],tmp:{bono:3400000,aporteRed:542250,aporteSte:2857750,precio:18290000},cc:{bono:3900000,aporteRed:542250,aporteSte:2857750,aporteFin:500000,precio:17790000},ci:{bono:4900000,aporteRed:542250,aporteSte:2857750,aporteFin:1500000,precio:16790000}}},
+    {familia:"MOKKA MCA",modelo:"Mokka MCA Edition Plus Gasolina 130HP AT",cit:"OP9014E61124S01-3",pl:23190000,margen:0.09,tmp:{bono:3800000,aporteRed:579750,aporteSte:3220250,precio:19390000},cc:{bono:4300000,aporteRed:579750,aporteSte:3220250,aporteFin:500000,precio:18890000},ci:{bono:5300000,aporteRed:579750,aporteSte:3220250,aporteFin:1500000,precio:17890000}},
+    {familia:"MOKKA MCA",modelo:"Mokka MCA GS Plus Gasolina 130HP AT",cit:"OP9014E61124S01-3",pl:24790000,margen:0.09,tmp:{bono:3000000,aporteRed:619750,aporteSte:2380250,precio:21790000},cc:{bono:3500000,aporteRed:619750,aporteSte:2380250,aporteFin:500000,precio:21290000},ci:{bono:4500000,aporteRed:619750,aporteSte:2380250,aporteFin:1500000,precio:20290000}},
+    {familia:"GRANDLAND",modelo:"Grandland GS Gasolina 130HP MT",cit:"OP8838E61122S00-5",pl:25790000,margen:0.09,tmp:{bono:3800000,aporteRed:644750,aporteSte:3155250,precio:21990000},cc:{bono:4800000,aporteRed:644750,aporteSte:3155250,aporteFin:1000000,precio:20990000},ci:{bono:5800000,aporteRed:644750,aporteSte:3155250,aporteFin:2000000,precio:19990000},store:{adic:500000,lcdv:["1GUOSYKNPKJ0TPH0000"],tmp:{bono:4300000,aporteRed:644750,aporteSte:3655250,precio:21490000},cc:{bono:5300000,aporteRed:644750,aporteSte:3655250,aporteFin:1000000,precio:20490000},ci:{bono:6300000,aporteRed:644750,aporteSte:3655250,aporteFin:2000000,precio:19490000}}},
+    {familia:"NEW GRANDLAND",modelo:"New Grandland GS Hybrid 136HP AT",cit:"OP9820E60125S00-4",pl:32690000,margen:0.09,tmp:{bono:3200000,aporteRed:817250,aporteSte:2382750,precio:29490000},cc:{bono:4200000,aporteRed:817250,aporteSte:2382750,aporteFin:1000000,precio:28490000},ci:{bono:5200000,aporteRed:817250,aporteSte:2382750,aporteFin:2000000,precio:27490000}},
+    {familia:"NEW GRANDLAND",modelo:"New Grandland GS Plus Hybrid 136HP AT",cit:"OP9820E60125S00-4",pl:36690000,margen:0.09,tmp:{bono:3200000,aporteRed:917250,aporteSte:2282750,precio:33490000},cc:{bono:4200000,aporteRed:917250,aporteSte:2282750,aporteFin:1000000,precio:32490000},ci:{bono:5200000,aporteRed:917250,aporteSte:2282750,aporteFin:2000000,precio:31490000}}
+    ],
+    Comerciales: [
+    {familia:"COMBO MCA",modelo:"Combo Lite Diesel 100HP MT",cit:"OP9510E60524S01-8",pl:22598100,margen:0.1,tmp:{bono:2975000,aporteRed:474750,aporteSte:2025250,precio:19623100},cc:{bono:3570000,aporteRed:474750,aporteSte:2025250,aporteFin:500000,precio:19028100},ci:null,b2b:{plSinIva:18990000,margenFijo:0.1,t1:{pct:0.15,precio:16141500,redProf:0.035,redNoProf:0.045,steProf:0.115,steNoProf:0.105},t2:{pct:0.18,precio:15571800,redProf:0.055,redNoProf:0.065,steProf:0.125,steNoProf:0.115},gc:{pct:0.26,precio:14052600,redProf:0.07,redNoProf:0.07,steProf:0.19,steNoProf:0.19}}}
+    ]
   }
 };
 
@@ -134,7 +158,7 @@ const PROX_MES = {boletin:"", vigencia:"", hasta:"", data:{}};
 // pasado no queda colgado en pantalla si a alguien se le olvida vaciarlo: cuando el mes
 // nuevo empieza, el precio del catalogo YA es el nuevo y el aviso no tiene nada que avisar.
 const PROX_MES_VIGENTE = !!PROX_MES.hasta && (new Date().toISOString().slice(0,10) <= PROX_MES.hasta);
-const APP_VERSION = "2026-09-08 · v26"; // ← actualizar cada vez que se sube una nueva versión
+const APP_VERSION = "2026-09-08 · v27"; // ← actualizar cada vez que se sube una nueva versión
 
 // Valor UTM del MES EN CURSO, para el Permiso de Circulación proporcional y el Impuesto
 // Verde. Ambos se pagan al momento de inscribir el auto nuevo, así que usan la UTM
@@ -205,6 +229,21 @@ const IMPUESTO_VERDE = {
   "LP10517E60426S00-4":{rend:27.6,nox:0.00921},
   "LP9634EL0924S01-6":{rend:0,nox:0},
   "LP9991E60525S00-1":{rend:25,nox:0.01731},
+  // Opel (lista Nº 09-2026). Los 11 CIT calzaron 11/11 en VehiculosHomologados.csv.
+  // El Crossland Electric va con rend 0 → exento. El Combo es furgon cerrado de 907 kg
+  // de carga: la exencion aplica sobre 2.000 kg, asi que SI paga impuesto verde (comparte
+  // valores con el Berlingo/Partner, son la misma plataforma).
+  "OP8838E61122S00-5":{rend:16,nox:0.03171},
+  "OP9007E60323S00-0":{rend:19,nox:0.01945},
+  "OP9014E60323S00-9":{rend:15.9,nox:0.01335},
+  "OP9014E61124S01-3":{rend:15.9,nox:0.01335},
+  "OP9015E61124S01-9":{rend:16.5,nox:0.00752},
+  "OP9510E60524S01-8":{rend:16.5,nox:0.04638},
+  "OP9757EL1224S00-6":{rend:0,nox:0},
+  "OP9820E60125S00-4":{rend:23.3,nox:0.01763},
+  "OP9883E60325S00-6":{rend:17.2,nox:0.00885},
+  "OP9928E60425S00-9":{rend:26,nox:0.01063},
+  "OP9928E60425S01-2":{rend:26,nox:0.01063},
   "PG10094E60725M00-0":{rend:8,nox:0.01437},
   "PG8056E60620S00-9":{rend:15.5,nox:0.02501},
   "PG8206E60422S00-7":{rend:16.5,nox:0.02562},
@@ -270,12 +309,14 @@ const C = {
   primary:"#18181b", accent:"#2563eb", accentLight:"#dbeafe",
   text:"#18181b", muted:"#64748b", light:"#94a3b8",
   green:"#16a34a", greenBg:"#dcfce7", yellow:"#ca8a04", yellowBg:"#fef9c3",
-  red:"#dc2626", redBg:"#fee2e2", peugeot:"#0f2b5b", citroen:"#c4161c", leapmotor:"#166534",
+  red:"#dc2626", redBg:"#fee2e2", peugeot:"#0f2b5b", citroen:"#c4161c", leapmotor:"#166534", opel:"#1e40af",
 };
 
 // Color por marca en un solo lugar: el header, las tarjetas de marca y los titulos de
 // familia leen todos de aca. Agregar una marca al catalogo = agregar su color aca.
-const MARCA_COLOR = { "Peugeot": C.peugeot, "Citroën": C.citroen, "Leapmotor": C.leapmotor };
+// Opel va en un azul marino mas brillante que el de Peugeot a proposito: el #0f2b5b de
+// Peugeot es casi negro y en el celular los dos botones se veian practicamente iguales.
+const MARCA_COLOR = { "Peugeot": C.peugeot, "Citroën": C.citroen, "Leapmotor": C.leapmotor, "Opel": C.opel };
 const colorMarca = (m) => MARCA_COLOR[m] || C.accent;
 
 const base = {
@@ -949,7 +990,9 @@ const defaultDocs = [
             <div style={base.secTitle}>Selecciona marca</div>
             {/* Las marcas salen del catalogo, no de una lista fija: si manana entra otra
                 marca basta con cargarla en CATALOGO_LOCAL y darle color en MARCA_COLOR. */}
-            <div style={{display:"grid",gridTemplateColumns:"repeat(3, 1fr)",gap:8}}>
+            {/* Hasta 3 marcas caben en una fila; de 4 en adelante conviene 2x2 antes que
+                dejar una sola marca colgando sola en la segunda fila. */}
+            <div style={{display:"grid",gridTemplateColumns:`repeat(${Object.keys(catalogo).length<=3?Object.keys(catalogo).length:2}, 1fr)`,gap:8}}>
               {Object.keys(catalogo).map(m=>(
                 <div key={m} onClick={()=>{setMarca(m);setTipo(null);setMIdx(null);}}
                   style={{padding:"20px 6px",borderRadius:10,border:"2px solid "+colorMarca(m),background:C.card,textAlign:"center",cursor:"pointer",fontWeight:700,fontSize:15,color:colorMarca(m)}}>
