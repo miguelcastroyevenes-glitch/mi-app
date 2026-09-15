@@ -158,14 +158,14 @@ const PROX_MES = {boletin:"", vigencia:"", hasta:"", data:{}};
 // pasado no queda colgado en pantalla si a alguien se le olvida vaciarlo: cuando el mes
 // nuevo empieza, el precio del catalogo YA es el nuevo y el aviso no tiene nada que avisar.
 const PROX_MES_VIGENTE = !!PROX_MES.hasta && (new Date().toISOString().slice(0,10) <= PROX_MES.hasta);
-const APP_VERSION = "2026-09-08 · v27"; // ← actualizar cada vez que se sube una nueva versión
+const APP_VERSION = "2026-09-14 · v28"; // ← actualizar cada vez que se sube una nueva versión
 
 // Valor UTM del MES EN CURSO, para el Permiso de Circulación proporcional y el Impuesto
 // Verde. Ambos se pagan al momento de inscribir el auto nuevo, así que usan la UTM
 // vigente (no la de enero: esa aplica a la renovación anual del permiso, que no es este
 // caso). ACTUALIZAR CADA MES con el valor oficial que publica el SII al inicio del mes.
-// Verificado sept-2026: Impuesto Verde CIT CT9861E60225S00-6, neto $18.563.025 → 2,78 UTM
-// → $199.384, idéntico a la calculadora del SII.
+// Verificado 14-09-2026: Impuesto Verde 5008 Hybrid PG9682E61024S00-2, precio con IVA
+// $26.490.000 → 5,94 UTM → $426.023, idéntico a la calculadora del SII.
 const VALOR_UTM = 71721; // septiembre 2026
 
 // Permiso de Circulación anual en UTM según la escala progresiva del Art. 12 letra a) del
@@ -467,25 +467,6 @@ const defaultDocs = [
     const precioAuto = auto.pl - fp.bono - descNum - bonoZonalNum;
     const precioNeto = Math.round(precioAuto / 1.19);
 
-    // ─── PERMISO DE CIRCULACIÓN PROPORCIONAL (auto nuevo) ─────────────────────
-    // Base: el valor neto sin IVA (mismo que ve el cliente como "Neto sin IVA").
-    // 1) tasación en UTM  2) escala progresiva  3) piso legal 0,5 UTM
-    // 4) proporción por los meses que faltan del año, contando el mes en curso
-    //    (se usa la fecha del sistema; el vendedor no ingresa fecha).
-    const tasacionUTM = VALOR_UTM > 0 ? precioNeto / VALOR_UTM : 0;
-    const permAnualUTM = Math.max(permisoAnualUTM(tasacionUTM), 0.5);
-    const mesCompra = new Date().getMonth() + 1;
-    const mesesRestantes = (12 - mesCompra) + 1; // incluye el mes en curso
-    const permProporcionalUTM = permAnualUTM * (mesesRestantes / 12);
-    const permisoCircPesos = Math.round(permProporcionalUTM * VALOR_UTM);
-
-    // ─── IMPUESTO VERDE (pago único) ─────────────────────────────────────────
-    // Se busca la homologación por CIT; si el modelo no está en la tabla, sale 0.
-    // El SII redondea el impuesto a 2 decimales de UTM y recién ahí lo pasa a pesos.
-    const iv = IMPUESTO_VERDE[auto.cit] || null;
-    const ivUTM = iv ? Math.round(impuestoVerdeUTM(iv.rend, iv.nox, precioNeto) * 100) / 100 : 0;
-    const impuestoVerdePesos = Math.round(ivUTM * VALOR_UTM);
-
     const totalDoc = docItems.filter(d=>d.activo).reduce((s,d)=>s+parsePesos(d.monto), 0);
     const totalAcc = accItems.reduce((s,a)=>s+parsePesos(a.monto), 0);
     const totalCliente = precioAuto + totalDoc + totalAcc;
@@ -527,6 +508,34 @@ const defaultDocs = [
     const margenFlotaLista = (trFlota && b2b) ? Math.round(b2b.plSinIva * (b2b.margenFijo - redFlota)) : 0;
     const margenFlotaPesos = margenFlotaLista - cesAplicado;
     const margenFlotaPct = (trFlota && b2b && b2b.plSinIva > 0) ? margenFlotaPesos / b2b.plSinIva : 0;
+
+    // Base de Permiso e Impuesto Verde: el neto que va en la factura. En flota es el precio
+    // del tramo (ya neto), NO el precio retail: antes se usaba siempre el retail y en flota
+    // ambos impuestos salian inflados.
+    // El Impuesto Verde, en cambio, va sobre el precio de venta CON IVA (asi lo calcula el
+    // SII). Verificado 14-09-2026: 5008 Hybrid PG9682E61024S00-2, valor $26.490.000 -> 5,94 UTM
+    // -> $426.023 en la calculadora del SII. Antes se usaba el neto y salia ~16% mas bajo.
+    const precioIvaImpVerde = (esFlota && trFlota) ? precioFlotaConIva : precioAuto;
+    const netoImpuestos = (esFlota && trFlota) ? precioFlotaNeto : precioNeto;
+
+    // ─── PERMISO DE CIRCULACIÓN PROPORCIONAL (auto nuevo) ─────────────────────
+    // Base: el valor neto sin IVA (mismo que ve el cliente como "Neto sin IVA").
+    // 1) tasación en UTM  2) escala progresiva  3) piso legal 0,5 UTM
+    // 4) proporción por los meses que faltan del año, contando el mes en curso
+    //    (se usa la fecha del sistema; el vendedor no ingresa fecha).
+    const tasacionUTM = VALOR_UTM > 0 ? netoImpuestos / VALOR_UTM : 0;
+    const permAnualUTM = Math.max(permisoAnualUTM(tasacionUTM), 0.5);
+    const mesCompra = new Date().getMonth() + 1;
+    const mesesRestantes = (12 - mesCompra) + 1; // incluye el mes en curso
+    const permProporcionalUTM = permAnualUTM * (mesesRestantes / 12);
+    const permisoCircPesos = Math.round(permProporcionalUTM * VALOR_UTM);
+
+    // ─── IMPUESTO VERDE (pago único) ─────────────────────────────────────────
+    // Se busca la homologación por CIT; si el modelo no está en la tabla, sale 0.
+    // El SII redondea el impuesto a 2 decimales de UTM y recién ahí lo pasa a pesos.
+    const iv = IMPUESTO_VERDE[auto.cit] || null;
+    const ivUTM = iv ? Math.round(impuestoVerdeUTM(iv.rend, iv.nox, precioIvaImpVerde) * 100) / 100 : 0;
+    const impuestoVerdePesos = Math.round(ivUTM * VALOR_UTM);
 
     const precioAutoFinal = (esFlota && trFlota) ? precioFlotaConIva : precioAuto;
     const totalClienteFinal = precioAutoFinal + totalDoc + totalAcc;
