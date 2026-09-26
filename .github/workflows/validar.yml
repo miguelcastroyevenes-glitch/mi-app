@@ -1,0 +1,51 @@
+# Red de seguridad en GitHub: si alguien (o alguna sesion de Claude) sube un HTML
+# con la sintaxis rota, este check queda en rojo en el commit y se ve al tiro.
+# GitHub Pages publica igual — esto avisa, no bloquea.
+name: Validar sintaxis de las apps
+
+on:
+  push:
+    branches: [main]
+    paths: ['index.html', 'stock.html']
+  pull_request:
+    paths: ['index.html', 'stock.html']
+  workflow_dispatch:
+
+jobs:
+  sintaxis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Extraer y validar el JSX de index.html (Deal Final)
+        run: |
+          node -e '
+            const fs = require("fs");
+            const html = fs.readFileSync("index.html", "utf8");
+            const m = [...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)];
+            if (!m.length) { console.error("No hay bloque <script> inline en index.html"); process.exit(1); }
+            fs.writeFileSync("/tmp/app.jsx", m[m.length - 1][1]);
+          '
+          npx --yes esbuild /tmp/app.jsx --loader:.jsx=jsx --outfile=/dev/null
+          echo "index.html OK"
+
+      - name: Extraer y validar el JS de stock.html (Stock Pompeyo)
+        run: |
+          node -e '
+            const fs = require("fs");
+            const html = fs.readFileSync("stock.html", "utf8");
+            const m = [...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)];
+            if (!m.length) { console.error("No hay bloque <script> inline en stock.html"); process.exit(1); }
+            fs.writeFileSync("/tmp/stock.js", m[m.length - 1][1]);
+          '
+          npx --yes esbuild /tmp/stock.js --loader:.js=js --outfile=/dev/null
+          echo "stock.html OK"
+
+      - name: APP_VERSION presente y con formato
+        run: |
+          grep -qE 'APP_VERSION = "[0-9]{4}-[0-9]{2}-[0-9]{2} · v[0-9]+"' index.html \
+            || { echo "APP_VERSION falta o tiene formato raro en index.html"; exit 1; }
+          echo "APP_VERSION OK"
