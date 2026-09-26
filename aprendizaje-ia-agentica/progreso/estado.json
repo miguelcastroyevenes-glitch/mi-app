@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "estudiante": "Miguel Ángel",
+  "creado": "2026-09-26",
+  "semana_actual": 1,
+  "aprobaciones": [],
+  "rechazos": [],
+  "sesiones": [],
+  "retornos": [],
+  "config": {
+    "comodines_por_semana": 2,
+    "minutos_por_modo": {
+      "micro": 15,
+      "estandar": 45,
+      "lab": 90
+    }
+  }
+}
