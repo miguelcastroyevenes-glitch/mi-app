@@ -8,31 +8,32 @@ El tutor es, a propósito, un ejemplo didáctico de agente:
   * CONTEXTO     → curriculo/malla.json (qué se estudia) y base/ (fuentes y fichas).
   * HERRAMIENTAS → este archivo: comandos que el LLM invoca en vez de «calcular de memoria».
   * MEMORIA      → progreso/estado.json, progreso/tarjetas.json y progreso/bitacora.md.
-  * EVALUACIÓN   → aprobar-semana (solo con evidencia), repetición espaciada y `validar`.
+  * EVALUACIÓN   → aprobar-semana (evidencia + rúbrica con umbral), repetición espaciada y `validar`.
 
-Regla de diseño: lo determinístico (fechas, racha, repasos vencidos, qué toca hoy,
-si una evidencia tiene la forma mínima) lo hace el código. El LLM explica, pregunta,
-evalúa la calidad de lo que Miguel demuestra y da feedback.
+Regla de diseño: lo que tiene que pasar siempre lo hace el código (fechas, racha, repasos
+vencidos, qué toca hoy, si una evidencia tiene forma mínima, si la rúbrica alcanza el
+umbral). El LLM explica, pregunta, puntúa cada criterio con evidencia y da feedback.
+
+Reglas de investigacion/03 que este código hace cumplir:
+  * sesiones micro 15 / estándar 30 / laboratorio 75 min;
+  * racha SEMANAL: piso de 3 sesiones o 60 min (cierre de mes: 2 o 30), 1 comodín al mes,
+    una semana fallida se repara con 2 sesiones (o el piso) la semana siguiente, pausas congelan;
+  * retorno: 1–2 días no se menciona · 3–6 reentrada · 7+ reinicio limpio (sin contar días perdidos);
+  * semana de cierre de mes = modo mantenimiento (sin contenido nuevo);
+  * bitácora de una fila por sesión con si-entonces; parking de ideas.
+Y de investigacion/01: la aprobación la decide el código (rúbrica 0–3, mínimo 2 por criterio)
+y cada etapa cierra con un checkpoint sin IA.
 
 Solo biblioteca estándar de Python 3 (>= 3.9).
 
 Fechas inyectables para pruebas:  --hoy AAAA-MM-DD   o   TUTOR_HOY=AAAA-MM-DD
 Raíz inyectable (simulación/tests): --raiz RUTA      o   TUTOR_RAIZ=RUTA
-
-Uso rápido:
-    python3 herramientas/tutor.py estado
-    python3 herramientas/tutor.py hoy [--micro | --estandar | --lab]
-    python3 herramientas/tutor.py repaso
-    python3 herramientas/tutor.py calificar s01-p2 4
-    python3 herramientas/tutor.py registrar --minutos 45 --nota "..."
-    python3 herramientas/tutor.py aprobar-semana 1 --evidencia "..."
-    python3 herramientas/tutor.py retomar
-    python3 herramientas/tutor.py panel
-    python3 herramientas/tutor.py validar
+Progreso en otra carpeta (p. ej. un repo privado): --progreso RUTA o TUTOR_PROGRESO=RUTA
 """
 from __future__ import annotations
 
 import argparse
+import calendar
 import html
 import json
 import math
@@ -44,7 +45,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 RAIZ_DEFECTO = Path(__file__).resolve().parent.parent
 ZONA_HORARIA = "America/Santiago"
 NOMBRE_SKILL = "tutor-ia-agentica"
@@ -66,6 +67,7 @@ PROYECTOS_MALLA = {
     19: "Agent QA Lab",
     24: "Capstone",
 }
+FIN_DE_ETAPA = {v["semanas"][1] for v in ETAPAS_MALLA.values()}  # 3, 6, 10, 14, 19, 24
 TOTAL_SEMANAS = 24
 SEMANA_FIN = TOTAL_SEMANAS + 1  # semana_actual == 25 ⇒ programa completado
 HORAS_TOTALES_MALLA = 210
@@ -79,9 +81,33 @@ CAMPOS_SEMANA = (
 CAMPOS_FUENTE = ("id", "titulo", "autor", "anio", "url", "idioma", "tipo", "nivel",
                  "minutos", "acceso", "etapas", "semanas", "nucleo", "por_que")
 
-MODOS = {"micro": 15, "estandar": 45, "lab": 90}
-TIPOS_SESION = ("micro", "estandar", "lab", "repaso")
-COMODINES_POR_SEMANA = 2
+MODOS = {"micro": 15, "estandar": 30, "lab": 75}
+TIPOS_SESION = ("micro", "estandar", "lab", "repaso", "produccion")
+LOGRADO = ("si", "parcial", "no")
+TOPE_LAB_MINUTOS = 145  # 2 h + una extensión de 25 min decidida explícitamente
+
+CONFIG_DEFECTO = {
+    "piso_sesiones": 3,
+    "piso_minutos": 60,
+    "piso_cierre_sesiones": 2,
+    "piso_cierre_minutos": 30,
+    "comodines_por_mes": 1,
+    "sesiones_para_reparar": 2,
+    "dias_cierre_mes": 7,
+    "dias_por_semana_de_contenido": 10,  # calendario honesto: 24 semanas ≈ 8 meses
+    # 03: «jueves a domingo tiene poco tiempo». Esos días no cuentan como «días fuera» (0 = lunes).
+    "dias_de_baja_disponibilidad": [3, 4, 5, 6],
+}
+
+CRITERIOS = {
+    "entregable": "El entregable de la semana existe y cumple lo pedido.",
+    "explicacion": "Explica sin mirar: 3 = correcto + cuándo NO aplica + ejemplo propio.",
+    "recuperacion": "Responde sin mirar las preguntas de repaso de la semana.",
+    "sin_ia": ("Checkpoint sin IA de la etapa: quiz cerrado, bug-hunt cronometrado o explicar "
+               "su propio código línea a línea, sin asistencia."),
+}
+UMBRAL_RUBRICA = 2
+ESCALA_RUBRICA = "0 no hay · 1 insuficiente · 2 suficiente · 3 sólido (mínimo 2 en cada criterio)"
 
 EF_INICIAL = 2.5
 EF_MINIMO = 1.3
@@ -107,12 +133,12 @@ class ErrorTutor(Exception):
 # Rutas y utilidades
 # ---------------------------------------------------------------------------
 class Rutas:
-    def __init__(self, raiz: Path | str):
+    def __init__(self, raiz: Path | str, progreso: Path | str | None = None):
         self.raiz = Path(raiz).resolve()
         self.malla = self.raiz / "curriculo" / "malla.json"
         self.fuentes = self.raiz / "base" / "fuentes.json"
         self.fichas = self.raiz / "base" / "fichas"
-        self.progreso = self.raiz / "progreso"
+        self.progreso = Path(progreso).resolve() if progreso else self.raiz / "progreso"
         self.estado = self.progreso / "estado.json"
         self.tarjetas = self.progreso / "tarjetas.json"
         self.bitacora = self.progreso / "bitacora.md"
@@ -129,8 +155,12 @@ class Rutas:
             return str(ruta)
 
 
-def resolver_raiz(valor: str | None) -> Rutas:
-    return Rutas(valor or os.environ.get("TUTOR_RAIZ") or RAIZ_DEFECTO)
+def resolver_rutas(raiz: str | None = None, progreso: str | None = None) -> Rutas:
+    """Con --raiz explícito, el progreso vive dentro de esa raíz salvo --progreso (así la
+    simulación y los tests nunca tocan el progreso real aunque exista TUTOR_PROGRESO)."""
+    if raiz:
+        return Rutas(raiz, progreso)
+    return Rutas(os.environ.get("TUTOR_RAIZ") or RAIZ_DEFECTO, progreso or os.environ.get("TUTOR_PROGRESO"))
 
 
 def parse_fecha(texto, campo: str = "fecha") -> date:
@@ -164,11 +194,6 @@ def formato_minutos(m: float) -> str:
     return f"{h} h {r:02d} min" if r else f"{h} h"
 
 
-def formato_horas(m: float) -> str:
-    h = m / 60
-    return f"{h:.1f}".replace(".", ",").replace(",0", "") + " h"
-
-
 def normalizar(texto: str) -> str:
     """minúsculas y sin tildes, para comparar texto libre."""
     t = unicodedata.normalize("NFKD", texto or "")
@@ -189,6 +214,19 @@ def escribir_json(ruta: Path, datos) -> None:
 
 def id_tarjeta_malla(semana: int, i: int) -> str:
     return f"s{semana:02d}-p{i}"
+
+
+def lunes_de(d: date) -> date:
+    return d - timedelta(days=d.weekday())
+
+
+def ultimo_dia_mes(d: date) -> int:
+    return calendar.monthrange(d.year, d.month)[1]
+
+
+def criterios_semana(n: int) -> list[str]:
+    base = ["entregable", "explicacion", "recuperacion"]
+    return base + (["sin_ia"] if n in FIN_DE_ETAPA else [])
 
 
 # ---------------------------------------------------------------------------
@@ -324,7 +362,7 @@ def catalogo_preguntas(malla: dict, fichas: dict) -> dict:
 # ---------------------------------------------------------------------------
 def estado_inicial(hoy: date) -> dict:
     return {
-        "version": 1,
+        "version": 2,
         "estudiante": "Miguel Ángel",
         "creado": hoy.isoformat(),
         "semana_actual": 1,
@@ -332,7 +370,9 @@ def estado_inicial(hoy: date) -> dict:
         "rechazos": [],
         "sesiones": [],
         "retornos": [],
-        "config": {"comodines_por_semana": COMODINES_POR_SEMANA, "minutos_por_modo": dict(MODOS)},
+        "pausas": [],
+        "parking": [],
+        "config": dict(CONFIG_DEFECTO),
     }
 
 
@@ -340,11 +380,18 @@ def tarjetas_iniciales() -> dict:
     return {"version": 1, "algoritmo": "SM-2 simplificado (calidad 0-5)", "tarjetas": {}}
 
 
+COLUMNAS_BITACORA = ("Fecha", "Sem.", "Formato", "Objetivo", "Logrado", "Aprendí", "Duda",
+                     "Recuperación", "Si-entonces")
 ENCABEZADO_BITACORA = (
     "# Bitácora de estudio — IA Agéntica\n\n"
-    "Registro automático de `tutor.py` (una entrada por sesión, aprobación o retorno).\n"
-    "Puedes agregar reflexiones a mano debajo de cualquier entrada.\n"
+    "Una fila por sesión o evento. La escribe `herramientas/tutor.py`; no la edites a mano.\n\n"
+    "| " + " | ".join(COLUMNAS_BITACORA) + " |\n"
+    "|" + "---|" * len(COLUMNAS_BITACORA) + "\n"
 )
+
+
+def _celda(texto) -> str:
+    return str(texto if texto not in (None, "") else "—").replace("|", "/").replace("\n", " ").strip()
 
 
 class Contexto:
@@ -366,10 +413,10 @@ class Contexto:
         self.estado = leer_json(rutas.estado) if self.estado_existia else estado_inicial(hoy)
         for clave, defecto in estado_inicial(hoy).items():
             self.estado.setdefault(clave, defecto)
+        self.config = {**CONFIG_DEFECTO, **(self.estado.get("config") or {})}
         self.tarjetas = leer_json(rutas.tarjetas) if rutas.tarjetas.exists() else tarjetas_iniciales()
         self.tarjetas.setdefault("tarjetas", {})
 
-    # --- atajos ---
     @property
     def semana_actual(self) -> int:
         return int(self.estado.get("semana_actual", 1))
@@ -377,10 +424,6 @@ class Contexto:
     @property
     def terminado(self) -> bool:
         return self.semana_actual >= SEMANA_FIN
-
-    @property
-    def comodines(self) -> int:
-        return int(self.estado.get("config", {}).get("comodines_por_semana", COMODINES_POR_SEMANA))
 
     def semana(self, n: int | None = None) -> dict:
         n = n or min(self.semana_actual, TOTAL_SEMANAS)
@@ -394,13 +437,14 @@ class Contexto:
         if panel:
             self.rutas.panel.write_text(generar_panel(self), encoding="utf-8")
 
-    def anotar_bitacora(self, titulo: str, lineas: list[str]) -> None:
+    def fila_bitacora(self, semana, formato, objetivo="", logrado="", aprendi="", duda="",
+                      recuperacion="", si_entonces="") -> None:
         self.rutas.progreso.mkdir(parents=True, exist_ok=True)
         if not self.rutas.bitacora.exists():
             self.rutas.bitacora.write_text(ENCABEZADO_BITACORA, encoding="utf-8")
-        cuerpo = "\n".join(l for l in lineas if l)
+        celdas = [self.hoy.isoformat(), semana, formato, objetivo, logrado, aprendi, duda, recuperacion, si_entonces]
         with open(self.rutas.bitacora, "a", encoding="utf-8") as f:
-            f.write(f"\n## {titulo}\n{cuerpo}\n")
+            f.write("| " + " | ".join(_celda(c) for c in celdas) + " |\n")
 
 
 # ---------------------------------------------------------------------------
@@ -423,7 +467,7 @@ def aplicar_sm2(tarjeta: dict, calidad: int, hoy: date) -> dict:
     t = dict(tarjeta)
     ef = float(t.get("ef", EF_INICIAL))
     reps = int(t.get("repeticiones", 0))
-    intervalo = int(t.get("intervalo", 0))
+    intervalo_previo = intervalo = int(t.get("intervalo", 0))
     if calidad < 3:
         reps, intervalo = 0, 1
     else:
@@ -438,7 +482,8 @@ def aplicar_sm2(tarjeta: dict, calidad: int, hoy: date) -> dict:
     intervalo = min(intervalo, INTERVALO_MAXIMO)
     t.update(ef=ef, repeticiones=reps, intervalo=intervalo, ultima=hoy.isoformat(),
              proxima=(hoy + timedelta(days=intervalo)).isoformat())
-    t["historial"] = list(t.get("historial", [])) + [{"fecha": hoy.isoformat(), "calidad": calidad}]
+    t["historial"] = list(t.get("historial", [])) + [
+        {"fecha": hoy.isoformat(), "calidad": calidad, "intervalo_previo": intervalo_previo}]
     return t
 
 
@@ -452,6 +497,9 @@ def tarjetas_vencidas(tarjetas: dict, hoy: date) -> list[str]:
         if prox <= hoy:
             items.append((prox, tid))
     return [tid for _, tid in sorted(items)]
+
+
+CAJAS = ("Nueva", "1 día", "3 días", "1 semana", "1 mes", "Dominada")
 
 
 def caja(t: dict) -> str:
@@ -470,7 +518,25 @@ def caja(t: dict) -> str:
     return "Dominada"
 
 
-CAJAS = ("Nueva", "1 día", "3 días", "1 semana", "1 mes", "Dominada")
+def metricas_recuperacion(tarjetas: dict, hoy: date) -> dict:
+    """% de aciertos (calidad ≥ 3). Metas de 03: ≥80% a 1 semana y ≥70% a 1 mes."""
+    hist = [h for t in tarjetas.get("tarjetas", {}).values() for h in t.get("historial", [])]
+
+    def pct(items):
+        return round(100 * sum(1 for h in items if h.get("calidad", 0) >= 3) / len(items)) if items else None
+
+    recientes = []
+    for h in hist:
+        try:
+            if date.fromisoformat(h["fecha"]) > hoy - timedelta(days=30):
+                recientes.append(h)
+        except (KeyError, ValueError):
+            continue
+    a_semana = [h for h in hist if h.get("intervalo_previo", 0) >= 7]
+    a_mes = [h for h in hist if h.get("intervalo_previo", 0) >= 30]
+    return {"ultimos_30_dias": pct(recientes), "n_30_dias": len(recientes),
+            "a_1_semana": pct(a_semana), "n_1_semana": len(a_semana),
+            "a_1_mes": pct(a_mes), "n_1_mes": len(a_mes)}
 
 
 def activar_tarjetas(ctx: Contexto, ids, hoy: date) -> list[str]:
@@ -491,135 +557,225 @@ def ids_tarjetas_ficha(ctx: Contexto, fid: str) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# Racha con comodín
+# Racha semanal con comodín (investigacion/03, §5)
 # ---------------------------------------------------------------------------
-def _semana_iso(d: date):
-    iso = d.isocalendar()
-    return (iso[0], iso[1])
+def es_semana_de_cierre(lunes: date, dias_cierre: int = CONFIG_DEFECTO["dias_cierre_mes"]) -> bool:
+    """Semana de cierre de mes: la que contiene la mayoría de los últimos `dias_cierre` días de un mes
+    (con 7 días, exactamente una semana por mes)."""
+    n = 0
+    for k in range(7):
+        d = lunes + timedelta(days=k)
+        if d.day > ultimo_dia_mes(d) - dias_cierre:
+            n += 1
+    return 2 * n > dias_cierre
 
 
-def _cubrir_hueco(hueco: list, usados: dict, por_semana: int, dias_comodin: list) -> bool:
-    necesidad = {}
-    for d in hueco:
-        k = _semana_iso(d)
-        necesidad[k] = necesidad.get(k, 0) + 1
-    if all(usados.get(k, 0) + n <= por_semana for k, n in necesidad.items()):
-        for k, n in necesidad.items():
-            usados[k] = usados.get(k, 0) + n
-        dias_comodin.extend(hueco)
-        return True
-    return False
+def mes_de_semana(lunes: date):
+    jueves = lunes + timedelta(days=3)  # convención ISO: la semana pertenece al mes de su jueves
+    return (jueves.year, jueves.month)
 
 
-def calcular_racha(fechas, hoy: date, comodines_por_semana: int = COMODINES_POR_SEMANA) -> dict:
-    """Racha = días de estudio seguidos, perdonando huecos con comodines.
+def _dias_en_pausa(lunes: date, pausas) -> int:
+    n = 0
+    for k in range(7):
+        d = lunes + timedelta(days=k)
+        if any(desde <= d <= hasta for desde, hasta in pausas):
+            n += 1
+    return n
 
-    * Cada semana (lunes a domingo) trae `comodines_por_semana` comodines.
-    * Un hueco (días sin estudio entre dos días estudiados) se cubre entero con
-      comodines de la semana de cada día; si no alcanzan, la racha se corta.
-    * Los días cubiertos por comodín no suman, pero tampoco cortan.
-    * Hoy nunca corta la racha: el día sigue abierto.
+
+def _pausas_de(estado: dict):
+    out = []
+    for p in estado.get("pausas", []):
+        try:
+            out.append((date.fromisoformat(p["desde"]), date.fromisoformat(p["hasta"])))
+        except (KeyError, ValueError, TypeError):
+            continue
+    return out
+
+
+def calcular_racha(sesiones, hoy: date, config: dict | None = None, pausas=()) -> dict:
+    """Racha = semanas (lunes a domingo) seguidas cumpliendo el piso.
+
+    * Piso: 3 sesiones o 60 min (semana de cierre de mes: 2 sesiones o 30 min).
+    * Semana fallida: se REPARA si la semana siguiente tiene ≥ 2 sesiones (o cumple el piso); si no, la cubre el
+      comodín del mes (1 por mes); si tampoco, la racha se corta.
+    * Semanas con ≥ 4 días de pausa declarada (vacaciones) son neutras: ni suman ni cortan.
+    * La semana en curso solo suma si ya cumplió el piso; si no, sigue abierta (no corta).
+    `sesiones` es una lista de (fecha, minutos).
     """
-    dias = sorted({f for f in fechas if f <= hoy})
-    res = {"actual": 0, "mejor": 0, "hoy_estudiado": hoy in set(dias), "dias_comodin": [],
-           "comodines_usados_semana": 0, "comodines_disponibles": comodines_por_semana,
-           "estado": "sin_iniciar"}
-    if not dias:
+    cfg = {**CONFIG_DEFECTO, **(config or {})}
+    ses = [(f, m) for f, m in sesiones if f <= hoy and m > 0]
+    por_semana = {}
+    for f, m in ses:
+        s = por_semana.setdefault(lunes_de(f), [0, 0])
+        s[0] += 1
+        s[1] += m
+
+    def info(lunes: date) -> dict:
+        n_ses, mins = por_semana.get(lunes, [0, 0])
+        cierre = es_semana_de_cierre(lunes, cfg["dias_cierre_mes"])
+        piso_s = cfg["piso_cierre_sesiones"] if cierre else cfg["piso_sesiones"]
+        piso_m = cfg["piso_cierre_minutos"] if cierre else cfg["piso_minutos"]
+        return {"lunes": lunes.isoformat(), "sesiones": n_ses, "minutos": mins, "cierre": cierre,
+                "piso_sesiones": piso_s, "piso_minutos": piso_m,
+                "piso_ok": n_ses >= piso_s or mins >= piso_m,
+                "pausa": _dias_en_pausa(lunes, pausas) >= 4, "estado": None}
+
+    lunes_hoy = lunes_de(hoy)
+    res = {"actual": 0, "mejor": 0, "estado": "sin_iniciar", "semanas": [],
+           "comodin_disponible": True, "semana_en_curso": None}
+    if not ses:
+        w = info(lunes_hoy)
+        w["estado"] = "pausa" if w["pausa"] else "en_curso"
+        res["semana_en_curso"] = w
         return res
-    usados, dias_comodin = {}, []
-    actual = mejor = 1
-    for prev, cur in zip(dias, dias[1:]):
-        hueco = [prev + timedelta(days=k) for k in range(1, (cur - prev).days)]
-        if hueco and not _cubrir_hueco(hueco, usados, comodines_por_semana, dias_comodin):
-            actual = 1
-        else:
+    infos = []
+    d = lunes_de(min(f for f, _ in ses))
+    while d <= lunes_hoy:
+        infos.append(info(d))
+        d += timedelta(weeks=1)
+    usados: dict = {}
+    actual = mejor = 0
+    ultimo = len(infos) - 1
+    for i, w in enumerate(infos):
+        if w["piso_ok"]:
+            w["estado"] = "cumplida"
             actual += 1
+        elif w["pausa"]:
+            w["estado"] = "pausa"
+        elif i == ultimo:
+            w["estado"] = "en_curso"
+        else:
+            sig = infos[i + 1]
+            mes = mes_de_semana(date.fromisoformat(w["lunes"]))
+            if sig["sesiones"] >= cfg["sesiones_para_reparar"] or sig["piso_ok"]:
+                w["estado"] = "reparada"
+            elif i + 1 == ultimo and not sig["pausa"]:
+                w["estado"] = "por_reparar"
+            elif usados.get(mes, 0) < cfg["comodines_por_mes"]:
+                usados[mes] = usados.get(mes, 0) + 1
+                w["estado"] = "comodin"
+            else:
+                w["estado"] = "rota"
+                actual = 0
         mejor = max(mejor, actual)
-    ultimo = dias[-1]
-    if ultimo < hoy:
-        abierto = [ultimo + timedelta(days=k) for k in range(1, (hoy - ultimo).days)]
-        if abierto and not _cubrir_hueco(abierto, usados, comodines_por_semana, dias_comodin):
-            actual = 0
-    usados_hoy = usados.get(_semana_iso(hoy), 0)
-    res.update(actual=actual, mejor=mejor, dias_comodin=[d.isoformat() for d in dias_comodin],
-               comodines_usados_semana=usados_hoy,
-               comodines_disponibles=max(0, comodines_por_semana - usados_hoy),
-               estado="activa" if actual > 0 else "cortada")
+    mes_actual = mes_de_semana(lunes_hoy)
+    res.update(actual=actual, mejor=mejor, semanas=infos, semana_en_curso=infos[-1],
+               estado="activa" if actual > 0 else "en_cero",
+               comodin_disponible=usados.get(mes_actual, 0) < cfg["comodines_por_mes"])
     return res
 
 
-def fechas_estudio(estado: dict) -> list[date]:
+def sesiones_de_estado(estado: dict) -> list:
     out = []
     for s in estado.get("sesiones", []):
         try:
-            if int(s.get("minutos", 0)) > 0:
-                out.append(date.fromisoformat(s["fecha"]))
+            out.append((date.fromisoformat(s["fecha"]), int(s.get("minutos", 0))))
         except (ValueError, KeyError, TypeError):
             continue
     return out
 
 
+def fechas_estudio(estado: dict) -> list[date]:
+    return [f for f, m in sesiones_de_estado(estado) if m > 0]
+
+
 def racha_de(ctx: Contexto) -> dict:
-    return calcular_racha(fechas_estudio(ctx.estado), ctx.hoy, ctx.comodines)
+    return calcular_racha(sesiones_de_estado(ctx.estado), ctx.hoy, ctx.config, _pausas_de(ctx.estado))
+
+
+def texto_falta_piso(w: dict) -> str:
+    if w["piso_ok"]:
+        return "piso cumplido"
+    faltan_s = max(0, w["piso_sesiones"] - w["sesiones"])
+    faltan_m = max(0, w["piso_minutos"] - w["minutos"])
+    return f"faltan {faltan_s} sesión(es) o {faltan_m} min para el piso"
 
 
 # ---------------------------------------------------------------------------
-# Retomar sin culpa
+# Retomar sin culpa (investigacion/03, §3)
 # ---------------------------------------------------------------------------
-def dias_sin_estudiar(estado: dict, hoy: date):
+def dias_sin_estudiar(estado: dict, hoy: date, libres=()):
+    """Días de estudio PLANIFICADOS sin estudiar desde la última sesión (hasta hoy, inclusive).
+
+    Los días de baja disponibilidad (por defecto jueves a domingo, según 03) no cuentan: un
+    fin de semana largo en la sucursal no es un «retorno». Devuelve None si no hay sesiones.
+    """
     fechas = [f for f in fechas_estudio(estado) if f <= hoy]
     if not fechas:
         return None
-    return (hoy - max(fechas)).days
+    ultima = max(fechas)
+    libres = set(libres or ())
+    return sum(1 for k in range(1, (hoy - ultima).days + 1)
+               if (ultima + timedelta(days=k)).weekday() not in libres)
 
 
-def protocolo_retomar(dias) -> dict:
-    """Protocolo de retorno según días sin estudiar. Nunca castiga: re-engancha."""
+def dias_fuera(ctx: "Contexto"):
+    return dias_sin_estudiar(ctx.estado, ctx.hoy, ctx.config.get("dias_de_baja_disponibilidad", ()))
+
+
+def en_pausa_declarada(estado: dict, hoy: date) -> bool:
+    return any(desde <= hoy <= hasta for desde, hasta in _pausas_de(estado))
+
+
+def pausa_reciente(estado: dict, hoy: date) -> bool:
+    """¿Hubo una pausa declarada que terminó hace poco (≤ 7 días)?"""
+    return any(hasta < hoy <= hasta + timedelta(days=7) for _, hasta in _pausas_de(estado))
+
+
+def ancla_reinicio(hoy: date):
+    """03: ancla al próximo lunes o al inicio de mes si está a ≤ 3 días; si no, parte ya."""
+    candidatos = []
+    if hoy.weekday() != 0:
+        candidatos.append((lunes_de(hoy) + timedelta(days=7), "el lunes"))
+    primero_mes = date(hoy.year + (hoy.month == 12), hoy.month % 12 + 1, 1)
+    if hoy.day != 1:
+        candidatos.append((primero_mes, "el inicio de mes"))
+    candidatos = [(d, q) for d, q in candidatos if (d - hoy).days <= 3]
+    return min(candidatos) if candidatos else (hoy, "hoy")
+
+
+def protocolo_retomar(dias, hoy: date | None = None, pausa_declarada: bool = False) -> dict:
+    """Protocolo de retorno. Nunca castiga ni cuenta días perdidos: re-engancha."""
     if dias is None:
         return {"codigo": "inicio", "titulo": "Primer día", "modo": "estandar",
                 "mensaje": "Aún no hay sesiones registradas. Hoy empieza la semana 1: una sola cosa, bien hecha.",
                 "pasos": ["Lee el objetivo de la semana 1 (tutor.py hoy).",
-                          "Sesión estándar de 45 min o micro de 15 si hoy no da.",
-                          "Cierra con registrar: así mañana el tutor sabe dónde quedaste."]}
-    if dias <= 1:
+                          "Sesión estándar de 30 min, o micro de 15 si hoy no da.",
+                          "Cierra con registrar y un si-entonces: así el tutor sabe dónde quedaste."]}
+    if dias <= 2:
         return {"codigo": "al_dia", "titulo": "Al día", "modo": "estandar",
-                "mensaje": "No hay nada que retomar: sigue con el plan de hoy.",
-                "pasos": ["tutor.py hoy y al lío."]}
-    if dias <= 3:
-        return {"codigo": "corto", "titulo": f"Retorno corto ({dias} días)", "modo": "estandar",
-                "mensaje": f"{dias} días sin estudiar es normal en una semana de sucursal. Retomas donde quedaste.",
-                "pasos": ["Lee tu última nota de bitácora (abajo) — 1 min.",
-                          "Haz 3 repasos vencidos — 5 min.",
-                          "Sigue con el paso que marca tutor.py hoy."]}
-    if dias <= 7:
-        return {"codigo": "medio", "titulo": f"Retorno medio ({dias} días)", "modo": "micro",
-                "mensaje": f"Estuviste {dias} días fuera. No se recupera el tiempo: se recupera el hilo. Hoy, sesión micro.",
-                "pasos": ["Lee tu última nota de bitácora — 1 min.",
-                          "Di en voz alta el objetivo de tu semana sin mirarlo; después compáralo — 2 min.",
-                          "Hasta 5 repasos vencidos — 5 min.",
-                          "Versión micro de la semana (tutor.py hoy --micro) — 7 min.",
-                          "No intentes «ponerte al día» con una maratón: mañana sigue el plan normal."]}
-    if dias <= 14:
-        return {"codigo": "largo", "titulo": f"Retorno largo ({dias} días)", "modo": "micro",
-                "mensaje": (f"{dias} días fuera. Pasa: cierres de mes, turnos, vida. La racha se reinicia, "
-                            "tu avance no: las semanas aprobadas siguen aprobadas."),
-                "pasos": ["Diagnóstico de 3 preguntas de tu última semana (abajo), sin mirar — 5 min.",
-                          "Si fallas 2 o más: hoy haces la versión micro de esa semana, no avanzas contenido nuevo.",
-                          "Si aciertas 2 o más: versión micro de la semana en curso — 10 min.",
-                          "Registra la sesión: la racha nueva empieza hoy.",
-                          "Revisa la fecha estimada de término (abajo): el calendario se corre, no se comprime."]}
-    return {"codigo": "reinicio", "titulo": f"Reinicio suave ({dias} días)", "modo": "micro",
-            "mensaje": (f"{dias} días fuera. Volver es lo único que importa, y ya lo estás haciendo. "
-                        "Nada de lo aprobado se pierde; hoy solo re-enganchas."),
-            "pasos": ["Mira el panel (tutor.py panel) para ver dónde vas — 2 min.",
-                      "Diagnóstico de 3 preguntas de tu última semana aprobada, sin mirar — 5 min.",
-                      "Una victoria chica: la versión micro de la semana en curso — 8 min.",
-                      "Acuerda con el tutor un ritmo mínimo realista (ej.: 3 micro + 1 lab por semana) por 2 semanas.",
-                      "El calendario se reprograma solo: la fecha estimada de término está abajo."]}
+                "mensaje": "No hay nada que retomar ni que comentar: sesión normal. La recuperación ya incluye lo pendiente.",
+                "pasos": ["tutor.py hoy y adelante."]}
+    if dias <= 6:
+        return {"codigo": "reentrada", "titulo": "Reentrada", "modo": "micro",
+                "mensaje": "Se retoma el hilo, no el tiempo. Hoy, micro de reentrada.",
+                "pasos": ["Dónde quedamos: tu última nota y tu si-entonces (abajo).",
+                          "3 preguntas fáciles-medias, sin mirar (abajo).",
+                          "El paso que ya estaba definido, en versión micro (tutor.py hoy --micro).",
+                          "Replanifica QUITANDO, no apilando: esta semana basta con el piso."]}
+    fecha, que = ancla_reinicio(hoy or date.today())
+    pasos = []
+    if que != "hoy":
+        pasos.append(f"Ancla el reinicio a {que} ({fecha.isoformat()}): parte ahí con arranque fuerte. "
+                     "Hasta entonces, nada obligatorio.")
+    else:
+        pasos.append("Parte hoy mismo; no esperes al lunes.")
+    if not pausa_declarada:
+        pasos.append("Pregunta: ¿qué lo cortó: tiempo, energía o interés? Tiempo → baja el piso. "
+                     "Energía → solo micro por una semana. Interés → proyecto aplicado a tu sucursal.")
+    pasos += ["Prueba de nivel: 8 preguntas sin mirar (abajo); el tutor muestra cada respuesta después.",
+              "La primera sesión termina con algo funcionando (la versión micro de la semana en curso).",
+              "Las fechas se mueven; nunca se comprimen. Lo aprobado sigue aprobado."]
+    return {"codigo": "reinicio", "titulo": "Reinicio limpio", "modo": "estandar",
+            "mensaje": ("Volviste, que es lo que importa. Nada de lo aprobado se pierde; "
+                        "hoy se re-engancha con una prueba corta y algo funcionando."),
+            "pasos": pasos, "ancla": fecha.isoformat()}
 
 
 # ---------------------------------------------------------------------------
-# Evidencia de dominio (forma mínima; la calidad la juzga el tutor)
+# Evidencia y rúbrica (la aprobación la decide el código)
 # ---------------------------------------------------------------------------
 RE_URL = re.compile(r"https?://[^\s<>\"'«»]+", re.I)
 RE_CONSUMO = re.compile(
@@ -639,8 +795,7 @@ LARGO_MINIMO_DESCRIPCION = 60
 def _candidatos_ruta(texto: str) -> list[str]:
     tokens = []
     for tok in re.split(r"\s+", texto):
-        tok = tok.strip("\"'«»()[]{},;:")
-        tok = tok.rstrip(".")
+        tok = tok.strip("\"'«»()[]{},;:").rstrip(".")
         if not tok or RE_URL.match(tok):
             continue
         if "/" in tok or re.search(r"\.[A-Za-z0-9]{1,5}$", tok):
@@ -659,10 +814,10 @@ def _existe_ruta(tok: str, rutas: Rutas):
 
 
 def evaluar_evidencia(texto: str, es_proyecto: bool, rutas: Rutas):
-    """Devuelve (ok, tipo, motivo). tipo ∈ {archivo, url, descripcion}.
+    """Forma mínima de la evidencia. Devuelve (ok, tipo, motivo); tipo ∈ {archivo, url, descripcion}.
 
-    Reglas: sin evidencia no hay avance; «vi el contenido» no es evidencia;
-    las semanas de proyecto exigen el artefacto (ruta existente o URL).
+    Sin evidencia no hay avance; «vi el contenido» no es evidencia; las semanas de proyecto
+    exigen el artefacto (ruta existente o URL). La calidad la puntúa la rúbrica.
     """
     t = (texto or "").strip()
     if not t:
@@ -693,28 +848,76 @@ def evaluar_evidencia(texto: str, es_proyecto: bool, rutas: Rutas):
     return True, tipo, ""
 
 
+def parsear_rubrica(texto: str | None) -> dict:
+    """«entregable=3,explicacion=2,recuperacion=3» → dict. Lanza ErrorTutor si el formato es inválido."""
+    if not texto or not texto.strip():
+        return {}
+    out = {}
+    for parte in re.split(r"[,;\s]+", texto.strip()):
+        if not parte:
+            continue
+        m = re.fullmatch(r"([a-z_]+)\s*[=:]\s*(\d)", normalizar(parte))
+        if not m:
+            raise ErrorTutor(f"Rúbrica mal escrita en «{parte}». Formato: entregable=3,explicacion=2,recuperacion=3")
+        clave, valor = m.group(1), int(m.group(2))
+        if clave not in CRITERIOS:
+            raise ErrorTutor(f"Criterio desconocido «{clave}». Válidos: {', '.join(CRITERIOS)}")
+        if not 0 <= valor <= 3:
+            raise ErrorTutor(f"«{clave}» debe ir de 0 a 3 ({ESCALA_RUBRICA}).")
+        out[clave] = valor
+    return out
+
+
+def evaluar_rubrica(rubrica: dict, n: int):
+    """Devuelve (ok, motivo). Todos los criterios de la semana, cada uno ≥ UMBRAL_RUBRICA."""
+    requeridos = criterios_semana(n)
+    faltan = [c for c in requeridos if c not in rubrica]
+    if faltan:
+        return False, (f"Falta puntuar: {', '.join(faltan)}. Criterios de la semana {n}: "
+                       f"{', '.join(requeridos)} (tutor.py rubrica {n}).")
+    bajos = [c for c in requeridos if rubrica[c] < UMBRAL_RUBRICA]
+    if bajos:
+        detalle = "; ".join(f"{c}: {CRITERIOS[c]}" for c in bajos)
+        return False, (f"No alcanza el umbral (mínimo {UMBRAL_RUBRICA} en cada criterio): "
+                       f"{', '.join(f'{c}={rubrica[c]}' for c in bajos)}. Qué se espera → {detalle}")
+    return True, ""
+
+
 # ---------------------------------------------------------------------------
 # Acciones que modifican la memoria
 # ---------------------------------------------------------------------------
 def inferir_tipo(minutos: int) -> str:
     if minutos <= 20:
         return "micro"
-    if minutos <= 60:
+    if minutos <= 50:
         return "estandar"
     return "lab"
 
 
+def recuperacion_del_dia(ctx: Contexto) -> str:
+    hoy = ctx.hoy.isoformat()
+    notas = [h["calidad"] for t in ctx.tarjetas["tarjetas"].values() for h in t.get("historial", [])
+             if h.get("fecha") == hoy]
+    return f"{sum(1 for q in notas if q >= 3)}/{len(notas)}" if notas else ""
+
+
 def registrar_sesion(ctx: Contexto, minutos: int, nota: str, tipo: str | None = None,
-                     evidencia: str | None = None, leido=(), semana: int | None = None) -> dict:
-    if not isinstance(minutos, int) or not 1 <= minutos <= 600:
+                     evidencia: str | None = None, leido=(), semana: int | None = None,
+                     objetivo: str | None = None, logrado: str | None = None,
+                     duda: str | None = None, si_entonces: str | None = None) -> dict:
+    if isinstance(minutos, bool) or not isinstance(minutos, int) or not 1 <= minutos <= 600:
         raise ErrorTutor("--minutos debe ser un entero entre 1 y 600.")
     nota = (nota or "").strip()
     if not nota:
-        raise ErrorTutor("La nota es obligatoria: 1 línea de qué hiciste o aprendiste (es lo que te "
+        raise ErrorTutor("La nota es obligatoria: 1 línea de qué aprendiste o hiciste (es lo que te "
                          "permite retomar rápido la próxima vez).")
     tipo = tipo or inferir_tipo(minutos)
     if tipo not in TIPOS_SESION:
         raise ErrorTutor(f"--tipo debe ser uno de: {', '.join(TIPOS_SESION)}.")
+    if logrado is not None:
+        logrado = normalizar(logrado).strip()
+        if logrado not in LOGRADO:
+            raise ErrorTutor("--logrado debe ser si, parcial o no.")
     tope = min(ctx.semana_actual, TOTAL_SEMANAS)
     semana = semana or tope
     if not 1 <= semana <= tope:
@@ -726,8 +929,18 @@ def registrar_sesion(ctx: Contexto, minutos: int, nota: str, tipo: str | None = 
             avisos.append(f"La fuente «{fid}» no existe en base/fuentes.json (se registra igual).")
     if evidencia and not RE_URL.match(evidencia.strip()) and not _existe_ruta(evidencia.strip(), ctx.rutas):
         avisos.append(f"No encontré el archivo de evidencia «{evidencia}» (se registra igual).")
+    if minutos > TOPE_LAB_MINUTOS:
+        avisos.append("Sesión de más de 2 h: la próxima vez aplica el tope (2 h + una extensión de 25 min "
+                      "decidida explícitamente) y registra el punto de reanudación.")
+    datos = ctx.semana(semana)
+    objetivo = (objetivo or "").strip() or datos.get("objetivo", "")
+    recuperacion = recuperacion_del_dia(ctx)
     sesion = {"fecha": ctx.hoy.isoformat(), "minutos": minutos, "tipo": tipo, "semana": semana,
-              "nota": nota}
+              "nota": nota, "objetivo": objetivo}
+    for clave, valor in (("logrado", logrado), ("duda", duda), ("si_entonces", si_entonces),
+                         ("recuperacion", recuperacion)):
+        if valor and str(valor).strip():
+            sesion[clave] = str(valor).strip()
     if evidencia:
         sesion["evidencia"] = evidencia.strip()
     if leido:
@@ -736,16 +949,17 @@ def registrar_sesion(ctx: Contexto, minutos: int, nota: str, tipo: str | None = 
     nuevas = []
     for fid in leido:
         nuevas += activar_tarjetas(ctx, ids_tarjetas_ficha(ctx, fid), ctx.hoy)
-    ctx.anotar_bitacora(
-        f"{ctx.hoy.isoformat()} · Semana {semana} · {tipo} · {formato_minutos(minutos)}",
-        [f"- Nota: {nota}",
-         f"- Evidencia: {evidencia}" if evidencia else "",
-         f"- Leído: {', '.join(leido)}" if leido else ""])
+    etiqueta = {"micro": "Micro", "estandar": "Estándar", "lab": "Laboratorio", "repaso": "Repaso",
+                "produccion": "Producción"}[tipo]
+    aprendi = nota + (f" (evidencia: {evidencia})" if evidencia else "") + (f" (leído: {', '.join(leido)})" if leido else "")
+    ctx.fila_bitacora(semana, f"{etiqueta} {formato_minutos(minutos)}", objetivo, logrado or "", aprendi,
+                      duda or "", recuperacion, si_entonces or "")
     ctx.guardar()
     return {"sesion": sesion, "avisos": avisos, "tarjetas_nuevas": nuevas}
 
 
-def aprobar_semana(ctx: Contexto, n: int, evidencia: str) -> dict:
+def aprobar_semana(ctx: Contexto, n: int, evidencia: str, rubrica: str | dict | None = None,
+                   test_out: bool = False) -> dict:
     actual = ctx.semana_actual
     if ctx.terminado:
         raise ErrorTutor("El programa ya está completo: las 24 semanas están aprobadas.")
@@ -756,13 +970,14 @@ def aprobar_semana(ctx: Contexto, n: int, evidencia: str) -> dict:
     aprobs = ctx.estado["aprobaciones"]
     if aprobs and ctx.hoy < parse_fecha(aprobs[-1]["fecha"]):
         raise ErrorTutor("La fecha de aprobación no puede ser anterior a la última aprobación.")
+    puntajes = rubrica if isinstance(rubrica, dict) else parsear_rubrica(rubrica)
 
     def rechazar(motivo: str):
         ctx.estado["rechazos"].append({"semana": n, "fecha": ctx.hoy.isoformat(),
-                                       "evidencia": (evidencia or "").strip(), "motivo": motivo})
-        ctx.anotar_bitacora(f"{ctx.hoy.isoformat()} · Semana {n}: todavía no se aprueba",
-                            [f"- Evidencia presentada: {(evidencia or '(vacía)').strip()}",
-                             f"- Qué falta: {motivo}"])
+                                       "evidencia": (evidencia or "").strip(), "rubrica": puntajes,
+                                       "motivo": motivo})
+        ctx.fila_bitacora(n, "AÚN NO se aprueba", f"Aprobar semana {n} con: {(evidencia or '(vacía)').strip()}",
+                          "no", f"Qué falta: {motivo}", "", "", "Cerrar la brecha y volver a demostrar")
         ctx.guardar()
         raise ErrorTutor("Aún no. " + motivo)
 
@@ -774,8 +989,12 @@ def aprobar_semana(ctx: Contexto, n: int, evidencia: str) -> dict:
     ok, tipo, motivo = evaluar_evidencia(evidencia, es_proyecto, ctx.rutas)
     if not ok:
         rechazar(motivo)
+    ok, motivo = evaluar_rubrica(puntajes, n)
+    if not ok:
+        rechazar(motivo)
     registro = {"semana": n, "fecha": ctx.hoy.isoformat(), "evidencia": evidencia.strip(),
-                "tipo_evidencia": tipo}
+                "tipo_evidencia": tipo, "rubrica": {c: puntajes[c] for c in criterios_semana(n)},
+                "modalidad": "test-out" if test_out else "normal"}
     if es_proyecto:
         registro["proyecto"] = (datos.get("proyecto") or {}).get("nombre", PROYECTOS_MALLA.get(n))
     aprobs.append(registro)
@@ -783,10 +1002,10 @@ def aprobar_semana(ctx: Contexto, n: int, evidencia: str) -> dict:
     nuevas = activar_tarjetas(ctx, ids_tarjetas_semana(ctx, n), ctx.hoy)
     for fid in datos.get("lectura") or []:
         nuevas += activar_tarjetas(ctx, ids_tarjetas_ficha(ctx, fid), ctx.hoy)
-    ctx.anotar_bitacora(f"{ctx.hoy.isoformat()} · Semana {n} APROBADA",
-                        [f"- Evidencia ({tipo}): {evidencia.strip()}",
-                         f"- Proyecto: {registro['proyecto']}" if es_proyecto else "",
-                         f"- Tarjetas nuevas para repaso: {len(nuevas)}"])
+    rub = ", ".join(f"{c}={v}" for c, v in registro["rubrica"].items())
+    ctx.fila_bitacora(n, "APROBADA" + (" (test-out)" if test_out else ""), datos.get("objetivo", ""), "si",
+                      f"Evidencia ({tipo}): {evidencia.strip()}" + (f" · Proyecto: {registro['proyecto']}" if es_proyecto else ""),
+                      "", f"Rúbrica: {rub}", "")
     ctx.guardar()
     return {"registro": registro, "tarjetas_nuevas": nuevas}
 
@@ -803,29 +1022,56 @@ def calificar_tarjeta(ctx: Contexto, tid: str, calidad: int) -> dict:
     return t
 
 
-def registrar_retorno(ctx: Contexto, dias: int, codigo: str) -> bool:
-    if dias is None or dias < 2:
+def registrar_retorno(ctx: Contexto, dias, codigo: str) -> bool:
+    if codigo not in ("reentrada", "reinicio"):
         return False
     hoy = ctx.hoy.isoformat()
     if any(r.get("fecha") == hoy for r in ctx.estado["retornos"]):
         return False
     ctx.estado["retornos"].append({"fecha": hoy, "dias_fuera": dias, "protocolo": codigo})
-    ctx.anotar_bitacora(f"{hoy} · Retorno después de {dias} días ({codigo})",
-                        ["- Volviste. Eso es lo que cuenta."])
+    ctx.fila_bitacora(min(ctx.semana_actual, TOTAL_SEMANAS), "RETORNO", f"Protocolo: {codigo}", "",
+                      "Volviste. Eso es lo que cuenta.")
     ctx.guardar()
     return True
 
 
+def declarar_pausa(ctx: Contexto, hasta: date, motivo: str) -> dict:
+    if hasta < ctx.hoy:
+        raise ErrorTutor("--hasta no puede ser anterior a hoy.")
+    if (hasta - ctx.hoy).days > 60:
+        raise ErrorTutor("Una pausa declarada dura como máximo 60 días; si es más larga, declárala de nuevo al volver.")
+    p = {"desde": ctx.hoy.isoformat(), "hasta": hasta.isoformat(), "motivo": (motivo or "pausa").strip()}
+    ctx.estado["pausas"].append(p)
+    ctx.fila_bitacora(min(ctx.semana_actual, TOTAL_SEMANAS), "PAUSA DECLARADA",
+                      f"Hasta {p['hasta']}", "", p["motivo"], "", "", "La racha queda congelada")
+    ctx.guardar()
+    return p
+
+
+def agregar_parking(ctx: Contexto, idea: str) -> dict:
+    idea = (idea or "").strip()
+    if not idea:
+        raise ErrorTutor("La idea está vacía.")
+    item = {"fecha": ctx.hoy.isoformat(), "idea": idea, "semana": min(ctx.semana_actual, TOTAL_SEMANAS)}
+    ctx.estado["parking"].append(item)
+    ctx.guardar()
+    return item
+
+
 # ---------------------------------------------------------------------------
-# Plan del día
+# Plan del día (investigacion/03, §1)
 # ---------------------------------------------------------------------------
 PASOS = {
-    "entender-1": {"modo": "estandar", "nombre": "Entender (1/2)"},
-    "entender-2": {"modo": "estandar", "nombre": "Entender (2/2)"},
-    "construir-1": {"modo": "lab", "nombre": "Construir (1/2)"},
-    "construir-2": {"modo": "lab", "nombre": "Construir (2/2)"},
+    "entender": {"modo": "estandar", "nombre": "Entender"},
+    "entender-2": {"modo": "estandar", "nombre": "Entender (segunda pasada)"},
+    "construir": {"modo": "lab", "nombre": "Construir"},
+    "construir-mas": {"modo": "lab", "nombre": "Construir (continuación)"},
+    "cerrar": {"modo": "estandar", "nombre": "Cerrar el laboratorio"},
     "demostrar": {"modo": "estandar", "nombre": "Demostrar"},
     "micro": {"modo": "micro", "nombre": "Micro"},
+    "reentrada": {"modo": "micro", "nombre": "Reentrada"},
+    "reinicio": {"modo": "estandar", "nombre": "Reinicio limpio"},
+    "mantenimiento": {"modo": "micro", "nombre": "Mantenimiento (cierre de mes)"},
     "mantener": {"modo": "micro", "nombre": "Mantener (programa completo)"},
 }
 
@@ -834,8 +1080,10 @@ def sesiones_de_semana(estado: dict, n: int) -> list:
     return [s for s in estado.get("sesiones", []) if s.get("semana") == n]
 
 
-def elegir_paso(estado: dict, n: int, modo: str | None = None, dias_fuera=None):
+def elegir_paso(estado: dict, n: int, modo: str | None = None, dias_fuera=None,
+                hoy: date | None = None, config: dict | None = None):
     """Decide el paso de hoy. Devuelve (clave_paso, motivo)."""
+    cfg = {**CONFIG_DEFECTO, **(config or {})}
     if n >= SEMANA_FIN:
         return "mantener", "programa completo"
     ses = sesiones_de_semana(estado, n)
@@ -843,22 +1091,31 @@ def elegir_paso(estado: dict, n: int, modo: str | None = None, dias_fuera=None):
     lab = sum(1 for s in ses if s.get("tipo") == "lab")
     if modo == "micro":
         return "micro", "elegiste modo micro"
-    if modo is None and dias_fuera is not None and dias_fuera >= 4:
-        return "micro", f"vienes de {dias_fuera} días sin estudiar: hoy re-enganchas en modo micro"
+    if modo is None:
+        if dias_fuera is not None and dias_fuera >= 7:
+            return "reinicio", "vuelves después de un tiempo: reinicio limpio"
+        if dias_fuera is not None and dias_fuera >= 3:
+            return "reentrada", "micro de reentrada para retomar el hilo"
+        if hoy is not None and es_semana_de_cierre(lunes_de(hoy), cfg["dias_cierre_mes"]):
+            if not estado.get("sesiones"):
+                return "micro", "semana de cierre de mes: primer contacto suave, en versión micro"
+            return "mantenimiento", "semana de cierre de mes: sin contenido nuevo"
     if modo == "lab":
-        return ("construir-1" if lab == 0 else "construir-2"), f"{lab} lab(s) hechos esta semana"
+        return ("construir" if lab == 0 else "construir-mas"), f"{lab} laboratorio(s) hechos en esta semana de contenido"
     if modo == "estandar":
-        clave = "entender-1" if teoria == 0 else "entender-2" if teoria == 1 else "demostrar"
-        return clave, f"{teoria} sesión(es) estándar esta semana"
+        if teoria == 0:
+            return "entender", "primera sesión estándar de la semana"
+        if teoria == 1:
+            return ("cerrar", "ya hay laboratorio: toca cerrarlo") if lab else ("entender-2", "aún sin laboratorio")
+        return "demostrar", "teoría y cierre hechos: toca demostrar"
+    # Ritmo de 03: lunes estándar (entender) · martes lab (construir) · miércoles estándar (cerrar) · demostrar.
     if teoria == 0:
-        return "entender-1", "semana nueva: primero entender"
-    if teoria == 1:
-        return "entender-2", "ya hiciste la primera sesión de teoría"
+        return "entender", "semana nueva: primero entender"
     if lab == 0:
-        return "construir-1", "teoría lista: toca construir"
-    if lab == 1:
-        return "construir-2", "laboratorio a medias: cerrar el entregable"
-    return "demostrar", "teoría y laboratorio hechos: toca demostrar para avanzar"
+        return "construir", "conceptos vistos: toca construir"
+    if teoria == 1:
+        return "cerrar", "laboratorio empezado: cerrarlo y dejar el entregable"
+    return "demostrar", "laboratorio cerrado: toca demostrar para avanzar"
 
 
 def _mitades(lista: list):
@@ -873,113 +1130,188 @@ def lecturas_de(ctx: Contexto, datos: dict) -> list[dict]:
         f = (ctx.fuentes or {}).get(fid, {})
         out.append({"id": fid, "titulo": f.get("titulo", "(no está en base/fuentes.json)"),
                     "autor": f.get("autor"), "minutos": f.get("minutos"), "url": f.get("url"),
-                    "acceso": f.get("acceso"), "leida": fid in leidas,
+                    "acceso": f.get("acceso"), "nucleo": bool(f.get("nucleo")), "leida": fid in leidas,
                     "ficha": ctx.rutas.rel(ctx.fichas[fid]["ruta"]) if fid in ctx.fichas else None})
     return out
 
 
+def quedamos_en(ctx: Contexto) -> str:
+    ses = ctx.estado.get("sesiones", [])
+    if not ses:
+        return "partimos con la semana 1"
+    u = ses[-1]
+    txt = u.get("nota", "")
+    if u.get("duda"):
+        txt += f" · duda pendiente: {u['duda']}"
+    return txt
+
+
+def ultimo_si_entonces(ctx: Contexto) -> str:
+    for s in reversed(ctx.estado.get("sesiones", [])):
+        if s.get("si_entonces"):
+            return s["si_entonces"]
+    return ""
+
+
+def seleccion_diagnostico(ctx: Contexto, cantidad: int, faciles: bool = False) -> list[str]:
+    """Preguntas para reentrada (fáciles-medias) o prueba de nivel (vencidas + últimas semanas)."""
+    tarjetas = ctx.tarjetas.get("tarjetas", {})
+    if faciles:
+        orden = sorted(tarjetas, key=lambda t: (-float(tarjetas[t].get("ef", EF_INICIAL)), t))
+    else:
+        orden = tarjetas_vencidas(ctx.tarjetas, ctx.hoy)
+        for n in reversed([a["semana"] for a in ctx.estado.get("aprobaciones", [])]):
+            orden += [t for t in ids_tarjetas_semana(ctx, n) if t not in orden]
+    if len(orden) < cantidad:
+        orden += [t for t in ids_tarjetas_semana(ctx, min(ctx.semana_actual, TOTAL_SEMANAS)) if t not in orden]
+    return [t for t in orden if t in ctx.catalogo][:cantidad]
+
+
 def plan_de_hoy(ctx: Contexto, modo: str | None = None) -> dict:
     n = ctx.semana_actual
-    dias = dias_sin_estudiar(ctx.estado, ctx.hoy)
-    paso, motivo = elegir_paso(ctx.estado, n, modo, dias)
+    dias = dias_fuera(ctx)
+    paso, motivo = elegir_paso(ctx.estado, n, modo, dias, ctx.hoy, ctx.config)
     vencidas = tarjetas_vencidas(ctx.tarjetas, ctx.hoy)
+    modo_paso = PASOS[paso]["modo"]
+    # El reinicio no cuenta como teoría de la semana (si no, se saltaría «Entender»).
+    tipo_registro = "repaso" if paso == "reinicio" else modo_paso
     plan = {"fecha": ctx.hoy.isoformat(), "semana": n, "paso": paso,
-            "nombre_paso": PASOS[paso]["nombre"], "modo": PASOS[paso]["modo"],
-            "minutos": MODOS[PASOS[paso]["modo"]], "motivo": motivo, "dias_sin_estudiar": dias,
-            "repasos_vencidos": vencidas, "bloques": [], "lecturas": [], "terminado": ctx.terminado}
+            "nombre_paso": PASOS[paso]["nombre"], "modo": modo_paso, "minutos": MODOS[modo_paso],
+            "tipo_registro": tipo_registro,
+            "motivo": motivo, "repasos_vencidos": vencidas, "bloques": [], "lecturas": [],
+            "terminado": ctx.terminado, "quedamos_en": quedamos_en(ctx),
+            "si_entonces_anterior": ultimo_si_entonces(ctx)}
+    k_rec = 5 if modo_paso == "micro" else 3
+    primer_dia = not ctx.estado.get("sesiones")
+    if vencidas:
+        primero = f"responde sin mirar: «{ctx.catalogo.get(vencidas[0], {}).get('pregunta', '')}»"
+    elif primer_dia:
+        primero = "lee el objetivo en voz alta y nombra un caso de tu sucursal donde aplicaría"
+    else:
+        primero = "di en una frase qué recuerdas de tu última sesión"
+    plan["primero"] = primero
     if paso == "mantener":
-        plan["bloques"] = [
-            (5, f"Repaso: {len(vencidas)} tarjetas vencidas → tutor.py repaso"),
-            (10, "Avanza el piloto de tu capstone: 1 tarea concreta del roadmap 30/60/90."),
-        ]
+        plan["hoy"] = "mantener lo aprendido y avanzar el piloto del capstone"
+        plan["bloques"] = [(2, "Arranque"), (6, f"Recuperación: {min(len(vencidas), 5)} repaso(s) → tutor.py repaso"),
+                           (5, "Un paso del piloto del capstone (roadmap 30/60/90)"), (2, "Registro")]
         return plan
     datos = ctx.semana(n)
     plan.update(titulo=datos.get("titulo", ""), objetivo=datos.get("objetivo", ""),
                 etapa=datos.get("etapa"), version_micro=datos.get("version_micro", ""),
                 lecturas=lecturas_de(ctx, datos))
-    k = min(len(vencidas), 3 if paso == "micro" else 5)
-    recuperar = (f"Recuperar: {k} repaso(s) vencido(s) → tutor.py repaso (responde antes de ver la respuesta)"
-                 if k else "Recuperar: di en voz alta qué recuerdas de tu última sesión (lee tu nota en la bitácora)")
+    plan["hoy"] = datos.get("objetivo", "")
+    arranque = f"Arranque: quedamos en «{plan['quedamos_en']}»; hoy: {PASOS[paso]['nombre']}"
+    if vencidas:
+        recuperar = f"Recuperación: {min(len(vencidas), k_rec)} pregunta(s) sin mirar → tutor.py repaso --limite {k_rec}"
+    elif primer_dia:
+        recuperar = "Línea base: di en 3 frases qué sabes hoy de agentes, sin buscar nada (sirve para medir tu avance)"
+    else:
+        recuperar = "Recuperación: explica sin mirar lo último que aprendiste (no hay tarjetas vencidas)"
     c1, c2 = _mitades(datos.get("conceptos") or [])
     ids_semana = ids_tarjetas_semana(ctx, n)
-    cierre = (f"Cierre: tutor.py registrar --minutos {MODOS[PASOS[paso]['modo']]} "
-              f"--tipo {PASOS[paso]['modo']} --nota \"...\"")
-    lectura_txt = ("Lectura: " + "; ".join(f"{l['id']} — {l['titulo']}" for l in plan["lecturas"] if not l["leida"])
-                   if any(not l["leida"] for l in plan["lecturas"]) else
-                   "Idea clave: repasa los conceptos de abajo (la lectura de la semana ya está hecha o aún no se integra la base)")
-    if paso == "entender-1":
+    cierre = (f"Cierre: tutor.py registrar --minutos {MODOS[modo_paso]} --tipo {tipo_registro} --nota \"...\" "
+              "--si-entonces \"Si es [día/hora] y [ancla], entonces abro el tutor y [primera acción]\"")
+    pendientes = [l for l in plan["lecturas"] if not l["leida"]]
+    if paso in ("entender", "entender-2"):
+        foco = c1 if paso == "entender" else (c2 or c1)
         plan["bloques"] = [
-            (5, recuperar),
-            (10, lectura_txt),
-            (20, "Tu intento primero: explica con tus palabras y un ejemplo de tu sucursal → " + " | ".join(c1)),
-            (7, "Feedback del tutor: qué está bien, qué falta, 1 corrección concreta"),
-            (3, cierre),
-        ]
-    elif paso == "entender-2":
+            (2, arranque), (5, recuperar),
+            (3, f"Gancho: el tutor plantea un caso de tu sucursal sobre «{foco[0] if foco else ''}» y tú predices qué pasa"),
+            (14, "Hacer: explica con tus palabras y un ejemplo propio → " + " | ".join(foco)
+             + (f" (lectura: {pendientes[0]['id']})" if pendientes else "")
+             + (". Después, sin mirar: " + ", ".join(ids_semana) if paso == "entender-2" else "")),
+            (3, "Explicar: explícaselo a tu vendedor más nuevo en 3 frases"),
+            (3, cierre)]
+    elif paso in ("construir", "construir-mas"):
+        b1 = ("Construir: " + datos.get("laboratorio", "")) if paso == "construir" else \
+            ("Sigue construyendo lo que falta para: " + datos.get("entregable", ""))
         plan["bloques"] = [
-            (5, recuperar),
-            (15, "Tu intento primero: explica con un ejemplo de tu sucursal → " + " | ".join(c2 or c1)),
-            (15, "Responde sin mirar las preguntas de la semana: " + ", ".join(ids_semana)
-             + " (el tutor muestra cada respuesta con: tutor.py respuesta <id>)"),
-            (7, "Feedback del tutor sobre tus respuestas"),
-            (3, cierre),
-        ]
-    elif paso == "construir-1":
+            (7, arranque + " · " + recuperar), (25, b1), (5, "Pausa sin pantalla"),
+            (25, "Construir y probar: deja funcionando la versión mínima"),
+            (8, "Demo y explicación: muéstrale al tutor qué funciona y por qué; él pregunta «¿qué pasa si…?»"),
+            (5, cierre + " (tope del laboratorio: 2 h)")]
+    elif paso == "cerrar":
         plan["bloques"] = [
-            (5, recuperar),
-            (10, "Planifica: ¿cuál es la versión mínima del laboratorio que puedes dejar funcionando hoy?"),
-            (60, "Construye: " + datos.get("laboratorio", "")),
-            (10, "Revisión con el tutor: qué funciona, qué no y qué sigue"),
-            (5, cierre),
-        ]
-    elif paso == "construir-2":
-        plan["bloques"] = [
-            (5, recuperar),
-            (60, "Cierra el entregable: " + datos.get("entregable", "")),
-            (15, "Autoevalúate contra la evidencia de dominio: " + datos.get("evidencia_de_dominio", "")),
-            (10, cierre),
-        ]
+            (2, arranque), (5, recuperar),
+            (3, "Gancho: ¿qué fallaría si mañana lo usa un vendedor de tu equipo? Predice antes de probar"),
+            (14, "Cierra el laboratorio y deja el entregable: " + datos.get("entregable", "")
+             + (" · Conceptos que aún no explicaste: " + " | ".join(c2) if c2 else "")),
+            (3, "Explicar: 3 frases para tu vendedor más nuevo sobre lo que construiste"),
+            (3, cierre)]
     elif paso == "demostrar":
         plan["bloques"] = [
-            (5, recuperar),
-            (25, "Demuestra: " + datos.get("evidencia_de_dominio", "")),
-            (10, "El tutor evalúa con exigencia; si hay brechas, las cierras hoy o agendas un lab"),
-            (5, f"Si pasa: tutor.py aprobar-semana {n} --evidencia \"<ruta, URL o qué demostraste>\""),
-        ]
+            (2, arranque), (5, recuperar),
+            (15, "Demuestra: " + datos.get("evidencia_de_dominio", "")),
+            (5, f"Evaluación con rúbrica, en contexto aparte: tutor.py rubrica {n} (0–3; mínimo 2 en cada criterio)"),
+            (3, f"Registra primero (tutor.py registrar ... --semana {n}) y, si pasa: tutor.py aprobar-semana {n} "
+                f"--evidencia \"<ruta, URL o qué demostraste>\" --rubrica \"{','.join(c + '=?' for c in criterios_semana(n))}\"")]
         rech = [r for r in ctx.estado.get("rechazos", []) if r.get("semana") == n]
         if rech:
             plan["ultimo_rechazo"] = rech[-1]["motivo"]
     elif paso == "micro":
-        plan["bloques"] = [
-            (5, recuperar),
-            (9, "Versión micro: " + datos.get("version_micro", "")),
-            (1, "Cierre: tutor.py registrar --minutos 15 --tipo micro --nota \"...\""),
-        ]
+        plan["bloques"] = [(2, arranque), (6, recuperar), (5, "Micro-paso: " + datos.get("version_micro", "")),
+                           (2, "Registro: tutor.py registrar --minutos 15 --tipo micro --nota \"...\"")]
+    elif paso == "reentrada":
+        faciles = seleccion_diagnostico(ctx, 3, faciles=True)
+        plan["preguntas"] = faciles
+        plan["bloques"] = [(2, f"Dónde quedamos: {plan['quedamos_en']}"),
+                           (6, "3 preguntas fáciles-medias sin mirar: " + (", ".join(faciles) or "las de la semana")),
+                           (5, "El paso ya definido, en micro: " + datos.get("version_micro", "")),
+                           (2, "Registro, y replanificar QUITANDO: esta semana basta con el piso")]
+    elif paso == "reinicio":
+        prueba = seleccion_diagnostico(ctx, 8)
+        plan["preguntas"] = prueba
+        plan["bloques"] = [(3, "¿Qué lo cortó: tiempo, energía o interés? (ajusta el plan con la respuesta)"),
+                           (10, "Prueba de nivel, 8 preguntas sin mirar: " + (", ".join(prueba) or "las de la semana")),
+                           (14, "Algo funcionando hoy: " + datos.get("version_micro", "")),
+                           (3, cierre)]
+    elif paso == "mantenimiento":
+        plan["hoy"] = "mantener lo aprendido durante el cierre de mes (sin contenido nuevo)"
+        plan["bloques"] = [(2, arranque), (6, recuperar),
+                           (5, "Cuaderno de fricciones: 1 línea sobre qué tarea del cierre de hoy podría hacer un agente"),
+                           (2, "Registro: tutor.py registrar --minutos 15 --tipo micro --nota \"fricción: ...\"")]
     return plan
 
 
 # ---------------------------------------------------------------------------
 # Resumen de estado
 # ---------------------------------------------------------------------------
-def minutos_en_semana_calendario(estado: dict, hoy: date) -> int:
-    lunes = hoy - timedelta(days=hoy.weekday())
-    total = 0
-    for s in estado.get("sesiones", []):
-        try:
-            f = date.fromisoformat(s["fecha"])
-        except (ValueError, KeyError):
-            continue
-        if lunes <= f <= hoy:
-            total += int(s.get("minutos", 0))
-    return total
+def nivel_actual(malla: dict, aprobadas) -> str | None:
+    nivel = None
+    for e in sorted(malla.get("etapas", []), key=lambda e: e.get("numero", 0)):
+        ini, fin = e.get("semanas", [0, 0])
+        if all(s in aprobadas for s in range(ini, fin + 1)):
+            nivel = e.get("nivel") or f"Etapa {e.get('numero')}"
+        else:
+            break
+    return nivel
 
 
-def inicio_semana_en_curso(ctx: Contexto):
+def proyeccion(ctx: Contexto) -> dict:
+    """Calendario honesto: ritmo real si hay datos; si no, el nominal de 03 (≈ 8 meses)."""
     aprobs = ctx.estado.get("aprobaciones", [])
-    if aprobs:
-        return parse_fecha(aprobs[-1]["fecha"])
+    nominal = ctx.config["dias_por_semana_de_contenido"]
+    ritmo_real = None
     fechas = fechas_estudio(ctx.estado)
-    return min(fechas) if fechas else None
+    if len(aprobs) >= 2 and fechas:
+        dias = (parse_fecha(aprobs[-1]["fecha"]) - min(fechas)).days
+        ritmo_real = max(1.0, dias / len(aprobs))
+    ritmo = ritmo_real or nominal
+    restantes = TOTAL_SEMANAS - len(aprobs)
+    out = {"ritmo_dias_por_semana": round(ritmo, 1), "ritmo_real": ritmo_real is not None,
+           "termino_programa": (ctx.hoy + timedelta(days=round(restantes * ritmo))).isoformat() if restantes else None,
+           "termino_etapa": None, "etapa": None}
+    if not ctx.terminado:
+        e = etapa_de(ctx.malla, ctx.semana().get("etapa"))
+        fin = e.get("semanas", [0, ctx.semana_actual])[1]
+        faltan = fin - ctx.semana_actual + 1
+        out.update(etapa=e.get("numero"), termino_etapa=(ctx.hoy + timedelta(days=round(faltan * ritmo))).isoformat())
+    return out
+
+
+def minutos_en_semana_calendario(estado: dict, hoy: date) -> int:
+    lunes = lunes_de(hoy)
+    return sum(m for f, m in sesiones_de_estado(estado) if lunes <= f <= hoy)
 
 
 def resumen(ctx: Contexto) -> dict:
@@ -987,42 +1319,48 @@ def resumen(ctx: Contexto) -> dict:
     datos = ctx.semana(n)
     aprobadas = [a["semana"] for a in ctx.estado.get("aprobaciones", [])]
     racha = racha_de(ctx)
-    dias = dias_sin_estudiar(ctx.estado, ctx.hoy)
+    dias = dias_fuera(ctx)
     vencidas = tarjetas_vencidas(ctx.tarjetas, ctx.hoy)
-    paso, motivo = elegir_paso(ctx.estado, n, None, dias)
-    total_min = sum(int(s.get("minutos", 0)) for s in ctx.estado.get("sesiones", []))
-    inicio = inicio_semana_en_curso(ctx)
+    paso, motivo = elegir_paso(ctx.estado, n, None, dias, ctx.hoy, ctx.config)
+    fechas = fechas_estudio(ctx.estado)
     etapas = []
     for e in ctx.malla.get("etapas", []):
         ini, fin = e.get("semanas", [0, 0])
-        rango = list(range(ini, fin + 1))
-        etapas.append({"numero": e.get("numero"), "nombre": e.get("nombre"),
-                       "aprobadas": sum(1 for s in rango if s in aprobadas), "total": len(rango)})
-    restantes = TOTAL_SEMANAS - len(aprobadas)
+        etapas.append({"numero": e.get("numero"), "nombre": e.get("nombre"), "nivel": e.get("nivel"),
+                       "aprobadas": sum(1 for s in range(ini, fin + 1) if s in aprobadas), "total": fin - ini + 1})
+    etapa_actual = etapa_de(ctx.malla, datos.get("etapa")) if not ctx.terminado else {}
     return {
         "fecha": ctx.hoy.isoformat(),
         "semana_actual": n,
         "terminado": ctx.terminado,
         "titulo": datos.get("titulo", "") if not ctx.terminado else "Programa completado",
         "etapa": datos.get("etapa") if not ctx.terminado else 6,
-        "nombre_etapa": etapa_de(ctx.malla, datos.get("etapa")).get("nombre") if not ctx.terminado else "",
+        "nombre_etapa": etapa_actual.get("nombre", ""),
         "objetivo": datos.get("objetivo", "") if not ctx.terminado else "",
+        "nivel": nivel_actual(ctx.malla, aprobadas),
+        "proximo_nivel": etapa_actual.get("nivel"),
         "aprobadas": aprobadas,
         "porcentaje": round(100 * len(aprobadas) / TOTAL_SEMANAS),
         "etapas": etapas,
         "racha": racha,
         "dias_sin_estudiar": dias,
-        "ultima_sesion": max(fechas_estudio(ctx.estado)).isoformat() if fechas_estudio(ctx.estado) else None,
+        "dias_calendario_sin_estudiar": dias_sin_estudiar(ctx.estado, ctx.hoy),
+        "toca_retomar": dias is not None and dias >= 3,
+        "en_pausa_declarada": en_pausa_declarada(ctx.estado, ctx.hoy),
+        "ultima_sesion": max(fechas).isoformat() if fechas else None,
+        "quedamos_en": quedamos_en(ctx),
+        "si_entonces": ultimo_si_entonces(ctx),
         "repasos_vencidos": vencidas,
         "tarjetas_activas": len(ctx.tarjetas.get("tarjetas", {})),
+        "recuperacion": metricas_recuperacion(ctx.tarjetas, ctx.hoy),
         "paso_siguiente": PASOS[paso]["nombre"],
         "modo_siguiente": PASOS[paso]["modo"],
         "motivo_paso": motivo,
+        "semana_calendario": racha["semana_en_curso"],
         "minutos_semana": minutos_en_semana_calendario(ctx.estado, ctx.hoy),
-        "meta_minutos_semana": int(datos.get("horas", 8) * 60) if not ctx.terminado else 0,
-        "minutos_totales": total_min,
-        "dias_en_semana_actual": (ctx.hoy - inicio).days if inicio and not ctx.terminado else None,
-        "fecha_estimada_termino": (ctx.hoy + timedelta(weeks=restantes)).isoformat() if restantes else None,
+        "minutos_totales": sum(m for _, m in sesiones_de_estado(ctx.estado)),
+        "proyeccion": proyeccion(ctx),
+        "parking": len(ctx.estado.get("parking", [])),
         "rechazos": len(ctx.estado.get("rechazos", [])),
         "retornos": len(ctx.estado.get("retornos", [])),
     }
@@ -1037,23 +1375,29 @@ FIN_BLOQUE = "ESTADO-TUTOR>>>"
 
 def bloque_estado(ctx: Contexto) -> str:
     r = resumen(ctx)
-    ult = ctx.estado.get("sesiones", [])[-1:] or [{}]
+    rc = r["racha"]
+    w = r["semana_calendario"]
     lineas = [
         INICIO_BLOQUE,
         f"fecha: {r['fecha']}",
         f"semana_actual: {r['semana_actual']}",
         f"titulo: {r['titulo']}",
+        f"nivel: {r['nivel'] or '-'}",
         f"aprobadas: {', '.join(map(str, r['aprobadas'])) or '-'}",
         f"paso_siguiente: {r['paso_siguiente']}",
-        f"racha: {r['racha']['actual']} (mejor {r['racha']['mejor']})",
-        f"ultima_sesion: {r['ultima_sesion'] or '-'}",
-        f"ultima_nota: {ult[0].get('nota', '-')}",
+        f"racha_semanal: {rc['actual']} (mejor {rc['mejor']}) · comodín del mes: "
+        f"{'disponible' if rc['comodin_disponible'] else 'usado'}",
+        f"esta_semana: {w['sesiones']} sesión(es), {w['minutos']} min · {texto_falta_piso(w)}",
+        f"quedamos_en: {r['quedamos_en']}",
+        f"si_entonces: {r['si_entonces'] or '-'}",
         f"repasos_vencidos: {', '.join(r['repasos_vencidos'][:10]) or '-'}",
+        f"ideas_en_parking: {r['parking']}",
         "# Eventos de esta conversación (una línea por evento; formato exacto):",
-        "# sesion: AAAA-MM-DD | minutos | micro/estandar/lab | nota",
+        "# sesion: AAAA-MM-DD | minutos | micro/estandar/lab | lo que aprendió | si-entonces",
         "# calificacion: AAAA-MM-DD | id_tarjeta | 0-5",
         "# leido: AAAA-MM-DD | id_fuente",
-        "# aprobada: AAAA-MM-DD | semana | evidencia",
+        "# parking: AAAA-MM-DD | idea",
+        "# aprobada: AAAA-MM-DD | semana | entregable=3,explicacion=2,recuperacion=3[,sin_ia=2] | evidencia",
         FIN_BLOQUE,
     ]
     return "\n".join(lineas)
@@ -1064,7 +1408,7 @@ def importar_bloque(ctx_factory, texto: str) -> dict:
     eventos = []
     for num, linea in enumerate(texto.splitlines(), 1):
         s = linea.strip()
-        m = re.match(r"^(sesion|calificacion|leido|aprobada)\s*:\s*(.+)$", s, re.I)
+        m = re.match(r"^(sesion|calificacion|leido|parking|aprobada)\s*:\s*(.+)$", s, re.I)
         if not m:
             continue
         partes = [p.strip() for p in m.group(2).split("|")]
@@ -1085,13 +1429,14 @@ def importar_bloque(ctx_factory, texto: str) -> dict:
         try:
             if tipo == "sesion":
                 if len(datos) < 3:
-                    raise ErrorTutor(f"línea {num}: sesion necesita minutos | tipo | nota")
-                minutos, tipo_s, nota = int(datos[0]), normalizar(datos[1]).strip(), " | ".join(datos[2:])
+                    raise ErrorTutor("sesion necesita: minutos | tipo | lo que aprendió [| si-entonces]")
+                minutos, tipo_s, nota = int(datos[0]), normalizar(datos[1]).strip(), datos[2]
+                si_ent = datos[3] if len(datos) > 3 else None
                 if any(s.get("fecha") == fecha.isoformat() and s.get("minutos") == minutos and s.get("nota") == nota
                        for s in ctx.estado["sesiones"]):
                     resultado["omitidos"].append(f"línea {num}: sesión ya registrada")
                     continue
-                registrar_sesion(ctx, minutos, nota, tipo_s)
+                registrar_sesion(ctx, minutos, nota, tipo_s, si_entonces=si_ent)
                 resultado["aplicados"].append(f"sesión {fecha} ({minutos} min)")
             elif tipo == "calificacion":
                 tid, calidad = datos[0], int(datos[1])
@@ -1106,12 +1451,21 @@ def importar_bloque(ctx_factory, texto: str) -> dict:
                 nuevas = activar_tarjetas(ctx, ids_tarjetas_ficha(ctx, fid), fecha)
                 ctx.guardar()
                 resultado["aplicados"].append(f"lectura {fid} ({len(nuevas)} tarjetas)")
+            elif tipo == "parking":
+                idea = " | ".join(datos)
+                if any(p.get("idea") == idea for p in ctx.estado["parking"]):
+                    resultado["omitidos"].append(f"línea {num}: idea ya anotada")
+                    continue
+                agregar_parking(ctx, idea)
+                resultado["aplicados"].append("idea al parking")
             elif tipo == "aprobada":
-                n, evidencia = int(datos[0]), " | ".join(datos[1:])
+                if len(datos) < 3:
+                    raise ErrorTutor("aprobada necesita: semana | rúbrica | evidencia")
+                n, rub, evidencia = int(datos[0]), datos[1], " | ".join(datos[2:])
                 if n < ctx.semana_actual:
                     resultado["omitidos"].append(f"línea {num}: semana {n} ya aprobada")
                     continue
-                aprobar_semana(ctx, n, evidencia)
+                aprobar_semana(ctx, n, evidencia, rub)
                 resultado["aplicados"].append(f"semana {n} aprobada")
         except (ErrorTutor, ValueError, IndexError) as e:
             resultado["errores"].append(f"línea {num}: {e}")
@@ -1134,102 +1488,102 @@ def proponer_lecturas(malla: dict, lista_fuentes, maximo: int = 4) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Panel HTML (autocontenido)
+# Panel HTML autocontenido: «Hoja de Combate del aprendizaje»
 # ---------------------------------------------------------------------------
 CSS_PANEL = """
 :root{color-scheme:light;
- --plano:#f9f9f7;--sup:#fcfcfb;--tarjeta:#ffffff;--tinta:#0b0b0b;--tinta2:#52514e;--tinta3:#6f6d67;
- --linea:#e1e0d9;--borde:rgba(11,11,11,.10);--acento:#2a78d6;--acento-suave:#e3eefc;
- --ok:#0ca30c;--ok-texto:#006300;--aviso:#fab219;--critico:#d03b3b;
- --h0:#eeede8;--h1:#b7d3f6;--h2:#6da7ec;--h3:#2a78d6;--h4:#184f95;--comodin:#a9a79e;}
+ --plano:#f9f9f7;--tarjeta:#ffffff;--tinta:#0b0b0b;--tinta2:#52514e;--tinta3:#6f6d67;
+ --linea:#e1e0d9;--borde:rgba(11,11,11,.10);--acento:#2a78d6;--acento-suave:#e3eefc;--acento-medio:#9ec5f4;
+ --ok-texto:#006300;--aviso:#fab219;--critico:#d03b3b;--neutro:#eeede8;--rayado:#a9a79e;}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
- --plano:#0d0d0d;--sup:#1a1a19;--tarjeta:#1f1f1e;--tinta:#ffffff;--tinta2:#c3c2b7;--tinta3:#a3a199;
- --linea:#2c2c2a;--borde:rgba(255,255,255,.10);--acento:#3987e5;--acento-suave:#17263a;
- --ok:#0ca30c;--ok-texto:#0ca30c;--aviso:#fab219;--critico:#e66767;
- --h0:#2c2c2a;--h1:#104281;--h2:#1c5cab;--h3:#3987e5;--h4:#86b6ef;--comodin:#6b6a64;}}
+ --plano:#0d0d0d;--tarjeta:#1f1f1e;--tinta:#ffffff;--tinta2:#c3c2b7;--tinta3:#a3a199;
+ --linea:#2c2c2a;--borde:rgba(255,255,255,.10);--acento:#3987e5;--acento-suave:#17263a;--acento-medio:#1c5cab;
+ --ok-texto:#0ca30c;--aviso:#fab219;--critico:#e66767;--neutro:#2c2c2a;--rayado:#6b6a64;}}
 :root[data-theme="dark"]{color-scheme:dark;
- --plano:#0d0d0d;--sup:#1a1a19;--tarjeta:#1f1f1e;--tinta:#ffffff;--tinta2:#c3c2b7;--tinta3:#a3a199;
- --linea:#2c2c2a;--borde:rgba(255,255,255,.10);--acento:#3987e5;--acento-suave:#17263a;
- --ok:#0ca30c;--ok-texto:#0ca30c;--aviso:#fab219;--critico:#e66767;
- --h0:#2c2c2a;--h1:#104281;--h2:#1c5cab;--h3:#3987e5;--h4:#86b6ef;--comodin:#6b6a64;}
+ --plano:#0d0d0d;--tarjeta:#1f1f1e;--tinta:#ffffff;--tinta2:#c3c2b7;--tinta3:#a3a199;
+ --linea:#2c2c2a;--borde:rgba(255,255,255,.10);--acento:#3987e5;--acento-suave:#17263a;--acento-medio:#1c5cab;
+ --ok-texto:#0ca30c;--aviso:#fab219;--critico:#e66767;--neutro:#2c2c2a;--rayado:#6b6a64;}
 *{box-sizing:border-box}
 body{margin:0;background:var(--plano);color:var(--tinta);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
 main{max-width:1080px;margin:0 auto;padding:20px 16px 48px}
-header{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between;margin-bottom:12px}
+header{display:flex;flex-wrap:wrap;gap:4px 16px;align-items:baseline;justify-content:space-between;margin-bottom:12px}
 h1{font-size:20px;margin:0}
-h2{font-size:15px;margin:0 0 12px;color:var(--tinta)}
+h2{font-size:15px;margin:0 0 12px}
 .sub{color:var(--tinta2);font-size:13px}
-.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
-.kpis{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr));margin:12px 0}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));margin-top:12px}
+.kpis{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));margin:12px 0}
 .card{background:var(--tarjeta);border:1px solid var(--borde);border-radius:12px;padding:16px;min-width:0}
 .kpi .lab{color:var(--tinta2);font-size:13px}
 .kpi .val{font-size:28px;font-weight:650;line-height:1.2}
 .kpi .det{color:var(--tinta3);font-size:12px}
-.hero{display:grid;gap:4px}
-.hero .num{font-size:48px;font-weight:650;line-height:1}
-.hero .obj{margin-top:8px}
-.chip{display:inline-block;padding:2px 8px;border-radius:999px;background:var(--acento-suave);color:var(--tinta);font-size:12px;border:1px solid var(--borde)}
-.plan li{margin:4px 0}
+.hero .num{font-size:48px;font-weight:650;line-height:1.05}
+.hero p{margin:6px 0}
+.chip{display:inline-block;padding:1px 8px;border-radius:999px;background:var(--acento-suave);font-size:12px;border:1px solid var(--borde);margin-right:4px}
+ol,ul{padding-left:20px;margin:0}
+li{margin:4px 0}
 .etapa{margin:10px 0}
 .etapa .cab{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--tinta2)}
 .semanas{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 .sem{position:relative;width:30px;height:30px;border-radius:6px;display:grid;place-items:center;font-size:12px;
- border:1px solid var(--linea);background:var(--sup);color:var(--tinta2);font-variant-numeric:tabular-nums}
+ border:1px solid var(--linea);background:var(--tarjeta);color:var(--tinta2);font-variant-numeric:tabular-nums}
 .sem.ok{background:var(--acento);border-color:var(--acento);color:#fff}
 .sem.curso{border:2px solid var(--acento);color:var(--tinta);font-weight:650}
 .sem.proy::after{content:"";position:absolute;right:-3px;top:-3px;width:9px;height:9px;border-radius:50%;
  background:var(--aviso);box-shadow:0 0 0 2px var(--tarjeta)}
-.leyenda{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--tinta2);margin-top:8px}
+.leyenda{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;color:var(--tinta2);margin-top:10px}
 .leyenda span{display:inline-flex;align-items:center;gap:4px}
 .sw{width:12px;height:12px;border-radius:3px;display:inline-block;border:1px solid var(--borde)}
-.heat{display:grid;grid-template-columns:28px repeat(12,minmax(0,16px));gap:3px;align-items:center}
-.heat .d{font-size:10px;color:var(--tinta3)}
-.cel{width:100%;aspect-ratio:1;border-radius:3px;background:var(--h0)}
-.cel.m1{background:var(--h1)}.cel.m2{background:var(--h2)}.cel.m3{background:var(--h3)}.cel.m4{background:var(--h4)}
-.cel.com{background:repeating-linear-gradient(45deg,var(--comodin) 0 2px,transparent 2px 5px),var(--h0)}
-.cel.hoy{outline:2px solid var(--tinta);outline-offset:1px}
-.cel.fut{background:transparent}
-.barras{display:flex;align-items:flex-end;gap:10px;height:140px;border-bottom:1px solid var(--linea);position:relative;margin-top:24px}
-.barra{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0}
+.tira{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:4px}
+.wk{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
+.wk .c{width:100%;aspect-ratio:1;max-width:34px;border-radius:6px;display:grid;place-items:center;font-size:13px;font-weight:650;
+ background:var(--neutro);color:var(--tinta2);border:1px solid var(--borde)}
+.wk .c.cumplida{background:var(--acento);color:#fff;border-color:var(--acento)}
+.wk .c.reparada{background:var(--acento-medio);color:var(--tinta)}
+.wk .c.comodin{background:repeating-linear-gradient(45deg,var(--rayado) 0 2px,transparent 2px 6px),var(--neutro);color:var(--tinta)}
+.wk .c.rota{background:var(--tarjeta);border:2px solid var(--critico);color:var(--critico)}
+.wk .c.en_curso,.wk .c.por_reparar{background:var(--tarjeta);border:2px dashed var(--acento);color:var(--tinta)}
+.wk .c.pausa{background:var(--neutro);color:var(--tinta3)}
+.wk .f{font-size:10px;color:var(--tinta3);white-space:nowrap}
+.barras{display:flex;align-items:flex-end;gap:10px;height:130px;border-bottom:1px solid var(--linea);margin-top:22px}
+.barra{flex:1;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0}
 .barra .b{width:min(24px,100%);background:var(--acento);border-radius:4px 4px 0 0;min-height:2px}
 .barra .v{font-size:11px;color:var(--tinta2);margin-bottom:2px}
+.barra .piso{position:absolute;left:12%;right:12%;border-top:2px solid var(--tinta2)}
 .ejes{display:flex;gap:10px;margin-top:4px}
 .ejes span{flex:1;text-align:center;font-size:11px;color:var(--tinta3);min-width:0}
-.meta{position:absolute;left:0;right:0;border-top:1px solid var(--tinta3)}
-.meta span{position:absolute;right:0;top:-16px;font-size:11px;color:var(--tinta2);background:var(--tarjeta);padding:0 2px}
-.hbar{display:grid;grid-template-columns:80px 1fr 32px;gap:8px;align-items:center;margin:6px 0;font-size:13px}
-.hbar .t{height:12px;background:transparent;border-radius:0 4px 4px 0}
-.hbar .f{height:12px;background:var(--acento);border-radius:0 4px 4px 0;min-width:2px}
+.hbar{display:grid;grid-template-columns:78px 1fr 32px;gap:8px;align-items:center;margin:6px 0;font-size:13px}
+.hbar .f{height:12px;background:var(--acento);border-radius:0 4px 4px 0;min-width:2px;display:block}
 .hbar .n{text-align:right;color:var(--tinta2);font-variant-numeric:tabular-nums}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--linea);vertical-align:top}
 th{color:var(--tinta2);font-weight:600}
 td.num{font-variant-numeric:tabular-nums}
-.est{white-space:nowrap}
-.est.ok{color:var(--ok-texto)}
+.ok-t{color:var(--ok-texto);white-space:nowrap}
 .ev{color:var(--tinta2);word-break:break-word}
-.bit{margin:0;padding-left:18px}.bit li{margin:6px 0}
 details summary{cursor:pointer;color:var(--tinta2);font-size:13px}
 .tabla-scroll{overflow-x:auto}
 footer{margin-top:24px;color:var(--tinta3);font-size:12px}
-@media (forced-colors:active){.sem.ok,.barra .b,.hbar .f{forced-color-adjust:none}}
+td.est{white-space:nowrap}
+@media (max-width:600px){.hero .num{font-size:40px}.wk .f.alt{visibility:hidden}.desc{display:none}.ev{word-break:break-all}}
 """
+
+ESTADOS_SEMANA = {
+    "cumplida": ("✓", "Piso cumplido"),
+    "reparada": ("R", "Reparada (2 sesiones la semana siguiente)"),
+    "comodin": ("C", "Cubierta con el comodín del mes"),
+    "pausa": ("P", "Pausa declarada"),
+    "rota": ("✗", "Racha cortada"),
+    "en_curso": ("…", "En curso"),
+    "por_reparar": ("R?", "Por reparar esta semana"),
+}
 
 
 def _esc(x) -> str:
     return html.escape(str(x if x is not None else ""))
 
 
-def _clase_minutos(m: int) -> str:
-    if m <= 0:
-        return ""
-    if m <= 20:
-        return "m1"
-    if m <= 50:
-        return "m2"
-    if m <= 100:
-        return "m3"
-    return "m4"
+def _pct(v) -> str:
+    return "—" if v is None else f"{v}%"
 
 
 def generar_panel(ctx: Contexto) -> str:
@@ -1238,45 +1592,57 @@ def generar_panel(ctx: Contexto) -> str:
     racha = r["racha"]
     aprob = {a["semana"]: a for a in ctx.estado.get("aprobaciones", [])}
     n = r["semana_actual"]
-    datos = ctx.semana(n)
     plan = plan_de_hoy(ctx)
+    proy = r["proyeccion"]
+    rec = r["recuperacion"]
+    w = r["semana_calendario"]
 
-    # --- encabezado + KPIs ---
-    horas_tot = r["minutos_totales"]
-    partes = [f"""<header><h1>Tutor IA Agéntica · Panel de progreso</h1>
-<div class="sub">Actualizado {_esc(fecha_corta(hoy))} · {_esc(ctx.estado.get('estudiante', ''))}</div></header>"""]
+    partes = [f"""<header><h1>Hoja de Combate del aprendizaje</h1>
+<div class="sub">IA Agéntica · {_esc(ctx.estado.get('estudiante', ''))} · actualizado {_esc(fecha_corta(hoy))}</div></header>"""]
     if r["terminado"]:
-        hero = """<div class="card hero"><div class="sub">Programa</div><div class="num">24/24</div>
-<div>Programa completado. Mantén los repasos y pilotea tu capstone.</div></div>"""
+        partes.append('<div class="card hero"><div class="sub">Programa</div><div class="num">24/24</div>'
+                      '<p>Programa completado. Nivel: AI Business Builder. Mantén los repasos y pilotea tu capstone.</p></div>')
     else:
-        hero = f"""<div class="card hero"><div class="sub">Semana en curso · Etapa {_esc(r['etapa'])} — {_esc(r['nombre_etapa'])}</div>
-<div class="num">Semana {n} <span class="sub">de {TOTAL_SEMANAS}</span></div>
-<div><strong>{_esc(r['titulo'])}</strong></div>
-<div class="obj"><span class="chip">Objetivo</span> {_esc(r['objetivo'])}</div>
-<div class="obj"><span class="chip">Próximo paso</span> {_esc(r['paso_siguiente'])} · {_esc(formato_minutos(MODOS[r['modo_siguiente']]))} — {_esc(r['motivo_paso'])}</div>
-<div class="obj sub">¿Solo 15 min? {_esc(datos.get('version_micro', ''))}</div></div>"""
-    partes.append(hero)
-    com_txt = " ".join("●" if i < racha["comodines_disponibles"] else "○" for i in range(ctx.comodines))
+        ritmo = f"ritmo {'real' if proy['ritmo_real'] else 'nominal'}: {proy['ritmo_dias_por_semana']} días por semana de contenido"
+        partes.append(
+            f'<div class="card hero"><div class="sub">Semana de contenido en curso · Etapa {_esc(r["etapa"])} — '
+            f'{_esc(r["nombre_etapa"])} · rumbo a nivel {_esc(r["proximo_nivel"])}</div>'
+            f'<div class="num">Semana {n} <span class="sub">de {TOTAL_SEMANAS}</span></div>'
+            f'<p><strong>{_esc(r["titulo"])}</strong></p>'
+            f'<p><span class="chip">Objetivo</span>{_esc(r["objetivo"])}</p>'
+            f'<p><span class="chip">Quedamos en</span>{_esc(plan["quedamos_en"])}</p>'
+            f'<p><span class="chip">Próximo paso</span>{_esc(plan["nombre_paso"])} · {_esc(formato_minutos(plan["minutos"]))} · '
+            f'Primero: {_esc(plan["primero"])}</p>'
+            f'<p class="sub">Término estimado de la etapa: {_esc(proy["termino_etapa"])} · del programa: '
+            f'{_esc(proy["termino_programa"])} ({_esc(ritmo)}).</p></div>')
+
     kpis = [
-        ("Semanas aprobadas", f"{len(r['aprobadas'])}/{TOTAL_SEMANAS}", f"{r['porcentaje']}% del programa"),
-        ("Horas registradas", formato_horas(horas_tot), f"de ~{HORAS_TOTALES_MALLA} h de la malla"),
-        ("Racha", f"{racha['actual']} días", f"mejor {racha['mejor']} · comodines esta semana {com_txt}"),
+        ("Semanas aprobadas", f"{len(r['aprobadas'])}/{TOTAL_SEMANAS}",
+         f"Nivel: {r['nivel'] or 'en camino a ' + str(r['proximo_nivel'] or '')}"),
+        ("Racha semanal", f"{racha['actual']} sem.",
+         f"mejor {racha['mejor']} · comodín del mes: {'disponible' if racha['comodin_disponible'] else 'usado'}"),
+        ("Esta semana (meta vs. real)", f"{w['sesiones']}/{w['piso_sesiones']} ses.",
+         f"{w['minutos']} min · {texto_falta_piso(w)}" + (" · cierre de mes" if w["cierre"] else "")),
+        ("Recuperación", _pct(rec["a_1_semana"] if rec["a_1_semana"] is not None else rec["ultimos_30_dias"]),
+         f"a 1 semana {_pct(rec['a_1_semana'])} (meta 80%) · a 1 mes {_pct(rec['a_1_mes'])} (meta 70%)"),
         ("Repasos vencidos", str(len(r["repasos_vencidos"])), f"{r['tarjetas_activas']} tarjetas activas"),
-        ("Esta semana", formato_horas(r["minutos_semana"]),
-         f"meta {formato_horas(r['meta_minutos_semana'])}" if r["meta_minutos_semana"] else "sin meta"),
     ]
     partes.append('<section class="kpis">' + "".join(
         f'<div class="card kpi"><div class="lab">{_esc(a)}</div><div class="val">{_esc(b)}</div>'
         f'<div class="det">{_esc(c)}</div></div>' for a, b, c in kpis) + "</section>")
 
-    # --- avance por etapa ---
+    lis = "".join(f"<li><strong>{m} min</strong> · {_esc(t)}</li>" for m, t in plan["bloques"])
+    bloque_plan = (f'<div class="card"><h2>Próxima sesión · {_esc(plan["nombre_paso"])} '
+                   f'({_esc(formato_minutos(plan["minutos"]))})</h2><ol>{lis}</ol>'
+                   + (f'<p class="sub">Si-entonces pendiente: {_esc(plan["si_entonces_anterior"])}</p>'
+                      if plan["si_entonces_anterior"] else "") + "</div>")
+
     filas = []
     for e in ctx.malla.get("etapas", []):
         ini, fin = e.get("semanas", [0, 0])
         chips = []
         for s in range(ini, fin + 1):
-            clases = ["sem"]
-            estado_s = "pendiente"
+            clases, estado_s = ["sem"], "pendiente"
             if s in aprob:
                 clases.append("ok")
                 estado_s = f"aprobada el {aprob[s]['fecha']}"
@@ -1289,94 +1655,90 @@ def generar_panel(ctx: Contexto) -> str:
             tit = ctx.semanas.get(s, {}).get("titulo", "")
             chips.append(f'<span class="{" ".join(clases)}" title="Semana {s}: {_esc(tit)} ({_esc(estado_s)})">{s}</span>')
         hechas = sum(1 for s in range(ini, fin + 1) if s in aprob)
-        filas.append(f'<div class="etapa"><div class="cab"><span>Etapa {e.get("numero")} · {_esc(e.get("nombre"))}</span>'
-                     f'<span>{hechas}/{fin - ini + 1} · {e.get("horas")} h</span></div><div class="semanas">{"".join(chips)}</div></div>')
-    leyenda_etapas = ('<div class="leyenda"><span><i class="sw" style="background:var(--acento)"></i>Aprobada</span>'
-                      '<span><i class="sw" style="border:2px solid var(--acento)"></i>En curso</span>'
-                      '<span><i class="sw"></i>Pendiente</span>'
-                      '<span><i class="sw" style="background:var(--aviso);border-radius:50%"></i>Semana de proyecto</span></div>')
-    bloque_etapas = f'<div class="card"><h2>Avance por etapa</h2>{"".join(filas)}{leyenda_etapas}</div>'
+        filas.append(f'<div class="etapa"><div class="cab"><span>Etapa {e.get("numero")} · {_esc(e.get("nombre"))}'
+                     f'{" · " + _esc(e.get("nivel")) if e.get("nivel") else ""}</span>'
+                     f'<span>{hechas}/{fin - ini + 1}</span></div><div class="semanas">{"".join(chips)}</div></div>')
+    bloque_etapas = ('<div class="card"><h2>Avance por etapa (el nivel se sube solo con evidencia)</h2>' + "".join(filas)
+                     + '<div class="leyenda"><span><i class="sw" style="background:var(--acento)"></i>Aprobada</span>'
+                       '<span><i class="sw" style="border:2px solid var(--acento)"></i>En curso</span>'
+                       '<span><i class="sw"></i>Pendiente</span>'
+                       '<span><i class="sw" style="background:var(--aviso);border-radius:50%"></i>Semana de proyecto</span></div></div>')
 
-    # --- racha: mapa de calor de 12 semanas ---
-    min_por_dia = {}
-    for s in ctx.estado.get("sesiones", []):
-        min_por_dia[s["fecha"]] = min_por_dia.get(s["fecha"], 0) + int(s.get("minutos", 0))
-    comodines = set(racha["dias_comodin"])
-    lunes_actual = hoy - timedelta(days=hoy.weekday())
-    cols = 12
-    inicio = lunes_actual - timedelta(weeks=cols - 1)
+    por_lunes = {x["lunes"]: x for x in racha["semanas"]}
+    lunes_hoy = lunes_de(hoy)
     celdas = []
-    for fila in range(7):
-        celdas.append(f'<span class="d">{DIAS[fila]}</span>')
-        for c in range(cols):
-            d = inicio + timedelta(weeks=c, days=fila)
-            iso = d.isoformat()
-            m = min_por_dia.get(iso, 0)
-            clases = ["cel"]
-            if d > hoy:
-                clases.append("fut")
-                txt = f"{fecha_corta(d)}: por venir"
-            elif m:
-                clases.append(_clase_minutos(m))
-                txt = f"{fecha_corta(d)}: {formato_minutos(m)}"
-            elif iso in comodines:
-                clases.append("com")
-                txt = f"{fecha_corta(d)}: comodín (la racha no se cortó)"
-            else:
-                txt = f"{fecha_corta(d)}: sin estudio"
-            if d == hoy:
-                clases.append("hoy")
-                txt += " · hoy"
-            celdas.append(f'<span class="{" ".join(clases)}" title="{_esc(txt)}"></span>')
-    leyenda_heat = ('<div class="leyenda"><span>Menos</span><i class="sw" style="background:var(--h0)"></i>'
-                    '<i class="sw" style="background:var(--h1)"></i><i class="sw" style="background:var(--h2)"></i>'
-                    '<i class="sw" style="background:var(--h3)"></i><i class="sw" style="background:var(--h4)"></i><span>Más minutos</span>'
-                    '<span><i class="sw" style="background:repeating-linear-gradient(45deg,var(--comodin) 0 2px,transparent 2px 5px),var(--h0)"></i>Comodín</span>'
-                    '<span><i class="sw" style="outline:2px solid var(--tinta)"></i>Hoy</span></div>')
-    estado_racha = ("Aún no empiezas: la racha parte con tu primera sesión." if racha["estado"] == "sin_iniciar" else
-                    f"Racha de {racha['actual']} días de estudio (mejor: {racha['mejor']}). "
-                    f"Cada semana trae {ctx.comodines} comodines para días sin estudio; hoy {'ya cuenta' if racha['hoy_estudiado'] else 'sigue abierto'}.")
-    bloque_racha = (f'<div class="card"><h2>Racha y constancia (últimas 12 semanas)</h2><p class="sub">{_esc(estado_racha)}</p>'
-                    f'<div class="heat">{"".join(celdas)}</div>{leyenda_heat}</div>')
+    for k in range(11, -1, -1):
+        lun = lunes_hoy - timedelta(weeks=k)
+        x = por_lunes.get(lun.isoformat())
+        if x is None and k == 0:
+            x = racha["semana_en_curso"]
+        if x is None:
+            est, sym, txt = "vacia", "", "antes de empezar"
+        else:
+            est = x["estado"]
+            sym, txt = ESTADOS_SEMANA.get(est, ("", est))
+            txt += f" · {x['sesiones']} sesión(es), {x['minutos']} min · piso {x['piso_sesiones']} o {x['piso_minutos']} min"
+            if x["cierre"]:
+                txt += " · cierre de mes"
+        celdas.append(f'<div class="wk" title="Semana del {_esc(fecha_corta(lun))}: {_esc(txt)}">'
+                      f'<span class="c {est}">{_esc(sym)}</span><span class="f{" alt" if k % 2 else ""}">'
+                      f'{lun.day:02d}/{lun.month:02d}</span></div>')
+    leyenda_racha = '<div class="leyenda">' + "".join(
+        f'<span><i class="sw" style="{estilo}"></i>{_esc(sym)} {_esc(txt)}</span>'
+        for sym, txt, estilo in (
+            ("✓", "Cumplida", "background:var(--acento)"),
+            ("R", "Reparada", "background:var(--acento-medio)"),
+            ("C", "Comodín", "background:repeating-linear-gradient(45deg,var(--rayado) 0 2px,transparent 2px 6px),var(--neutro)"),
+            ("P", "Pausa", "background:var(--neutro)"),
+            ("✗", "Cortada", "border:2px solid var(--critico)"),
+            ("…", "En curso", "border:2px dashed var(--acento)"))) + "</div>"
+    bloque_racha = ('<div class="card"><h2>Racha semanal (últimas 12 semanas)</h2>'
+                    '<p class="sub">Piso: 3 sesiones o 60 min (cierre de mes: 2 o 30). 1 comodín al mes; una semana '
+                    'fallida se repara con 2 sesiones (o el piso) la semana siguiente.</p>'
+                    f'<div class="tira">{"".join(celdas)}</div>{leyenda_racha}</div>')
 
-    # --- horas por semana calendario (8 semanas) ---
     barras, ejes = [], []
-    semanas_cal = [lunes_actual - timedelta(weeks=k) for k in range(7, -1, -1)]
-    valores = []
-    for lun in semanas_cal:
-        tot = sum(m for iso, m in min_por_dia.items() if lun <= date.fromisoformat(iso) <= lun + timedelta(days=6))
-        valores.append(tot)
-    meta = r["meta_minutos_semana"] or 480
-    tope = max(max(valores or [0]), meta, 60) * 1.1
-    for i, (lun, v) in enumerate(zip(semanas_cal, valores)):
-        alto = 100 * v / tope
-        etiqueta = formato_horas(v) if (i == len(valores) - 1 or (v and v == max(valores))) else ""
-        barras.append(f'<div class="barra" title="Semana del {fecha_corta(lun)}: {formato_horas(v)}">'
+    semanas_cal = [lunes_hoy - timedelta(weeks=k) for k in range(7, -1, -1)]
+    infos = []
+    for l in semanas_cal:
+        x = por_lunes.get(l.isoformat())
+        if x is None:
+            cierre = es_semana_de_cierre(l, ctx.config["dias_cierre_mes"])
+            x = {"sesiones": 0, "minutos": 0, "cierre": cierre,
+                 "piso_sesiones": ctx.config["piso_cierre_sesiones" if cierre else "piso_sesiones"]}
+        infos.append(x)
+    tope = max([x["sesiones"] for x in infos] + [x["piso_sesiones"] for x in infos] + [4]) * 1.15
+    maximo = max(x["sesiones"] for x in infos)
+    for i, (lun, x) in enumerate(zip(semanas_cal, infos)):
+        alto = 100 * x["sesiones"] / tope
+        piso = 100 * x["piso_sesiones"] / tope
+        etiqueta = str(x["sesiones"]) if i == len(infos) - 1 or (maximo and x["sesiones"] == maximo) else ""
+        barras.append(f'<div class="barra" title="Semana del {_esc(fecha_corta(lun))}: {x["sesiones"]} sesión(es), '
+                      f'{x["minutos"]} min · piso {x["piso_sesiones"]}{" (cierre de mes)" if x.get("cierre") else ""}">'
+                      f'<span class="piso" style="bottom:{piso:.1f}%"></span>'
                       f'<span class="v">{_esc(etiqueta)}</span><span class="b" style="height:{alto:.1f}%"></span></div>')
-        ejes.append(f"<span>{lun.day:02d}-{MESES[lun.month - 1]}</span>")
-    linea_meta = (f'<div class="meta" style="bottom:{100 * meta / tope:.1f}%"><span>meta {formato_horas(meta)}</span></div>')
-    bloque_horas = (f'<div class="card"><h2>Horas por semana (lunes a domingo)</h2>'
-                    f'<div class="barras">{linea_meta}{"".join(barras)}</div><div class="ejes">{"".join(ejes)}</div></div>')
+        ejes.append(f"<span>{lun.day:02d}/{lun.month:02d}</span>")
+    bloque_barras = ('<div class="card"><h2>Sesiones por semana vs. piso</h2>'
+                     '<p class="sub">Barra: sesiones reales. Línea: piso de esa semana (baja en cierre de mes).</p>'
+                     f'<div class="barras">{"".join(barras)}</div><div class="ejes">{"".join(ejes)}</div></div>')
 
-    # --- proyectos / entregables ---
     filas_p = []
     for sem, nombre in PROYECTOS_MALLA.items():
         if sem in aprob:
-            est = '<span class="est ok">✓ Aprobado</span>'
+            est = '<span class="ok-t">✓ Aprobado</span>'
             ev = aprob[sem]["evidencia"]
-            ev_html = (f'<a href="{_esc(ev)}">{_esc(ev)}</a>' if RE_URL.fullmatch(ev.strip()) else _esc(ev))
+            ev_html = f'<a href="{_esc(ev)}">{_esc(ev)}</a>' if RE_URL.fullmatch(ev.strip()) else _esc(ev)
         elif sem == n:
-            est, ev_html = '<span class="est">● En curso</span>', ""
+            est, ev_html = "● En curso", ""
         else:
-            est, ev_html = '<span class="est">○ Pendiente</span>', ""
+            est, ev_html = "○ Pendiente", ""
         entreg = ctx.semanas.get(sem, {}).get("entregable", "")
-        filas_p.append(f'<tr><td class="num">{sem}</td><td><strong>{_esc(nombre)}</strong><div class="sub">{_esc(entreg)}</div></td>'
-                       f'<td>{est}</td><td class="ev">{ev_html}</td></tr>')
-    bloque_proy = ('<div class="card"><h2>Proyectos y entregables</h2><div class="tabla-scroll"><table>'
+        filas_p.append(f'<tr><td class="num">{sem}</td><td><strong>{_esc(nombre)}</strong><div class="sub desc">{_esc(entreg)}</div></td>'
+                       f'<td class="est">{est}</td><td class="ev">{ev_html}</td></tr>')
+    bloque_proy = ('<div class="card" style="margin-top:12px"><h2>Proyectos y artefactos</h2><div class="tabla-scroll"><table>'
                    '<thead><tr><th>Sem.</th><th>Proyecto</th><th>Estado</th><th>Evidencia</th></tr></thead>'
                    f'<tbody>{"".join(filas_p)}</tbody></table></div></div>')
 
-    # --- repasos ---
     por_caja = {c: 0 for c in CAJAS}
     prox7 = 0
     for t in ctx.tarjetas.get("tarjetas", {}).values():
@@ -1387,50 +1749,47 @@ def generar_panel(ctx: Contexto) -> str:
         except (KeyError, ValueError):
             pass
     maxc = max(por_caja.values()) or 1
-    hbars = "".join(f'<div class="hbar" title="{_esc(c)}: {v} tarjetas"><span>{_esc(c)}</span><span class="t">'
-                     f'<span class="f" style="display:block;width:{100 * v / maxc:.1f}%"></span></span><span class="n">{v}</span></div>'
-                     for c, v in por_caja.items())
+    hbars = "".join(f'<div class="hbar" title="{_esc(c)}: {v} tarjetas"><span>{_esc(c)}</span><span>'
+                    f'<span class="f" style="width:{100 * v / maxc:.1f}%"></span></span><span class="n">{v}</span></div>'
+                    for c, v in por_caja.items())
     bloque_rep = (f'<div class="card"><h2>Repasos (repetición espaciada)</h2>'
                   f'<p class="sub">Vencidos hoy: <strong>{len(r["repasos_vencidos"])}</strong> · próximos 7 días: {prox7} · '
-                  f'activas: {r["tarjetas_activas"]}. Las tarjetas se activan al aprobar cada semana.</p>'
-                  f'<div>{hbars}</div><p class="sub">Tarjetas por intervalo de repaso (de «Nueva» a «Dominada»).</p></div>')
+                  f'aciertos últimos 30 días: {_pct(rec["ultimos_30_dias"])} ({rec["n_30_dias"]} respuestas).</p>'
+                  f'{hbars}<p class="sub">Tarjetas por intervalo, de «Nueva» a «Dominada». Se activan al aprobar cada semana.</p></div>')
 
-    # --- bitácora ---
+    park = ctx.estado.get("parking", [])[-8:]
+    items_p = "".join(f'<li>{_esc(p["idea"])} <span class="sub">({_esc(p["fecha"])})</span></li>' for p in reversed(park)) \
+        or '<li class="sub">Vacío. Lo nuevo o de moda se anota aquí y no desvía la sesión.</li>'
     ult = list(reversed(ctx.estado.get("sesiones", [])[-6:]))
-    items = "".join(f'<li><strong>{_esc(s["fecha"])}</strong> · Sem. {_esc(s.get("semana"))} · {_esc(s.get("tipo"))} · '
-                    f'{_esc(formato_minutos(s.get("minutos", 0)))}<div class="sub">{_esc(s.get("nota", ""))}</div></li>'
-                    for s in ult) or '<li class="sub">Sin sesiones todavía. La primera es la más importante.</li>'
-    bloque_bit = f'<div class="card"><h2>Últimas sesiones</h2><ul class="bit">{items}</ul></div>'
+    items_b = "".join(f'<li><strong>{_esc(s["fecha"])}</strong> · Sem. {_esc(s.get("semana"))} · {_esc(s.get("tipo"))} · '
+                      f'{_esc(formato_minutos(s.get("minutos", 0)))}'
+                      + (f' · logrado: {_esc(s.get("logrado"))}' if s.get("logrado") else "")
+                      + f'<div class="sub">{_esc(s.get("nota", ""))}</div></li>' for s in ult) \
+        or '<li class="sub">Sin sesiones todavía. La primera es la más importante.</li>'
+    bloque_notas = (f'<div class="card"><h2>Últimas sesiones</h2><ul>{items_b}</ul>'
+                    f'<h2 style="margin-top:16px">Parking de ideas</h2><ul>{items_p}</ul></div>')
 
-    # --- plan de hoy ---
-    lis = "".join(f"<li><strong>{m} min</strong> · {_esc(t)}</li>" for m, t in plan["bloques"])
-    bloque_plan = (f'<div class="card plan"><h2>Plan de la próxima sesión · {_esc(plan["nombre_paso"])} '
-                   f'({_esc(formato_minutos(plan["minutos"]))})</h2><ol>{lis}</ol></div>')
-
-    # --- vista de tabla (accesibilidad) ---
     filas_t = []
     for s in range(1, TOTAL_SEMANAS + 1):
         d = ctx.semanas.get(s, {})
         est = (f"Aprobada {aprob[s]['fecha']}" if s in aprob else "En curso" if s == n else "Pendiente")
         filas_t.append(f'<tr><td class="num">{s}</td><td class="num">{_esc(d.get("etapa"))}</td><td>{_esc(d.get("titulo"))}</td>'
                        f'<td class="num">{_esc(d.get("horas"))}</td><td>{_esc(est)}</td></tr>')
-    bloque_tabla = ('<div class="card"><details><summary>Ver las 24 semanas en tabla</summary><div class="tabla-scroll"><table>'
-                    '<thead><tr><th>Sem.</th><th>Etapa</th><th>Título</th><th>Horas</th><th>Estado</th></tr></thead>'
-                    f'<tbody>{"".join(filas_t)}</tbody></table></div></details></div>')
+    bloque_tabla = ('<div class="card" style="margin-top:12px"><details><summary>Ver las 24 semanas en tabla</summary>'
+                    '<div class="tabla-scroll"><table><thead><tr><th>Sem.</th><th>Etapa</th><th>Título</th><th>Horas</th>'
+                    f'<th>Estado</th></tr></thead><tbody>{"".join(filas_t)}</tbody></table></div></details></div>')
 
-    cuerpo = (
-        "".join(partes)
-        + f'<section class="grid">{bloque_plan}{bloque_etapas}</section>'
-        + f'<section class="grid" style="margin-top:12px">{bloque_racha}{bloque_horas}</section>'
-        + f'<section style="margin-top:12px">{bloque_proy}</section>'
-        + f'<section class="grid" style="margin-top:12px">{bloque_rep}{bloque_bit}</section>'
-        + f'<section style="margin-top:12px">{bloque_tabla}</section>'
-        + f'<footer>Generado por <code>tutor.py panel</code> el {hoy.isoformat()} desde progreso/estado.json y '
-          f'progreso/tarjetas.json. No edites este archivo a mano: se regenera en cada registro.</footer>'
-    )
+    cuerpo = ("".join(partes)
+              + f'<section class="grid">{bloque_plan}{bloque_etapas}</section>'
+              + f'<section class="grid">{bloque_racha}{bloque_barras}</section>'
+              + bloque_proy
+              + f'<section class="grid">{bloque_rep}{bloque_notas}</section>'
+              + bloque_tabla
+              + f'<footer>Generado por <code>herramientas/tutor.py</code> el {hoy.isoformat()} desde progreso/estado.json '
+                'y progreso/tarjetas.json. Se regenera en cada registro; no lo edites a mano.</footer>')
     return ("<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\">\n"
             "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
-            "<title>Panel del tutor</title>\n"
+            "<title>Hoja de Combate</title>\n"
             f"<style>{CSS_PANEL}</style>\n</head>\n<body>\n<main>\n{cuerpo}\n</main>\n</body>\n</html>\n")
 
 
@@ -1493,7 +1852,6 @@ def _validar_malla(rutas: Rutas, inf: Informe):
     except ErrorTutor as e:
         inf.error(sec, str(e))
         return None
-    # etapas
     etapas = {e.get("numero"): e for e in malla.get("etapas", []) if isinstance(e, dict)}
     if set(etapas) != set(ETAPAS_MALLA):
         inf.error(sec, f"se esperaban las etapas 1–6 y hay: {sorted(k for k in etapas if k is not None)}")
@@ -1508,7 +1866,8 @@ def _validar_malla(rutas: Rutas, inf: Informe):
         for campo in ("nombre", "entregable"):
             if not str(e.get(campo, "")).strip():
                 inf.error(sec, f"etapa {num}: falta «{campo}»")
-    # semanas consecutivas
+        if not e.get("nivel"):
+            inf.aviso(sec, f"etapa {num}: sin «nivel» (gamificación)")
     lista = [s for s in malla.get("semanas", []) if isinstance(s, dict)]
     numeros = [s.get("semana") for s in lista]
     if numeros != list(range(1, TOTAL_SEMANAS + 1)):
@@ -1517,9 +1876,8 @@ def _validar_malla(rutas: Rutas, inf: Informe):
         dup = sorted({n for n in numeros if numeros.count(n) > 1})
         inf.error(sec, f"las semanas deben ser 1..24 consecutivas y en orden (faltan {faltan}, "
                        f"sobran {extra}, duplicadas {dup})")
-    else:
+    elif set(etapas) == set(ETAPAS_MALLA):
         inf.ok(sec, "24 semanas consecutivas (1..24) y 6 etapas con los rangos de la malla")
-    # campos por semana
     errores_campos = 0
     objetivos = {}
     for s in lista:
@@ -1560,7 +1918,7 @@ def _validar_malla(rutas: Rutas, inf: Informe):
         if "horas" in s and (not isinstance(horas, (int, float)) or isinstance(horas, bool) or horas <= 0):
             inf.error(sec, f"semana {n}: «horas» debe ser un número positivo")
         elif isinstance(horas, (int, float)) and not 4 <= horas <= 14:
-            inf.aviso(sec, f"semana {n}: {horas} h está fuera del rango típico de 8–10 h/semana")
+            inf.aviso(sec, f"semana {n}: {horas} h está fuera del rango típico de 8–10 h por semana de contenido")
         obj = s.get("objetivo")
         if "objetivo" in s:
             if not isinstance(obj, str):
@@ -1580,7 +1938,6 @@ def _validar_malla(rutas: Rutas, inf: Informe):
         inf.error(sec, f"objetivo repetido en las semanas {semanas_dup}: cada semana tiene su objetivo único")
     if not errores_campos and len(lista) == TOTAL_SEMANAS:
         inf.ok(sec, "todas las semanas tienen sus 12 campos y un objetivo único por semana")
-    # horas
     total = sum(s.get("horas", 0) for s in lista if isinstance(s.get("horas"), (int, float)))
     if abs(total - HORAS_TOTALES_MALLA) > TOLERANCIA_HORAS_TOTAL:
         inf.error(sec, f"las horas suman {total}; la malla dice ~{HORAS_TOTALES_MALLA} (±{TOLERANCIA_HORAS_TOTAL})")
@@ -1595,7 +1952,6 @@ def _validar_malla(rutas: Rutas, inf: Informe):
         inf.error(sec, "horas por etapa no calzan con la malla: " + "; ".join(malas))
     else:
         inf.ok(sec, "horas por etapa calzan con la malla (24/28/36/34/40/48)")
-    # proyectos
     proy_top = {p.get("semana"): p.get("nombre") for p in malla.get("proyectos", []) if isinstance(p, dict)}
     if proy_top != PROYECTOS_MALLA:
         inf.error(sec, f"lista «proyectos» debe ser exactamente {PROYECTOS_MALLA} (hay {proy_top})")
@@ -1608,41 +1964,38 @@ def _validar_malla(rutas: Rutas, inf: Informe):
                 prob.append(f"semana {n} debe tener proyecto «{PROYECTOS_MALLA[n]}» con resultado")
         elif p:
             prob.append(f"semana {n} tiene un proyecto, pero la malla no pone proyecto ahí")
-    if prob:
-        for p in prob:
-            inf.error(sec, p)
-    elif proy_top == PROYECTOS_MALLA:
-        inf.ok(sec, "proyectos en las semanas 3, 6, 10, 14, 19 y 24")
+    for p in prob:
+        inf.error(sec, p)
+    if not prob and proy_top == PROYECTOS_MALLA:
+        inf.ok(sec, "proyectos en las semanas 3, 6, 10, 14, 19 y 24 (cierre de cada etapa)")
     return malla
 
 
 def _validar_fuentes_y_fichas(rutas: Rutas, malla, inf: Informe):
     sec = "Base de conocimiento"
     lecturas = {}
-    if malla:
-        for s in malla.get("semanas", []):
-            if isinstance(s, dict) and isinstance(s.get("lectura"), list):
-                for fid in s["lectura"]:
-                    lecturas.setdefault(fid, []).append(s.get("semana"))
+    for s in (malla or {}).get("semanas", []):
+        if isinstance(s, dict) and isinstance(s.get("lectura"), list):
+            for fid in s["lectura"]:
+                lecturas.setdefault(fid, []).append(s.get("semana"))
     vacias = [s.get("semana") for s in (malla or {}).get("semanas", []) if isinstance(s, dict) and not s.get("lectura")]
+    fuentes = None
     try:
         lista = leer_lista_fuentes(rutas)
     except (json.JSONDecodeError, ErrorTutor) as e:
         inf.error(sec, f"base/fuentes.json no se puede leer: {e}")
         lista = None
-        fuentes = None
-    else:
-        fuentes = indice_fuentes(lista) if lista is not None else None
-    if lista is None and rutas.fuentes.exists() is False:
+    if lista is None and not rutas.fuentes.exists():
         inf.aviso(sec, "base/fuentes.json aún no existe (lo entrega el agente 2): no puedo verificar lecturas")
         if lecturas:
             inf.aviso(sec, f"{len(lecturas)} ids en «lectura» quedan sin verificar")
-    elif fuentes is not None:
+    elif lista is not None:
+        fuentes = indice_fuentes(lista)
         ids = [f.get("id") for f in lista if isinstance(f, dict)]
         sin_id = sum(1 for f in lista if not isinstance(f, dict) or not isinstance(f.get("id"), str) or not f.get("id"))
         if sin_id:
             inf.error(sec, f"{sin_id} fuente(s) sin «id» de texto")
-        dup = sorted({i for i in ids if ids.count(i) > 1 and i})
+        dup = sorted({i for i in ids if i and ids.count(i) > 1})
         if dup:
             inf.error(sec, f"ids de fuente duplicados: {dup}")
         faltan_campos = {}
@@ -1663,13 +2016,12 @@ def _validar_fuentes_y_fichas(rutas: Rutas, malla, inf: Informe):
         if not inexistentes:
             inf.ok(sec, f"base/fuentes.json: {len(fuentes)} fuentes; todos los ids de «lectura» existen")
         prop = proponer_lecturas(malla or {}, lista)
-        no_asignadas = sum(1 for n, ids_p in prop.items() for i in ids_p if i not in lecturas)
+        no_asignadas = sorted({i for ids_p in prop.values() for i in ids_p if i not in lecturas})
         if no_asignadas:
-            inf.aviso(sec, f"{no_asignadas} fuente(s) sugeridas para alguna semana aún no están en «lectura» "
+            inf.aviso(sec, f"{len(no_asignadas)} fuente(s) sugeridas para alguna semana aún no están en «lectura» "
                            "→ python3 herramientas/tutor.py integrar-lecturas --aplicar")
     if vacias:
         inf.aviso(sec, f"{len(vacias)} semana(s) con «lectura» vacía (pendiente integrar la base de conocimiento)")
-    # fichas
     if not rutas.fichas.is_dir():
         inf.aviso(sec, "base/fichas/ aún no existe (lo entrega el agente 2)")
         return
@@ -1736,7 +2088,7 @@ def _validar_skill_y_docs(rutas: Rutas, inf: Informe):
         extra = set(campos) - {"name", "description", "license", "allowed-tools", "metadata", "version"}
         if extra:
             inf.aviso(sec, f"SKILL.md: claves de frontmatter no estándar: {sorted(extra)}")
-        if not err and nombre == NOMBRE_SKILL and desc:
+        if nombre == NOMBRE_SKILL and desc and len(desc) <= 1024:
             inf.ok(sec, "SKILL.md: frontmatter válido (name + description con frases de disparo)")
     for s in SECCIONES_SKILL:
         if s.lower() not in texto.lower():
@@ -1760,27 +2112,34 @@ def verificar_estado(ctx: Contexto) -> list[str]:
     e, hoy = ctx.estado, ctx.hoy
     sa = e.get("semana_actual")
     if not isinstance(sa, int) or not 1 <= sa <= SEMANA_FIN:
-        errores.append(f"semana_actual inválida: {sa}")
-        return errores
+        return [f"semana_actual inválida: {sa}"]
     aprobs = e.get("aprobaciones", [])
     semanas_aprob = [a.get("semana") for a in aprobs]
     if semanas_aprob != list(range(1, sa)):
         errores.append(f"aprobaciones {semanas_aprob} no calzan con semana_actual={sa} (deberían ser 1..{sa - 1})")
     fecha_prev = None
     for a in aprobs:
+        n = a.get("semana")
         if not str(a.get("evidencia", "")).strip():
-            errores.append(f"semana {a.get('semana')} aprobada sin evidencia")
+            errores.append(f"semana {n} aprobada sin evidencia")
         try:
             f = date.fromisoformat(a.get("fecha", ""))
             if f > hoy:
-                errores.append(f"semana {a.get('semana')} aprobada en fecha futura ({f})")
+                errores.append(f"semana {n} aprobada en fecha futura ({f})")
             if fecha_prev and f < fecha_prev:
-                errores.append(f"aprobación de la semana {a.get('semana')} con fecha anterior a la previa")
+                errores.append(f"aprobación de la semana {n} con fecha anterior a la previa")
             fecha_prev = f
         except (ValueError, TypeError):
-            errores.append(f"semana {a.get('semana')}: fecha de aprobación inválida")
-        if a.get("semana") in PROYECTOS_MALLA and a.get("tipo_evidencia") not in ("archivo", "url"):
-            errores.append(f"semana de proyecto {a.get('semana')} aprobada sin artefacto (archivo o URL)")
+            errores.append(f"semana {n}: fecha de aprobación inválida")
+        if n in PROYECTOS_MALLA and a.get("tipo_evidencia") not in ("archivo", "url"):
+            errores.append(f"semana de proyecto {n} aprobada sin artefacto (archivo o URL)")
+        rub = a.get("rubrica") or {}
+        if isinstance(n, int):
+            bajos = [c for c in criterios_semana(n) if not isinstance(rub.get(c), int) or rub[c] < UMBRAL_RUBRICA]
+            if bajos:
+                errores.append(f"semana {n} aprobada sin alcanzar la rúbrica en: {', '.join(bajos)}")
+        if a.get("modalidad", "normal") not in ("normal", "test-out"):
+            errores.append(f"semana {n}: modalidad inválida ({a.get('modalidad')})")
     for i, s in enumerate(e.get("sesiones", []), 1):
         try:
             f = date.fromisoformat(s.get("fecha", ""))
@@ -1789,15 +2148,26 @@ def verificar_estado(ctx: Contexto) -> list[str]:
         except (ValueError, TypeError):
             errores.append(f"sesión {i}: fecha inválida")
         m = s.get("minutos")
-        if not isinstance(m, int) or not 1 <= m <= 600:
+        if not isinstance(m, int) or isinstance(m, bool) or not 1 <= m <= 600:
             errores.append(f"sesión {i}: minutos inválidos ({m})")
         if s.get("tipo") not in TIPOS_SESION:
             errores.append(f"sesión {i}: tipo inválido ({s.get('tipo')})")
+        if s.get("logrado") is not None and s.get("logrado") not in LOGRADO:
+            errores.append(f"sesión {i}: «logrado» inválido ({s.get('logrado')})")
         sem = s.get("semana")
         if not isinstance(sem, int) or not 1 <= sem <= min(sa, TOTAL_SEMANAS):
             errores.append(f"sesión {i}: semana {sem} fuera de rango (semana en curso: {sa})")
         if not str(s.get("nota", "")).strip():
             errores.append(f"sesión {i}: sin nota")
+    for p in e.get("pausas", []):
+        try:
+            if date.fromisoformat(p["desde"]) > date.fromisoformat(p["hasta"]):
+                errores.append(f"pausa {p}: «desde» posterior a «hasta»")
+        except (KeyError, ValueError, TypeError):
+            errores.append(f"pausa inválida: {p}")
+    for p in e.get("parking", []):
+        if not str(p.get("idea", "")).strip():
+            errores.append("idea vacía en el parking")
     tarjetas = ctx.tarjetas.get("tarjetas", {})
     for tid, t in tarjetas.items():
         c = ctx.catalogo.get(tid)
@@ -1825,7 +2195,7 @@ def verificar_estado(ctx: Contexto) -> list[str]:
         if faltan:
             errores.append(f"semana {n} aprobada pero sus tarjetas no están activas: {faltan}")
     try:
-        calcular_racha(fechas_estudio(e), hoy, ctx.comodines)
+        racha_de(ctx)
     except Exception as ex:  # pragma: no cover - defensivo
         errores.append(f"no se pudo calcular la racha: {ex}")
     return errores
@@ -1834,7 +2204,7 @@ def verificar_estado(ctx: Contexto) -> list[str]:
 def _validar_estado(rutas: Rutas, hoy: date, inf: Informe):
     sec = "Estado del estudiante"
     if not rutas.estado.exists():
-        inf.aviso(sec, "progreso/estado.json no existe todavía (python3 herramientas/tutor.py iniciar)")
+        inf.aviso(sec, f"{rutas.rel(rutas.estado)} no existe todavía (python3 herramientas/tutor.py iniciar)")
         return
     try:
         ctx = Contexto(rutas, hoy)
@@ -1883,43 +2253,51 @@ def validar(rutas: Rutas, hoy: date) -> Informe:
 def texto_estado(ctx: Contexto) -> str:
     r = resumen(ctx)
     rc = r["racha"]
+    w = r["semana_calendario"]
     out = [f"ESTADO · {fecha_corta(ctx.hoy)}"]
     if r["terminado"]:
-        out.append("Programa completado: 24/24 semanas aprobadas.")
+        out.append("Programa completado: 24/24 semanas aprobadas. Nivel: AI Business Builder.")
     else:
         out.append(f"Semana {r['semana_actual']}/{TOTAL_SEMANAS} · Etapa {r['etapa']} — {r['nombre_etapa']}")
         out.append(f"«{r['titulo']}»")
         out.append(f"Objetivo: {r['objetivo']}")
-    barra = "█" * (len(r["aprobadas"])) + "░" * (TOTAL_SEMANAS - len(r["aprobadas"]))
-    out.append(f"Avance: {len(r['aprobadas'])}/{TOTAL_SEMANAS} semanas ({r['porcentaje']}%) {barra}")
-    out.append("Etapas: " + " · ".join(f"E{e['numero']} {e['aprobadas']}/{e['total']}" for e in r["etapas"]))
+    barra = "█" * len(r["aprobadas"]) + "░" * (TOTAL_SEMANAS - len(r["aprobadas"]))
+    out.append(f"Avance: {len(r['aprobadas'])}/{TOTAL_SEMANAS} semanas de contenido ({r['porcentaje']}%) {barra}")
+    out.append("Etapas: " + " · ".join(f"E{e['numero']} {e['aprobadas']}/{e['total']}" for e in r["etapas"])
+               + f" · Nivel: {r['nivel'] or '—'}")
     if rc["estado"] == "sin_iniciar":
-        out.append("Racha: aún sin sesiones (parte con la primera).")
+        out.append("Racha semanal: parte con tu primera semana (piso: 3 sesiones o 60 min).")
     else:
-        out.append(f"Racha: {rc['actual']} días (mejor {rc['mejor']}) · comodines disponibles esta semana: "
-                   f"{rc['comodines_disponibles']}/{ctx.comodines} · hoy: {'cuenta' if rc['hoy_estudiado'] else 'pendiente'}")
-    if r["meta_minutos_semana"]:
-        out.append(f"Esta semana: {formato_minutos(r['minutos_semana'])} de {formato_horas(r['meta_minutos_semana'])} (meta de la malla)")
+        out.append(f"Racha semanal: {rc['actual']} (mejor {rc['mejor']}) · comodín del mes: "
+                   f"{'disponible' if rc['comodin_disponible'] else 'usado'}")
+    out.append(f"Esta semana: {w['sesiones']} sesión(es), {w['minutos']} min · {texto_falta_piso(w)}"
+               + (" · semana de cierre de mes (piso reducido)" if w["cierre"] else ""))
+    if r["en_pausa_declarada"]:
+        out.append("Pausa declarada vigente: la racha está congelada.")
     if r["ultima_sesion"]:
-        d = r["dias_sin_estudiar"]
-        out.append(f"Última sesión: {r['ultima_sesion']} ({'hoy' if d == 0 else f'hace {d} día' + ('s' if d != 1 else '')})")
-    out.append(f"Repasos vencidos: {len(r['repasos_vencidos'])} (de {r['tarjetas_activas']} tarjetas activas)")
+        out.append(f"Quedamos en: {r['quedamos_en']} (última sesión: {r['ultima_sesion']})")
+    if r["si_entonces"]:
+        out.append(f"Si-entonces: {r['si_entonces']}")
+    rec = r["recuperacion"]
+    out.append(f"Repasos vencidos: {len(r['repasos_vencidos'])} (de {r['tarjetas_activas']} tarjetas) · "
+               f"recuperación a 1 semana: {_pct(rec['a_1_semana'])} (meta 80%)")
+    if r["parking"]:
+        out.append(f"Parking de ideas: {r['parking']} (python3 herramientas/tutor.py parking para verlas)")
     if not r["terminado"]:
         out.append(f"Próximo paso: {r['paso_siguiente']} ({formato_minutos(MODOS[r['modo_siguiente']])}) — {r['motivo_paso']}")
         out.append("  → python3 herramientas/tutor.py hoy")
-        if r["dias_en_semana_actual"] and r["dias_en_semana_actual"] > 14:
-            out.append(f"Llevas {r['dias_en_semana_actual']} días en esta semana: apunta a la evidencia mínima "
-                       "con la versión micro; no hace falta perfección para demostrar.")
-        out.append(f"Término estimado a ritmo de 1 semana por semana: {r['fecha_estimada_termino']}")
-    if r["dias_sin_estudiar"] is not None and r["dias_sin_estudiar"] >= 2:
-        out.append(f"Vienes de {r['dias_sin_estudiar']} días sin estudiar → python3 herramientas/tutor.py retomar")
+        p = r["proyeccion"]
+        out.append(f"Término estimado: etapa {p['etapa']} el {p['termino_etapa']} · programa el {p['termino_programa']} "
+                   f"(ritmo {'real' if p['ritmo_real'] else 'nominal'}: {p['ritmo_dias_por_semana']} días por semana de contenido)")
+    if r["toca_retomar"]:
+        out.append("Toca retomar el hilo → python3 herramientas/tutor.py retomar")
     return "\n".join(out)
 
 
 def texto_plan(ctx: Contexto, plan: dict) -> str:
+    cab = f"Quedamos en: {plan['quedamos_en']} · Hoy: {plan.get('hoy', '')} · Primero: {plan['primero']}"
     if plan["terminado"]:
-        lineas = [f"HOY · {fecha_corta(ctx.hoy)} · Programa completado",
-                  "Modo mantener (15 min):"]
+        lineas = [f"HOY · {fecha_corta(ctx.hoy)} · Programa completado", cab, "", "PLAN (15 min)"]
         lineas += [f"  [{m:>2} min] {t}" for m, t in plan["bloques"]]
         return "\n".join(lineas)
     etapa = etapa_de(ctx.malla, plan.get("etapa"))
@@ -1927,18 +2305,27 @@ def texto_plan(ctx: Contexto, plan: dict) -> str:
         f"HOY · {fecha_corta(ctx.hoy)} · Semana {plan['semana']}/{TOTAL_SEMANAS} · Etapa {plan.get('etapa')} — {etapa.get('nombre', '')}",
         f"{plan.get('titulo', '')}",
         f"Paso: {plan['nombre_paso']} · modo {plan['modo']} · {formato_minutos(plan['minutos'])} ({plan['motivo']})",
+        "",
+        cab,
+        "",
+        "OBJETIVO ÚNICO DE LA SEMANA",
+        f"  {plan.get('objetivo', '')}",
+        "",
+        "PLAN",
     ]
-    if plan["dias_sin_estudiar"] is not None and plan["dias_sin_estudiar"] >= 2:
-        lineas.append(f"Ojo: {plan['dias_sin_estudiar']} días sin estudiar → primero: python3 herramientas/tutor.py retomar")
-    lineas += ["", "OBJETIVO ÚNICO", f"  {plan.get('objetivo', '')}", "", "PLAN"]
     lineas += [f"  [{m:>2} min] {t}" for m, t in plan["bloques"]]
+    if plan.get("preguntas"):
+        lineas += ["", "PREGUNTAS (sin mirar; el tutor muestra la respuesta después)"]
+        lineas += [f"  [{t}] {ctx.catalogo[t]['pregunta']}" for t in plan["preguntas"] if t in ctx.catalogo]
     if plan.get("ultimo_rechazo"):
         lineas += ["", "LO QUE FALTÓ LA ÚLTIMA VEZ", f"  {plan['ultimo_rechazo']}"]
+    if plan.get("si_entonces_anterior"):
+        lineas += ["", f"SI-ENTONCES QUE DEJASTE: {plan['si_entonces_anterior']}"]
     lineas += ["", "LECTURA"]
     if plan["lecturas"]:
         for l in plan["lecturas"]:
             detalle = ", ".join(x for x in (l.get("autor"), f"{l['minutos']} min" if l.get("minutos") else None,
-                                            l.get("acceso")) if x)
+                                            "núcleo" if l.get("nucleo") else None) if x)
             marca = "[leída] " if l["leida"] else ""
             lineas.append(f"  {marca}{l['id']} — {l['titulo']}" + (f" ({detalle})" if detalle else ""))
             if l.get("url"):
@@ -1947,33 +2334,50 @@ def texto_plan(ctx: Contexto, plan: dict) -> str:
                 lineas.append(f"      ficha: {l['ficha']}")
         lineas.append("  Al registrar, agrega --leido <ID> para activar sus preguntas de repaso.")
     else:
-        lineas.append("  Pendiente de integrar base/fuentes.json. Hoy trabaja con los conceptos; "
+        lineas.append("  Pendiente de integrar base/fuentes.json en la malla. Hoy trabaja con los conceptos; "
                       "el tutor no inventa fuentes.")
-    if plan["paso"] != "micro":
+    if plan["paso"] not in ("micro", "reentrada", "mantenimiento"):
         lineas += ["", "SI SOLO TIENES 15 MIN", f"  {plan.get('version_micro', '')}"]
     return "\n".join(lineas)
 
 
-def texto_retomar(ctx: Contexto, dias, proto: dict) -> str:
+def texto_retomar(ctx: Contexto, proto: dict) -> str:
     r = resumen(ctx)
     lineas = [f"RETOMAR · {fecha_corta(ctx.hoy)} · {proto['titulo']}", proto["mensaje"], "", "PASOS"]
     lineas += [f"  {i}. {p}" for i, p in enumerate(proto["pasos"], 1)]
-    ses = ctx.estado.get("sesiones", [])
-    if ses:
-        u = ses[-1]
-        lineas += ["", "TU ÚLTIMA NOTA", f"  {u['fecha']} · semana {u.get('semana')}: {u.get('nota', '')}"]
-    if proto["codigo"] in ("largo", "reinicio", "medio"):
-        vencidas = tarjetas_vencidas(ctx.tarjetas, ctx.hoy)
-        diag = vencidas[:3]
-        if len(diag) < 3 and r["aprobadas"]:
-            diag += [t for t in ids_tarjetas_semana(ctx, r["aprobadas"][-1]) if t not in diag][:3 - len(diag)]
-        if diag:
-            lineas += ["", "DIAGNÓSTICO (responde sin mirar; el tutor muestra la respuesta después)"]
-            lineas += [f"  [{t}] {ctx.catalogo[t]['pregunta']}" for t in diag if t in ctx.catalogo]
+    if r["ultima_sesion"]:
+        lineas += ["", "DÓNDE QUEDAMOS", f"  {r['quedamos_en']}"]
+        if r["si_entonces"]:
+            lineas.append(f"  Si-entonces: {r['si_entonces']}")
+    if proto["codigo"] in ("reentrada", "reinicio"):
+        cantidad, faciles = (3, True) if proto["codigo"] == "reentrada" else (8, False)
+        preg = seleccion_diagnostico(ctx, cantidad, faciles)
+        if preg:
+            titulo = "3 PREGUNTAS FÁCILES-MEDIAS" if faciles else "PRUEBA DE NIVEL (8 preguntas)"
+            lineas += ["", f"{titulo} — sin mirar; el tutor muestra la respuesta después"]
+            lineas += [f"  [{t}] {ctx.catalogo[t]['pregunta']}" for t in preg]
     if not r["terminado"]:
+        p = r["proyeccion"]
         lineas += ["", f"Semana en curso: {r['semana_actual']} — {r['titulo']}",
-                   f"Término estimado (reprogramado desde hoy): {r['fecha_estimada_termino']}",
-                   f"Modo sugerido hoy: {proto['modo']} → python3 herramientas/tutor.py hoy --{proto['modo']}"]
+                   f"Fechas reprogramadas desde hoy: etapa {p['etapa']} el {p['termino_etapa']} · programa el {p['termino_programa']}",
+                   f"Modo sugerido hoy: {proto['modo']} → python3 herramientas/tutor.py hoy"]
+    return "\n".join(lineas)
+
+
+def texto_rubrica(ctx: Contexto, n: int) -> str:
+    d = ctx.semana(n)
+    lineas = [f"RÚBRICA · Semana {n}: {d.get('titulo', '')}",
+              f"Escala por criterio: {ESCALA_RUBRICA}.",
+              "Evalúa en un contexto aparte (subagente): solo rúbrica, evidencia y clave; sin el historial de la conversación.",
+              "", f"Evidencia de dominio: {d.get('evidencia_de_dominio', '')}",
+              f"Entregable: {d.get('entregable', '')}", "", "CRITERIOS"]
+    for c in criterios_semana(n):
+        lineas.append(f"  {c}: {CRITERIOS[c]}")
+    lineas += ["", "CLAVE (preguntas de la semana; no se la muestres a Miguel antes de que responda)"]
+    for tid in ids_tarjetas_semana(ctx, n):
+        lineas.append(f"  [{tid}] {ctx.catalogo[tid]['pregunta']} → {ctx.catalogo[tid]['respuesta']}")
+    ejemplo = ",".join(f"{c}=2" for c in criterios_semana(n))
+    lineas += ["", f"Aprobar: python3 herramientas/tutor.py aprobar-semana {n} --evidencia \"...\" --rubrica \"{ejemplo}\""]
     return "\n".join(lineas)
 
 
@@ -1984,9 +2388,11 @@ def construir_parser() -> argparse.ArgumentParser:
     comun = argparse.ArgumentParser(add_help=False)
     comun.add_argument("--hoy", default=argparse.SUPPRESS, help="fecha a usar como hoy (AAAA-MM-DD)")
     comun.add_argument("--raiz", default=argparse.SUPPRESS, help="carpeta del programa (por defecto, la del script)")
+    comun.add_argument("--progreso", default=argparse.SUPPRESS, help="carpeta de progreso (por defecto, <raiz>/progreso)")
     p = argparse.ArgumentParser(prog="tutor.py", description="Tutor de IA Agéntica: herramientas determinísticas.")
     p.add_argument("--hoy", default=None, help="fecha a usar como hoy (AAAA-MM-DD); también TUTOR_HOY")
     p.add_argument("--raiz", default=None, help="carpeta del programa; también TUTOR_RAIZ")
+    p.add_argument("--progreso", default=None, help="carpeta de progreso; también TUTOR_PROGRESO")
     p.add_argument("--version", action="version", version=f"tutor.py {VERSION}")
     sub = p.add_subparsers(dest="comando", metavar="comando")
 
@@ -1996,8 +2402,8 @@ def construir_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("hoy", parents=[comun], help="arma el plan de la sesión de hoy")
     g = s.add_mutually_exclusive_group()
     g.add_argument("--micro", dest="modo", action="store_const", const="micro", help="15 min")
-    g.add_argument("--estandar", dest="modo", action="store_const", const="estandar", help="45 min de teoría activa")
-    g.add_argument("--lab", dest="modo", action="store_const", const="lab", help="90 min de laboratorio")
+    g.add_argument("--estandar", dest="modo", action="store_const", const="estandar", help="30 min")
+    g.add_argument("--lab", dest="modo", action="store_const", const="lab", help="75 min de laboratorio")
     s.add_argument("--json", action="store_true")
 
     s = sub.add_parser("repaso", parents=[comun], help="tarjetas vencidas (solo preguntas)")
@@ -2012,19 +2418,36 @@ def construir_parser() -> argparse.ArgumentParser:
     s.add_argument("id_tarjeta")
     s.add_argument("calidad", type=int)
 
-    s = sub.add_parser("registrar", parents=[comun], help="registra una sesión de estudio")
+    s = sub.add_parser("registrar", parents=[comun], help="registra una sesión (una fila de bitácora)")
     s.add_argument("--minutos", type=int, required=True)
-    s.add_argument("--nota", required=True)
+    s.add_argument("--nota", required=True, help="lo que aprendiste o hiciste (1 línea)")
     s.add_argument("--tipo", choices=TIPOS_SESION)
+    s.add_argument("--objetivo", help="objetivo de la sesión (por defecto, el de la semana)")
+    s.add_argument("--logrado", help="si, parcial o no")
+    s.add_argument("--duda")
+    s.add_argument("--si-entonces", dest="si_entonces", help="«Si es [día/hora] y [ancla], entonces abro el tutor y [acción]»")
     s.add_argument("--evidencia")
     s.add_argument("--leido", action="append", default=[], help="id de fuente leída (repetible)")
     s.add_argument("--semana", type=int)
 
-    s = sub.add_parser("aprobar-semana", parents=[comun], help="aprueba la semana en curso SOLO con evidencia")
+    s = sub.add_parser("rubrica", parents=[comun], help="criterios, escala y clave para evaluar una semana")
+    s.add_argument("semana", type=int, nargs="?")
+
+    s = sub.add_parser("aprobar-semana", parents=[comun], help="aprueba la semana en curso SOLO con evidencia y rúbrica")
     s.add_argument("semana", type=int)
     s.add_argument("--evidencia", required=True)
+    s.add_argument("--rubrica", required=True, help="entregable=3,explicacion=2,recuperacion=3[,sin_ia=2]")
+    s.add_argument("--test-out", dest="test_out", action="store_true", help="convalidación: ya lo dominaba")
 
     sub.add_parser("retomar", parents=[comun], help="protocolo de retorno sin culpa")
+
+    s = sub.add_parser("pausa", parents=[comun], help="declara una pausa (vacaciones): congela la racha")
+    s.add_argument("--hasta", required=True)
+    s.add_argument("--motivo", default="vacaciones")
+
+    s = sub.add_parser("parking", parents=[comun], help="anota una idea para después (sin idea: las lista)")
+    s.add_argument("idea", nargs="?")
+
     sub.add_parser("panel", parents=[comun], help="genera progreso/panel.html")
 
     s = sub.add_parser("validar", parents=[comun], help="recorre y confirma todo el programa")
@@ -2066,7 +2489,7 @@ def main(argv=None) -> int:
         parser.print_help()
         return 0
     try:
-        rutas = resolver_raiz(args.raiz)
+        rutas = resolver_rutas(args.raiz, args.progreso)
         hoy = fecha_hoy(args.hoy)
         return _ejecutar(args, rutas, hoy)
     except ErrorTutor as e:
@@ -2100,15 +2523,15 @@ def _ejecutar(args, rutas: Rutas, hoy: date) -> int:
         escribir_json(rutas.estado, estado_inicial(hoy))
         escribir_json(rutas.tarjetas, tarjetas_iniciales())
         rutas.bitacora.write_text(ENCABEZADO_BITACORA, encoding="utf-8")
-        ctx = Contexto(rutas, hoy)
-        ctx.guardar()
+        Contexto(rutas, hoy).guardar()
         _imprimir(f"Progreso iniciado en semana 1 ({hoy.isoformat()}). Siguiente: python3 herramientas/tutor.py hoy")
         return 0
 
     if cmd == "simular":
         sys.path.insert(0, str(Path(__file__).resolve().parent))
         import simular  # noqa: E402
-        return simular.main(["--semilla", str(args.semilla)] + (["--detalle"] if args.detalle else []))
+        return simular.main(["--semilla", str(args.semilla), "--origen", str(rutas.raiz)]
+                            + (["--detalle"] if args.detalle else []))
 
     if cmd == "integrar-lecturas":
         malla = cargar_malla(rutas)
@@ -2131,12 +2554,13 @@ def _ejecutar(args, rutas: Rutas, hoy: date) -> int:
         asignadas = {i for ids in prop.values() for i in ids}
         sin_semana = [f["id"] for f in lista if isinstance(f, dict) and f.get("id") not in asignadas]
         if sin_semana:
-            _imprimir(f"\nFuentes sin semana asignada ({len(sin_semana)}): {', '.join(sin_semana[:15])}")
+            _imprimir(f"\nFuentes que no quedan como lectura principal de ninguna semana ({len(sin_semana)}): "
+                      f"{', '.join(sin_semana[:15])}{' …' if len(sin_semana) > 15 else ''}")
         if args.aplicar and cambios:
             escribir_json(rutas.malla, malla)
-            _imprimir(f"\n{cambios} semana(s) actualizadas en curriculo/malla.json. Corre: tutor.py validar")
+            _imprimir(f"\n{cambios} semana(s) actualizadas en curriculo/malla.json. Corre: python3 herramientas/tutor.py validar")
         elif cambios:
-            _imprimir(f"\n{cambios} semana(s) cambiarían. Para escribirlas: tutor.py integrar-lecturas --aplicar")
+            _imprimir(f"\n{cambios} semana(s) cambiarían. Para escribirlas: python3 herramientas/tutor.py integrar-lecturas --aplicar")
         return 0
 
     if cmd == "empaquetar-skill":
@@ -2160,10 +2584,7 @@ def _ejecutar(args, rutas: Rutas, hoy: date) -> int:
     ctx = Contexto(rutas, hoy)
 
     if cmd == "estado":
-        if args.json:
-            _imprimir(json.dumps(resumen(ctx), ensure_ascii=False, indent=2))
-        else:
-            _imprimir(texto_estado(ctx))
+        _imprimir(json.dumps(resumen(ctx), ensure_ascii=False, indent=2) if args.json else texto_estado(ctx))
         return 0
 
     if cmd == "hoy":
@@ -2200,10 +2621,9 @@ def _ejecutar(args, rutas: Rutas, hoy: date) -> int:
         c = ctx.catalogo.get(args.id_tarjeta)
         if not c:
             raise ErrorTutor(f"No existe la tarjeta «{args.id_tarjeta}».")
-        _imprimir(f"[{args.id_tarjeta}] {c['pregunta']}\nRespuesta: {c['respuesta']}")
         origen = (f"curriculo/malla.json, semana {c['semana']}" if c["origen"] == "malla"
                   else f"base/fichas/{c['ficha']}.md")
-        _imprimir(f"Fuente: {origen}")
+        _imprimir(f"[{args.id_tarjeta}] {c['pregunta']}\nRespuesta: {c['respuesta']}\nFuente: {origen}")
         return 0
 
     if cmd == "calificar":
@@ -2213,41 +2633,73 @@ def _ejecutar(args, rutas: Rutas, hoy: date) -> int:
         return 0
 
     if cmd == "registrar":
-        res = registrar_sesion(ctx, args.minutos, args.nota, args.tipo, args.evidencia, args.leido, args.semana)
+        res = registrar_sesion(ctx, args.minutos, args.nota, args.tipo, args.evidencia, args.leido, args.semana,
+                               args.objetivo, args.logrado, args.duda, args.si_entonces)
         s = res["sesion"]
-        r = resumen(ctx)
-        _imprimir(f"Registrado: {formato_minutos(s['minutos'])} ({s['tipo']}) · semana {s['semana']} · {s['fecha']}.")
-        if r["meta_minutos_semana"]:
-            _imprimir(f"Esta semana: {formato_minutos(r['minutos_semana'])} de {formato_horas(r['meta_minutos_semana'])}. "
-                      f"Racha: {r['racha']['actual']} días (mejor {r['racha']['mejor']}).")
+        w = racha_de(ctx)["semana_en_curso"]
+        _imprimir(f"Registrado: {formato_minutos(s['minutos'])} ({s['tipo']}) · semana {s['semana']} · {s['fecha']}"
+                  + (f" · recuperación {s['recuperacion']}" if s.get("recuperacion") else "") + ".")
+        _imprimir(f"Esta semana: {w['sesiones']} sesión(es), {w['minutos']} min · {texto_falta_piso(w)}.")
+        if not s.get("si_entonces"):
+            _imprimir("Falta el si-entonces: «Si es [día/hora] y [ancla], entonces abro el tutor y [primera acción]» "
+                      "(agrégalo con --si-entonces la próxima vez).")
         for a in res["avisos"]:
             _imprimir(f"Aviso: {a}")
         if res["tarjetas_nuevas"]:
             _imprimir(f"Tarjetas nuevas para repaso: {len(res['tarjetas_nuevas'])}.")
-        _imprimir("Siguiente: python3 herramientas/tutor.py hoy (la próxima vez) · Panel actualizado: progreso/panel.html")
-        _imprimir(f"Commit sugerido: git add aprendizaje-ia-agentica/progreso && git commit -m "
+        _imprimir("Panel actualizado: progreso/panel.html")
+        _imprimir(f"Commit sugerido: git add progreso && git commit -m "
                   f"\"tutor: semana {s['semana']}, sesión {s['fecha']} ({formato_minutos(s['minutos'])})\"")
         return 0
 
+    if cmd == "rubrica":
+        n = args.semana or min(ctx.semana_actual, TOTAL_SEMANAS)
+        if not 1 <= n <= TOTAL_SEMANAS:
+            raise ErrorTutor(f"La semana debe estar entre 1 y {TOTAL_SEMANAS}.")
+        _imprimir(texto_rubrica(ctx, n))
+        return 0
+
     if cmd == "aprobar-semana":
-        res = aprobar_semana(ctx, args.semana, args.evidencia)
+        res = aprobar_semana(ctx, args.semana, args.evidencia, args.rubrica, args.test_out)
         reg = res["registro"]
-        _imprimir(f"Semana {reg['semana']} aprobada con evidencia ({reg['tipo_evidencia']}).")
+        rub = ", ".join(f"{c}={v}" for c, v in reg["rubrica"].items())
+        _imprimir(f"Semana {reg['semana']} aprobada con evidencia ({reg['tipo_evidencia']}) y rúbrica ({rub})"
+                  + (" como test-out" if args.test_out else "") + ".")
         if reg.get("proyecto"):
             _imprimir(f"Proyecto registrado: {reg['proyecto']}.")
+        nivel = nivel_actual(ctx.malla, [a["semana"] for a in ctx.estado["aprobaciones"]])
+        if reg["semana"] in FIN_DE_ETAPA and nivel:
+            _imprimir(f"Etapa completa. Nivel: {nivel}.")
         _imprimir(f"Tarjetas nuevas para repaso: {len(res['tarjetas_nuevas'])} (primera revisión mañana).")
         if ctx.terminado:
             _imprimir("Programa completado: 24/24. Lo que sigue: pilotear el capstone y mantener los repasos.")
         else:
-            sig = ctx.semana()
-            _imprimir(f"Siguiente: semana {ctx.semana_actual} — {sig.get('titulo', '')}.")
+            _imprimir(f"Siguiente: semana {ctx.semana_actual} — {ctx.semana().get('titulo', '')}.")
         return 0
 
     if cmd == "retomar":
-        dias = dias_sin_estudiar(ctx.estado, ctx.hoy)
-        proto = protocolo_retomar(dias)
+        dias = dias_fuera(ctx)
+        declarada = pausa_reciente(ctx.estado, ctx.hoy) or en_pausa_declarada(ctx.estado, ctx.hoy)
+        proto = protocolo_retomar(dias, ctx.hoy, declarada)
         registrar_retorno(ctx, dias, proto["codigo"])
-        _imprimir(texto_retomar(ctx, dias, proto))
+        _imprimir(texto_retomar(ctx, proto))
+        return 0
+
+    if cmd == "pausa":
+        p = declarar_pausa(ctx, parse_fecha(args.hasta, "--hasta"), args.motivo)
+        _imprimir(f"Pausa declarada del {p['desde']} al {p['hasta']} ({p['motivo']}). La racha queda congelada. "
+                  "Al volver: python3 herramientas/tutor.py retomar")
+        return 0
+
+    if cmd == "parking":
+        if args.idea:
+            agregar_parking(ctx, args.idea)
+            _imprimir(f"Anotada en el parking ({len(ctx.estado['parking'])} idea(s)). Se retoma al cerrar el módulo.")
+        else:
+            ideas = ctx.estado.get("parking", [])
+            _imprimir("PARKING DE IDEAS" if ideas else "PARKING vacío.")
+            for i, p in enumerate(ideas, 1):
+                _imprimir(f"  {i}. {p['idea']} ({p['fecha']}, semana {p.get('semana')})")
         return 0
 
     if cmd == "panel":

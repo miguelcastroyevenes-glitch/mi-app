@@ -1,4 +1,6 @@
 # Bitácora de estudio — IA Agéntica
 
-Registro automático de `tutor.py` (una entrada por sesión, aprobación o retorno).
-Puedes agregar reflexiones a mano debajo de cualquier entrada.
+Una fila por sesión o evento. La escribe `herramientas/tutor.py`; no la edites a mano.
+
+| Fecha | Sem. | Formato | Objetivo | Logrado | Aprendí | Duda | Recuperación | Si-entonces |
+|---|---|---|---|---|---|---|---|---|

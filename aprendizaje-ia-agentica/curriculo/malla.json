@@ -15,10 +15,12 @@
   ],
   "datos_de_practica": "Usa exports anonimizados o datos simulados. Nunca subas RUT, teléfonos, correos ni rentas de clientes a una herramienta o repositorio sin autorización de la empresa.",
   "modos_de_sesion": {
-    "micro": {"minutos": 15, "uso": "Días de cierre de mes, fines de semana cargados o retorno después de días sin estudiar."},
-    "estandar": {"minutos": 45, "uso": "Teoría activa: entender conceptos y responder sin mirar."},
-    "lab": {"minutos": 90, "uso": "Construir el laboratorio y el entregable de la semana."}
+    "micro": {"minutos": 15, "estructura": "2' arranque · 6' recuperación (5 preguntas) · 5' micro-paso · 2' registro", "uso": "Días cargados (jueves a domingo), cierre de mes o retorno."},
+    "estandar": {"minutos": 30, "estructura": "2' arranque · 5' recuperación (3 preguntas) · 3' gancho · 14' hacer · 3' explicar · 3' cierre", "uso": "Base de la semana: entender, responder sin mirar y demostrar."},
+    "lab": {"minutos": 75, "estructura": "7' arranque y recuperación · 25' construir · 5' pausa sin pantalla · 25' construir y probar · 8' demo y explicación · 5' cierre", "uso": "Día liviano o libre: construir el laboratorio. Tope 2 h."}
   },
+  "meta_semanal": {"piso": "3 sesiones o 60 min", "piso_cierre_de_mes": "2 sesiones o 30 min", "objetivo": "4–6 h", "techo": "8–10 h"},
+  "calendario_honesto": "Las horas de cada semana son la carga de la semana de CONTENIDO, no de la semana calendario: 24 semanas de contenido ≈ 8 meses. El avance se mide en semanas de contenido aprobadas.",
   "competencias": [
     {"nombre": "Business & Strategy", "ponderacion": 20, "prueba": "Convertir un proceso en caso de negocio con ROI y riesgo."},
     {"nombre": "Agent Architecture", "ponderacion": 15, "prueba": "Diseñar arquitectura y justificar workflow vs. agent vs. multi-agent."},
@@ -30,6 +32,7 @@
   "etapas": [
     {
       "numero": 1,
+      "nivel": "Estratega",
       "nombre": "Mentalidad agéntica + estrategia de negocio",
       "semanas": [1, 3],
       "horas": 24,
@@ -38,6 +41,7 @@
     },
     {
       "numero": 2,
+      "nivel": "Arquitecto",
       "nombre": "Anatomía y arquitectura de agentes",
       "semanas": [4, 6],
       "horas": 28,
@@ -46,6 +50,7 @@
     },
     {
       "numero": 3,
+      "nivel": "Constructor",
       "nombre": "Construcción: APIs, datos, herramientas y MCP",
       "semanas": [7, 10],
       "horas": 36,
@@ -54,6 +59,7 @@
     },
     {
       "numero": 4,
+      "nivel": "Orquestador",
       "nombre": "Orquestación, multi-agent y AI Workforce",
       "semanas": [11, 14],
       "horas": 34,
@@ -62,6 +68,7 @@
     },
     {
       "numero": 5,
+      "nivel": "Garante",
       "nombre": "Producción: evaluación, seguridad, observabilidad y gobernanza",
       "semanas": [15, 19],
       "horas": 40,
@@ -70,6 +77,7 @@
     },
     {
       "numero": 6,
+      "nivel": "AI Business Builder",
       "nombre": "AI Business, emprendimiento y transformación",
       "semanas": [20, 24],
       "horas": 48,
@@ -111,7 +119,7 @@
         {"pregunta": "¿Qué es la ventana de contexto y por qué importa en un agente?", "respuesta": "Es el máximo de tokens que el modelo considera en una llamada (instrucciones, historial, documentos, resultados de herramientas). Lo que no está ahí, el modelo no lo sabe; y si la llenas de ruido, pierde foco."}
       ],
       "horas": 8,
-      "version_micro": "15 min: escribe en 5 líneas cómo sería un agente de seguimiento de leads en tu sucursal: qué modelo, qué contexto necesita, qué herramienta usaría, qué acción ejecuta y cuánta autonomía le darías hoy.",
+      "version_micro": "Escribe en 5 líneas cómo sería un agente de seguimiento de leads en tu sucursal: qué modelo, qué contexto necesita, qué herramienta usaría, qué acción ejecuta y cuánta autonomía le darías hoy.",
       "proyecto": null,
       "competencia": "Agent Architecture"
     },
@@ -140,7 +148,7 @@
         {"pregunta": "Nombra 4 elementos de una buena especificación de tarea.", "respuesta": "Objetivo, entradas disponibles, formato de salida (idealmente un esquema) y criterios de éxito verificables; además restricciones y casos borde."}
       ],
       "horas": 8,
-      "version_micro": "15 min: elige UNA tarea de hoy en la sucursal y clasifícala (código / workflow / agente / sin IA) con una frase de justificación usando frecuencia y costo del error.",
+      "version_micro": "Elige UNA tarea de hoy en la sucursal y clasifícala (código / workflow / agente / sin IA) con una frase de justificación usando frecuencia y costo del error.",
       "proyecto": null,
       "competencia": "Business & Strategy"
     },
@@ -169,7 +177,7 @@
         {"pregunta": "En el mapeo de procesos, ¿qué es una excepción y por qué importa para un agente?", "respuesta": "Un caso que se sale del camino normal (cliente pide descuento fuera de política, crédito rechazado). Ahí suelen estar los riesgos y las aprobaciones humanas: el agente debe detectarlas y escalarlas."}
       ],
       "horas": 8,
-      "version_micro": "15 min: agrega 3 oportunidades a tu lista y ponle a cada una nota de 1 a 5 en valor, factibilidad y riesgo.",
+      "version_micro": "Agrega 3 oportunidades a tu lista y ponle a cada una nota de 1 a 5 en valor, factibilidad y riesgo.",
       "proyecto": {"nombre": "AI Opportunity Map", "resultado": "20 casos de uso priorizados por valor/factibilidad/riesgo."},
       "competencia": "Business & Strategy"
     },
@@ -197,7 +205,7 @@
         {"pregunta": "¿Qué debería hacer el agente si obtener_historial_lead devuelve «lead no encontrado»?", "respuesta": "Tratarlo como observación: verificar el id, intentar otra búsqueda si tiene sentido o reportar y escalar, en vez de inventar el historial."}
       ],
       "horas": 9,
-      "version_micro": "15 min: escribe el JSON schema de UNA herramienta (buscar_leads_sin_gestion) con tipos, campos obligatorios y una descripción clara.",
+      "version_micro": "Escribe el JSON schema de UNA herramienta (buscar_leads_sin_gestion) con tipos, campos obligatorios y una descripción clara.",
       "proyecto": null,
       "competencia": "Agent Architecture"
     },
@@ -226,7 +234,7 @@
         {"pregunta": "Si el RAG responde mal, ¿cómo distingues si falló la recuperación o la generación?", "respuesta": "Revisas los fragmentos recuperados: si el correcto no estaba, falló la recuperación (chunking, embeddings, consulta); si estaba y respondió mal, falló la generación (prompt o modelo)."}
       ],
       "horas": 9,
-      "version_micro": "15 min: haz la tabla de memoria de tu agente de seguimiento: 5 cosas que debe recordar, dónde se guarda cada una y por cuánto tiempo.",
+      "version_micro": "Haz la tabla de memoria de tu agente de seguimiento: 5 cosas que debe recordar, dónde se guarda cada una y por cuánto tiempo.",
       "proyecto": null,
       "competencia": "Agent Architecture"
     },
@@ -255,7 +263,7 @@
         {"pregunta": "¿Qué nivel de autonomía le darías hoy a un agente que envía mensajes a clientes y por qué?", "respuesta": "Redactar con aprobación humana: el mensaje sale con tu marca y afecta clientes reales; hasta medir su tasa de error, una persona revisa antes de enviar."}
       ],
       "horas": 10,
-      "version_micro": "15 min: dibuja en papel el diagrama del agente (entradas, herramientas, decisión, excepción, aprobación) y súbele una foto al repositorio.",
+      "version_micro": "Dibuja en papel el diagrama del agente (entradas, herramientas, decisión, excepción, aprobación) y súbele una foto al repositorio.",
       "proyecto": {"nombre": "Sales Intelligence Agent", "resultado": "Agente que analiza cartera, detecta oportunidades y explica sus razones."},
       "competencia": "Agent Architecture"
     },
@@ -284,7 +292,7 @@
         {"pregunta": "¿Qué es un entorno virtual (venv)?", "respuesta": "Una carpeta con un Python y paquetes aislados para un proyecto, para que las versiones de librerías de un proyecto no choquen con las de otro."}
       ],
       "horas": 9,
-      "version_micro": "15 min: escribe una función que reciba unidades y meta y devuelva el % de cumplimiento, y pruébala con 3 casos (incluida meta 0).",
+      "version_micro": "Escribe una función que reciba unidades y meta y devuelva el % de cumplimiento, y pruébala con 3 casos (incluida meta 0).",
       "proyecto": null,
       "competencia": "Technical Build"
     },
@@ -312,7 +320,7 @@
         {"pregunta": "Escribe la estructura de una consulta SQL que cuente leads por ejecutivo.", "respuesta": "SELECT ejecutivo, COUNT(*) AS leads FROM leads GROUP BY ejecutivo ORDER BY leads DESC;"}
       ],
       "horas": 9,
-      "version_micro": "15 min: escribe 1 consulta SQL (leads por nivel del embudo) y anota qué código HTTP esperarías si tu API key está vencida.",
+      "version_micro": "Escribe 1 consulta SQL (leads por nivel del embudo) y anota qué código HTTP esperarías si tu API key está vencida.",
       "proyecto": null,
       "competencia": "Technical Build"
     },
@@ -341,7 +349,7 @@
         {"pregunta": "¿Qué transporte usarías para un servidor MCP que corre en tu computador?", "respuesta": "stdio: el cliente lanza el servidor como proceso local y se comunican por entrada/salida estándar. Para uno remoto y compartido, HTTP."}
       ],
       "horas": 9,
-      "version_micro": "15 min: lista 3 herramientas y 1 recurso que expondría un servidor MCP de tu sucursal, con qué datos y si son de solo lectura o de escritura.",
+      "version_micro": "Lista 3 herramientas y 1 recurso que expondría un servidor MCP de tu sucursal, con qué datos y si son de solo lectura o de escritura.",
       "proyecto": null,
       "competencia": "Technical Build"
     },
@@ -370,7 +378,7 @@
         {"pregunta": "¿Qué es un dry-run?", "respuesta": "Ejecutar la tarea mostrando lo que se haría sin hacerlo de verdad, para revisarlo antes de aplicar acciones reales."}
       ],
       "horas": 9,
-      "version_micro": "15 min: toma una de tus herramientas y mejora su descripción y su mensaje de error para que un modelo sepa exactamente qué hacer.",
+      "version_micro": "Toma una de tus herramientas y mejora su descripción y su mensaje de error para que un modelo sepa exactamente qué hacer.",
       "proyecto": {"nombre": "Tool-Using Agent", "resultado": "Agente que consulta datos y ejecuta acciones mediante APIs/MCP."},
       "competencia": "Technical Build"
     },
@@ -398,7 +406,7 @@
         {"pregunta": "¿Qué decide el orquestador?", "respuesta": "Cómo descomponer la tarea, a quién delegar cada parte, en qué orden y cómo integrar los resultados en la respuesta final."}
       ],
       "horas": 8,
-      "version_micro": "15 min: escribe el contrato JSON (entrada y salida) del handoff entre el investigador y el analista.",
+      "version_micro": "Escribe el contrato JSON (entrada y salida) del handoff entre el investigador y el analista.",
       "proyecto": null,
       "competencia": "Orchestration"
     },
@@ -426,7 +434,7 @@
         {"pregunta": "¿Qué es el problema del «teléfono roto» en un sistema multiagente?", "respuesta": "Cada traspaso pierde o distorsiona información y con varios saltos el error se acumula. Se mitiga con contratos estructurados y verificación."}
       ],
       "horas": 8,
-      "version_micro": "15 min: escribe los 3 criterios con los que tu verificador aprueba o rechaza una recomendación.",
+      "version_micro": "Escribe los 3 criterios con los que tu verificador aprueba o rechaza una recomendación.",
       "proyecto": null,
       "competencia": "Orchestration"
     },
@@ -455,7 +463,7 @@
         {"pregunta": "¿Por qué importan los incentivos al implementar agentes en ventas?", "respuesta": "Si el equipo percibe que el agente le quita clientes o comisión, no lo usa o lo sabotea; el diseño debe mostrar cómo le libera tiempo para vender más."}
       ],
       "horas": 9,
-      "version_micro": "15 min: elige 5 tareas del proceso comercial y marca para cada una si la hace una persona, un agente o ambos, y quién aprueba.",
+      "version_micro": "Elige 5 tareas del proceso comercial y marca para cada una si la hace una persona, un agente o ambos, y quién aprueba.",
       "proyecto": null,
       "competencia": "Orchestration"
     },
@@ -483,7 +491,7 @@
         {"pregunta": "¿Cómo se calcula el costo esperado del error?", "respuesta": "Probabilidad de error × impacto del error (descuento indebido, cliente molesto); se suma al TCO y justifica revisiones humanas donde el impacto es alto."}
       ],
       "horas": 9,
-      "version_micro": "15 min: calcula el costo de procesar 1 lead con tu sistema (tokens × precio) y proyecta el costo mensual para tu volumen de leads.",
+      "version_micro": "Calcula el costo de procesar 1 lead con tu sistema (tokens × precio) y proyecta el costo mensual para tu volumen de leads.",
       "proyecto": {"nombre": "AI Sales Team", "resultado": "Orquestador + investigadores + analista + ejecutor + verificador."},
       "competencia": "Orchestration"
     },
@@ -511,7 +519,7 @@
         {"pregunta": "¿Qué mide «tool correctness»?", "respuesta": "Si el agente eligió la herramienta correcta, con los argumentos correctos y en el momento adecuado."}
       ],
       "horas": 8,
-      "version_micro": "15 min: escribe 3 golden cases (entrada + resultado esperado + cómo lo calificarías).",
+      "version_micro": "Escribe 3 golden cases (entrada + resultado esperado + cómo lo calificarías).",
       "proyecto": null,
       "competencia": "Evals & Security"
     },
@@ -539,7 +547,7 @@
         {"pregunta": "¿Qué 3 métricas pondrías arriba en el tablero de un agente comercial?", "respuesta": "Tasa de éxito de la tarea, costo por tarea y tasa de escalamientos o errores de política (más latencia si atiende en tiempo real)."}
       ],
       "horas": 8,
-      "version_micro": "15 min: abre 1 traza fallida y escribe en 3 líneas en qué paso falló y en qué categoría la pondrías.",
+      "version_micro": "Abre 1 traza fallida y escribe en 3 líneas en qué paso falló y en qué categoría la pondrías.",
       "proyecto": null,
       "competencia": "Evals & Security"
     },
@@ -568,7 +576,7 @@
         {"pregunta": "¿Qué diferencia hay entre autenticación y autorización?", "respuesta": "La autenticación verifica quién eres; la autorización define qué puedes hacer con esa identidad."}
       ],
       "horas": 8,
-      "version_micro": "15 min: escribe 3 ataques de prompt injection contra tu agente y, para cada uno, la defensa que lo detendría.",
+      "version_micro": "Escribe 3 ataques de prompt injection contra tu agente y, para cada uno, la defensa que lo detendría.",
       "proyecto": null,
       "competencia": "Evals & Security"
     },
@@ -597,7 +605,7 @@
         {"pregunta": "¿Qué ley regula los datos personales en Chile y qué cambio viene?", "respuesta": "La Ley 19.628; la Ley 21.719 la reforma con más exigencias y una agencia de protección de datos, con entrada en vigencia programada para diciembre de 2026. Verifica el estado actual antes de citarla."}
       ],
       "horas": 8,
-      "version_micro": "15 min: escribe 3 acciones que tu agente puede hacer solo, 3 que requieren tu aprobación y 3 prohibidas.",
+      "version_micro": "Escribe 3 acciones que tu agente puede hacer solo, 3 que requieren tu aprobación y 3 prohibidas.",
       "proyecto": null,
       "competencia": "Evals & Security"
     },
@@ -625,7 +633,7 @@
         {"pregunta": "¿Qué significa degradación elegante en un agente?", "respuesta": "Que ante una falla no inventa ni se cae en silencio: informa y deriva a una persona o a un camino más simple."}
       ],
       "horas": 8,
-      "version_micro": "15 min: escribe tu criterio de «listo para piloto» en 5 líneas con umbrales numéricos.",
+      "version_micro": "Escribe tu criterio de «listo para piloto» en 5 líneas con umbrales numéricos.",
       "proyecto": {"nombre": "Agent QA Lab", "resultado": "Evaluaciones, trazas, seguridad, métricas y protocolo de aprobación."},
       "competencia": "Evals & Security"
     },
@@ -653,7 +661,7 @@
         {"pregunta": "¿Qué significa productizar un agente?", "respuesta": "Convertirlo de solución a la medida en algo repetible: configurable, documentado, con soporte, precio y proceso de implementación estándar."}
       ],
       "horas": 9,
-      "version_micro": "15 min: escribe el problema de tu capstone en 2 frases: quién lo sufre y cuánto le cuesta.",
+      "version_micro": "Escribe el problema de tu capstone en 2 frases: quién lo sufre y cuánto le cuesta.",
       "proyecto": null,
       "competencia": "Entrepreneurship / Leadership"
     },
@@ -681,7 +689,7 @@
         {"pregunta": "¿Qué es el payback del CAC?", "respuesta": "Los meses que tarda el margen bruto de un cliente en recuperar lo que costó adquirirlo."}
       ],
       "horas": 9,
-      "version_micro": "15 min: escribe 5 preguntas de entrevista sobre hechos pasados del problema, sin mencionar tu solución.",
+      "version_micro": "Escribe 5 preguntas de entrevista sobre hechos pasados del problema, sin mencionar tu solución.",
       "proyecto": null,
       "competencia": "Entrepreneurship / Leadership"
     },
@@ -709,7 +717,7 @@
         {"pregunta": "¿Qué métricas definirías para el piloto de un agente comercial?", "respuesta": "Adopción (uso por ejecutivo), tasa de éxito de la tarea, tiempo ahorrado y efecto en el embudo (contactos, agendas, ventas), además de incidentes."}
       ],
       "horas": 10,
-      "version_micro": "15 min: escribe el hito de los primeros 30 días del roadmap con su métrica y su fecha.",
+      "version_micro": "Escribe el hito de los primeros 30 días del roadmap con su métrica y su fecha.",
       "proyecto": null,
       "competencia": "Entrepreneurship / Leadership"
     },
@@ -737,7 +745,7 @@
         {"pregunta": "¿Qué es un champion en la adopción?", "respuesta": "Una persona del equipo que adopta temprano la herramienta, la valida con su experiencia y ayuda a sus pares a usarla."}
       ],
       "horas": 10,
-      "version_micro": "15 min: escribe en 3 líneas la «decisión solicitada» de tu business case: qué pides, cuánto cuesta y qué resultado prometes medir.",
+      "version_micro": "Escribe en 3 líneas la «decisión solicitada» de tu business case: qué pides, cuánto cuesta y qué resultado prometes medir.",
       "proyecto": null,
       "competencia": "Business & Strategy"
     },
@@ -765,7 +773,7 @@
         {"pregunta": "¿Qué hace que un repositorio sirva como portafolio?", "respuesta": "Que otra persona entienda el problema, lo instale y lo corra desde cero con el README, vea la evidencia (evals, demo) y entienda las decisiones de diseño."}
       ],
       "horas": 10,
-      "version_micro": "15 min: ensaya solo los primeros 60 segundos del pitch (problema y por qué importa) y grábalos.",
+      "version_micro": "Ensaya solo los primeros 60 segundos del pitch (problema y por qué importa) y grábalos.",
       "proyecto": {"nombre": "Capstone", "resultado": "Producto/servicio agéntico listo para pilotear, con business case."},
       "competencia": "Entrepreneurship / Leadership"
     }
