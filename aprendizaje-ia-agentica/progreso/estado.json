@@ -9,6 +9,7 @@
   "retornos": [],
   "pausas": [],
   "parking": [],
+  "ajustes_piso": [],
   "config": {
     "piso_sesiones": 3,
     "piso_minutos": 60,

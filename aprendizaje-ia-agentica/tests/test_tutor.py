@@ -619,6 +619,10 @@ class TestBloqueImportar(BaseCopia):
 # ---------------------------------------------------------------------------
 class TestIntegracionBase(BaseCopia):
     def test_integrar_lecturas_prioriza_nucleo(self):
+        m = self.malla()
+        for semana in m["semanas"]:
+            semana["lectura"] = []  # estado previo a la integración
+        self.guardar_malla(m)
         (self.raiz / "base").mkdir()
         fuentes = [{"id": "LARGA", "semanas": [1], "nucleo": False, "minutos": 10},
                    {"id": "NUCLEO", "semanas": [1, 2], "nucleo": True, "minutos": 60},
@@ -645,6 +649,8 @@ class TestIntegracionBase(BaseCopia):
             nombres = z.namelist()
         self.assertIn("tutor-ia-agentica/SKILL.md", nombres)
         self.assertIn("tutor-ia-agentica/referencias/malla.json", nombres)
+        self.assertIn("tutor-ia-agentica/referencias/investigacion/03-reglas-del-tutor.md", nombres)
+        self.assertIn("tutor-ia-agentica/referencias/investigacion/01-revision-idea-tutor.md", nombres)
 
     def test_panel_y_parking(self):
         self.cli("parking", "probar n8n para el correo de leads")
@@ -656,6 +662,124 @@ class TestIntegracionBase(BaseCopia):
                       "prefers-color-scheme:dark"):
             self.assertIn(texto, html)
         self.assertIn("probar n8n", self.cli("parking")[1])
+
+
+# ---------------------------------------------------------------------------
+class TestHiloDeCalidad(BaseCopia):
+    def test_la_malla_real_trae_hilo_en_las_24_semanas(self):
+        malla = json.loads((RAIZ / "curriculo" / "malla.json").read_text(encoding="utf-8"))
+        hilos = [s.get("hilo_calidad", "") for s in malla["semanas"]]
+        self.assertEqual(len(hilos), 24)
+        self.assertTrue(all(len(h) >= 30 for h in hilos))
+        self.assertIn("Contrato Maestro", hilos[0])
+        self.assertIn("injection", hilos[7])
+
+    def test_validar_exige_hilo_no_vacio(self):
+        m = self.malla()
+        m["semanas"][2]["hilo_calidad"] = ""
+        del m["semanas"][3]["hilo_calidad"]
+        m["semanas"][4]["hilo_calidad"] = "probar"
+        self.guardar_malla(m)
+        _, errores, _ = self.validar()
+        self.assertTrue(any("semana 3: el campo «hilo_calidad» está vacío" in e for e in errores), errores)
+        self.assertTrue(any("semana 4: falta el campo «hilo_calidad»" in e for e in errores), errores)
+        self.assertTrue(any("semana 5: «hilo_calidad» debe ser una práctica concreta" in e for e in errores), errores)
+
+    def test_hoy_lo_muestra_y_cerrar_lo_incluye(self):
+        hilo = self.ctx().semana(1)["hilo_calidad"]
+        _, out, _ = self.cli("hoy")
+        self.assertIn("HILO DE CALIDAD", out)
+        self.assertIn(hilo, out)
+        self.cli("registrar", "--minutos", 30, "--tipo", "estandar", "--nota", "a")
+        self.cli("registrar", "--minutos", 75, "--tipo", "lab", "--nota", "b")
+        plan = json.loads(self.cli("hoy", "--json")[1])
+        self.assertEqual(plan["paso"], "cerrar")
+        self.assertIn("Hilo de calidad: " + hilo, [t for _, t in plan["bloques"]])
+        self.assertEqual(sum(m for m, _ in plan["bloques"]), 30)
+        self.assertIn(hilo, self.rutas.panel.read_text(encoding="utf-8"))
+
+    def test_etapa_3_usa_claude_y_una_plataforma_de_contraste(self):
+        malla = json.loads((RAIZ / "curriculo" / "malla.json").read_text(encoding="utf-8"))
+        s10 = malla["semanas"][9]["laboratorio"]
+        for texto in ("Claude Agent SDK", "skill", "MCP", "hook", "Contraste"):
+            self.assertIn(texto, s10)
+        self.assertIn("Contraste", malla["semanas"][8]["laboratorio"])
+        self.assertIn("Claude", malla["plataforma"]["principal"])
+
+
+class TestHookDeArranque(BaseCopia):
+    def config(self):
+        return json.loads((self.raiz / ".claude" / "settings.json").read_text(encoding="utf-8"))
+
+    def test_settings_valido_con_sessionstart_y_sin_stop(self):
+        cfg = self.config()
+        comandos = [h["command"] for g in cfg["hooks"]["SessionStart"] for h in g["hooks"] if h["type"] == "command"]
+        self.assertTrue(any("tutor.py estado" in c for c in comandos))
+        self.assertNotIn("Stop", cfg["hooks"])
+
+    def test_el_comando_del_hook_funciona(self):
+        import subprocess
+        comando = self.config()["hooks"]["SessionStart"][0]["hooks"][0]["command"]
+        env = dict(os.environ, CLAUDE_PROJECT_DIR=str(self.raiz))
+        env.pop("TUTOR_RAIZ", None)
+        env.pop("TUTOR_PROGRESO", None)
+        r = subprocess.run(["bash", "-c", comando], input='{"hook_event_name":"SessionStart"}', text=True,
+                           capture_output=True, env=env, cwd=tempfile.gettempdir(), timeout=60)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("ESTADO", r.stdout)
+        self.assertIn("Semana 1/24", r.stdout)
+
+    def test_validar_detecta_hook_ausente_o_con_stop(self):
+        ruta = self.raiz / ".claude" / "settings.json"
+        cfg = self.config()
+        cfg["hooks"]["Stop"] = [{"hooks": [{"type": "command", "command": "exit 2"}]}]
+        ruta.write_text(json.dumps(cfg), encoding="utf-8")
+        self.assertTrue(any("hook Stop" in e for e in self.validar()[1]))
+        ruta.write_text("{ roto", encoding="utf-8")
+        self.assertTrue(any("no es JSON válido" in e for e in self.validar()[1]))
+        ruta.unlink()
+        self.assertTrue(any("settings.json" in e for e in self.validar()[1]))
+
+
+class TestPisoYReglasIntegradas(BaseCopia):
+    def test_ajuste_de_piso_rige_desde_su_semana(self):
+        fechas = [(d("2027-01-04"), 15), (d("2027-01-05"), 15), (d("2027-01-11"), 15), (d("2027-01-12"), 15)]
+        sin = tutor.calcular_racha(fechas, d("2027-01-17"))
+        self.assertEqual([w["piso_ok"] for w in sin["semanas"]], [False, False])
+        con = tutor.calcular_racha(fechas, d("2027-01-17"), ajustes_piso=[(d("2027-01-13"), 2, 30)])
+        self.assertEqual([w["piso_ok"] for w in con["semanas"]], [False, True])
+
+    def test_cli_piso(self):
+        _, out, _ = self.cli("piso", hoy="2026-10-06")
+        self.assertIn("3 sesiones o 60 min", out)
+        codigo, out, err = self.cli("piso", "--sesiones", 2, "--minutos", 45, "--motivo", "cierre largo", hoy="2026-10-06")
+        self.assertEqual(codigo, 0, err)
+        self.assertIn("2 sesiones o 45 min", self.cli("piso", hoy="2026-10-07")[1])
+        self.assertIn("PISO AJUSTADO", self.rutas.bitacora.read_text(encoding="utf-8"))
+        self.assertEqual(self.cli("piso", "--sesiones", 9, hoy="2026-10-07")[0], 2)
+        self.assertEqual(self.validar("2026-10-07")[1], [])
+
+    def test_skill_integrada_sin_pendientes(self):
+        texto = (RAIZ / ".claude" / "skills" / "tutor-ia-agentica" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertNotIn("INTEGRAR", texto)
+        self.assertNotIn(tutor.MARCA_PENDIENTE, texto)
+        for seccion in ("Las 10 no negociables", "SIEMPRE", "NUNCA", "Señales de desenganche",
+                        "investigacion/03-reglas-del-tutor.md", "investigacion/01-revision-idea-tutor.md"):
+            self.assertIn(seccion, texto)
+        _, _, avisos = self.validar()
+        self.assertFalse(any("Pendiente de integración" in a for a in avisos))
+        copia = self.rutas.skill
+        copia.write_text(copia.read_text(encoding="utf-8") + "\n" + tutor.MARCA_INTEGRAR + "\n", encoding="utf-8")
+        self.assertTrue(any("Pendiente de integración" in a for a in self.validar()[2]))
+
+    def test_documentos_sin_menciones_de_salud(self):
+        import re
+        for rel in ("README.md", "CLAUDE.md", ".claude/skills/tutor-ia-agentica/SKILL.md", "curriculo/malla.json",
+                    "herramientas/tutor.py"):
+            texto = (RAIZ / rel).read_text(encoding="utf-8")
+            prohibidas = "|".join(("".join(("t", "d", "a", "h")), "".join(("a", "d", "h", "d")),
+                                   r"diagn[oó]stic[oa] m[eé]dic"))
+            self.assertIsNone(re.search(prohibidas, texto, re.I), rel)
 
 
 if __name__ == "__main__":
