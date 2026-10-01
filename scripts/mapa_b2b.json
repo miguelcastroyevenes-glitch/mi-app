@@ -1,0 +1,26 @@
+{
+  "_comentario": "Modelo de la app (texto contenido en 'modelo') -> pistas que identifican su fila en la Lista de Descuentos B2B (todas deben aparecer en col A + col C de la pestaña de la marca). Verificado en la carga de octubre 2026. Si entra un comercial nuevo con flota, se agrega aquí.",
+  "Peugeot": {
+    "Partner MCA L1": ["PARTNER", "L1"],
+    "Partner MCA L2": ["PARTNER", "L2"],
+    "Expert MCA L3": ["Expert"],
+    "Traveller MCA L3": ["Traveller"],
+    "Furgón L2H2": ["Boxer", "L2H2"],
+    "Furgón L3H2": ["Boxer", "L3H2"],
+    "Furgón L4H2": ["Boxer", "L4H2"],
+    "Cabina L3": ["Boxer", "Cabina"],
+    "Landtrek": ["Landtrek"]
+  },
+  "Citroën": {
+    "Berlingo MCA M ": ["Berlingo MCA M "],
+    "Berlingo MCA XL": ["Berlingo MCA XL Diesel"],
+    "Jumpy": ["JUMPY"],
+    "Spacetourer": ["Spacetourer"],
+    "Jumper MCA L2H2": ["JUMPER", "L2H2"],
+    "Jumper MCA L3H2": ["JUMPER", "L3H2"],
+    "Jumper MCA L4H2": ["JUMPER", "L4H2"]
+  },
+  "Opel": {
+    "Combo": ["COMBO"]
+  }
+}

@@ -34,6 +34,42 @@ cerrar deals reales, y no tiene tests. Cada edición mueve plata de verdad.
 
 ## Actualización mensual del catálogo
 
+### Con un comando (desde v29, octubre 2026)
+
+`scripts/actualizar_catalogo.py` hace toda la carga mensual de las 4 marcas. Es la fuente de
+verdad del proceso: la skill `actualizar-catalogo-deal` debe limitarse a llamarlo.
+
+```powershell
+cd C:\Proyectos\app-deal\mi-app
+python -m pip install openpyxl pypdf          # una vez
+python scripts\actualizar_catalogo.py --carpeta "C:\Proyectos\app-deal\files\Noviembre" --mes noviembre --anio 2026            # ensayo
+python scripts\actualizar_catalogo.py --carpeta "C:\Proyectos\app-deal\files\Noviembre" --mes noviembre --anio 2026 --aplicar  # escribe
+```
+
+Qué hace: valida los Excel (IVA de comerciales incluido), actualiza cada modelo **conservando
+el nombre que ya tiene la app**, saca los que no vienen, agrega los nuevos, recalcula `b2b` desde
+la Lista de Descuentos B2B (mapeo explícito en `scripts/mapa_b2b.json`), trae la UTM del mes desde
+el SII, sube `APP_VERSION`, revisa que cada CIT esté en `IMPUESTO_VERDE`, cruza los "precio desde"
+de las circulares PDF y deja un resumen `cambios-precios-<mes>-<año>.md` para el equipo (en
+`ENTREGABLES_DIR` si existe, si no en `respaldos`). Si algo no cuadra, **no escribe nada**.
+
+No publica: después hay que abrir la app en el navegador (un deal retail y uno de flota) y
+correr `publicar.ps1`. Probado contra la carga de octubre 2026: partiendo de v28 deja el
+catálogo idéntico al publicado a mano en v29.
+
+Lo que el script **no** hace solo (avisa y hay que hacerlo a mano): marca nueva, `b2b` de un
+comercial nuevo (agregarlo también a `mapa_b2b.json`) y filas nuevas de `IMPUESTO_VERDE`.
+
+Trampas que ya resuelve y no hay que repetir a mano:
+- El script viejo de la skill reescribía `CATALOGO_LOCAL` completo solo con Peugeot/Citroën:
+  borraba Leapmotor, Opel y todos los `b2b`. Nunca usar su opción `--index`.
+- Los Excel cambian nombres entre meses (Leapmotor en MAYÚSCULAS, "136HP" → "136 HP").
+  Se cruza sin distinguir mayúsculas ni espacios.
+- Margen comercial: columna AL en Peugeot, AK en Citroën **y Opel**. Leapmotor viene en una
+  sola hoja "Lista de Precios" con formato de pasajeros.
+- Las "alzas" de Stellantis casi siempre son **vía bono** (baja el bono, el precio lista queda).
+  En comerciales, $300.000 netos se ven como $357.000 con IVA.
+
 Las listas llegan a `Documentos\quilin\precios\<MES AÑO>\`. Son una por marca, más
 `Lista de Descuentos B2B <mes>.xlsx` para los tramos de flota.
 
@@ -93,15 +129,21 @@ en pantalla de celular los dos botones se confundían.
 
 Ambos se pagan al inscribir el auto nuevo, así que los dos usan `VALOR_UTM`, que es la
 **UTM del mes en curso** (no la de enero: esa aplica a la renovación anual). **Hay que
-subirla cada mes.** Septiembre 2026 = `71721`.
+subirla cada mes** (el script de catálogo la trae sola de
+https://www.sii.cl/valores_y_fechas/utm/utm2026.htm). Octubre 2026 = `72151`.
 
 ### Impuesto Verde
 
 Tabla `IMPUESTO_VERDE`, indexada por **CIT**, con `{rend, nox}`. Fórmula del SII:
 
 ```
-[(35 / rendimiento urbano) + (120 × NOx)] × (precioNeto × 0,00000006)
+[(35 / rendimiento urbano) + (120 × NOx)] × (precioConIva × 0,00000006)
 ```
+
+Va sobre el precio de venta **CON IVA** (corregido en v28, 14-09-2026: con el neto salía ~16%
+más bajo que la calculadora del SII). En flota se usa el precio flota con IVA. El Permiso de
+Circulación, en cambio, sigue sobre el **neto**. Verificado 01-10-2026, Expert flota T1 con
+$500.000 adicional: permiso $152.251 e impuesto verde $577.930 con UTM 72.151.
 
 El resultado va en UTM, se **redondea a 2 decimales** y recién ahí se pasa a pesos. Ese
 redondeo es lo que hace que calce exacto con la calculadora del SII.
@@ -151,8 +193,10 @@ explica por el valor de UTM usado, no por la escala ni el prorrateo.
   tiene que funcionar 100% offline en el celular del vendedor.
 - **En Windows, `git commit -m` con here-string se rompe** si el mensaje trae paréntesis;
   PowerShell parte el texto y git lo lee como rutas. Usar `git commit -F archivo.txt`.
-- **No hay Python real en esta máquina** (solo el stub de la Store). Para leer los Excel:
-  Node + `xlsx` (SheetJS).
+- **Herramientas (actualizado 01-10-2026):** sí hay Python 3.12; el script de catálogo necesita
+  `openpyxl` (y `pypdf` para el cruce con las circulares). No hay Node: `validar.ps1` no corre
+  local, así que la sintaxis se comprueba abriendo la app en el navegador (Babel la compila) y
+  con el workflow de GitHub, que corre en cada push.
 
 ---
 

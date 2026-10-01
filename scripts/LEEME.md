@@ -30,6 +30,7 @@ para que no queden dos clones editables.
 |---|---|
 | `.\scripts\respaldo.ps1` | Respaldo local. No toca GitHub. Se puede correr cuando sea. |
 | `.\scripts\validar.ps1` | Chequea la sintaxis de las dos apps. Cero riesgo. |
+| `python scripts\actualizar_catalogo.py --carpeta <carpeta del mes> --mes <mes> --anio <año>` | Carga mensual del catálogo (4 marcas, B2B, UTM, versión). Sin `--aplicar` es ensayo. Ver `MANTENCION.md`. |
 | `.\scripts\publicar.ps1 -Mensaje "v29: catálogo octubre"` | Respaldo → pull → validar → subir versión → commit → push. |
 
 Ensayo sin publicar nada:
