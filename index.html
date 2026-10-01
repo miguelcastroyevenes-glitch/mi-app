@@ -148,7 +148,7 @@ const PROX_MES = {boletin:"", vigencia:"", hasta:"", data:{}};
 // pasado no queda colgado en pantalla si a alguien se le olvida vaciarlo: cuando el mes
 // nuevo empieza, el precio del catalogo YA es el nuevo y el aviso no tiene nada que avisar.
 const PROX_MES_VIGENTE = !!PROX_MES.hasta && (new Date().toISOString().slice(0,10) <= PROX_MES.hasta);
-const APP_VERSION = "2026-10-01 · v29"; // ← actualizar cada vez que se sube una nueva versión
+const APP_VERSION = "2026-10-01 · v30"; // ← actualizar cada vez que se sube una nueva versión
 
 // Valor UTM del MES EN CURSO, para el Permiso de Circulación proporcional y el Impuesto
 // Verde. Ambos se pagan al momento de inscribir el auto nuevo, así que usan la UTM
@@ -698,13 +698,13 @@ const defaultDocs = [
       L.push("");
       L.push("--- PRECIO FLOTA (la lista B2B va SIN IVA) ---");
       if (deal.aporteSteFlota) {
-        L.push(`Aporte Stellantis: ${fmt(deal.aporteSteFlota)}`);
-        L.push(`Aporte concesionario: ${fmt(deal.aporteRedFlota)}`);
         // Los % se sacan del propio deal (lista sin IVA = neto + descuento total), asi
         // funcionan tambien con deals guardados antes de que existiera este dato.
         const plSinIvaDeal = (deal.precioFlotaNeto || 0) + (deal.descFlotaPesos || 0);
         const pctDeal = v => plSinIvaDeal > 0 ? ` (${pct(v / plSinIvaDeal)})` : "";
-        if (deal.cesAdicional > 0) L.push(`Descuento Pompeyo adicional (CES): ${fmt(deal.cesAdicional)}${pctDeal(deal.cesAdicional)}`);
+        L.push(`Aporte marca: ${fmt(deal.aporteSteFlota)}${pctDeal(deal.aporteSteFlota)}`);
+        L.push(`CES regular según tramo: ${fmt(deal.aporteRedFlota)}${pctDeal(deal.aporteRedFlota)}`);
+        if (deal.cesAdicional > 0) L.push(`Adicional Pompeyo: ${fmt(deal.cesAdicional)}${pctDeal(deal.cesAdicional)}`);
         L.push(`Descuento total: ${fmt(deal.descFlotaPesos)}${pctDeal(deal.descFlotaPesos)}`);
       }
       L.push(`Precio flota NETO: ${fmt(deal.precioFlotaNeto)}`);
@@ -1253,16 +1253,16 @@ const defaultDocs = [
               <div style={{...base.card,background:mc+"06"}}>
                 <div style={base.row}><span style={base.label}>Precio lista sin IVA</span><span style={base.val}>{fmt(calc.b2b.plSinIva)}</span></div>
                 <div style={base.row}>
-                  <span style={{fontSize:12,color:C.accent}}>− Aporte Stellantis ({pct(calc.steFlota)})</span>
+                  <span style={{fontSize:12,color:C.accent}}>− Aporte marca ({pct(calc.steFlota)})</span>
                   <span style={{fontSize:12,color:C.accent,fontWeight:600}}>−{fmt(calc.aporteSteFlota)}</span>
                 </div>
                 <div style={base.row}>
-                  <span style={{fontSize:12,color:"#b45309"}}>− Aporte concesionario ({pct(calc.redFlota)})</span>
+                  <span style={{fontSize:12,color:"#b45309"}}>− CES regular según tramo ({pct(calc.redFlota)})</span>
                   <span style={{fontSize:12,color:"#b45309",fontWeight:600}}>−{fmt(calc.aporteRedFlota)}</span>
                 </div>
                 {calc.cesAplicado > 0 && (
                   <div style={base.row}>
-                    <span style={{fontSize:12,color:C.red}}>− Descuento Pompeyo adicional (CES) ({pct(calc.cesPct)})</span>
+                    <span style={{fontSize:12,color:C.red}}>− Adicional Pompeyo ({pct(calc.cesPct)})</span>
                     <span style={{fontSize:12,color:C.red,fontWeight:600}}>−{fmt(calc.cesAplicado)}</span>
                   </div>
                 )}
@@ -1298,20 +1298,11 @@ const defaultDocs = [
                         : <>Sale del margen de la casa, no del aporte Stellantis.</>}
                     </div>
                     {calc.cesAplicado > 0 && (
-                      <div style={{display:"flex",gap:8,marginTop:8}}>
-                        <div style={{flex:1,padding:"6px 8px",borderRadius:6,background:C.redBg,textAlign:"center"}}>
-                          <div style={{fontSize:11,color:C.muted}}>Adicional Pompeyo</div>
-                          <div style={{fontSize:16,fontWeight:800,color:C.red}}>{pct(calc.cesPct)}</div>
-                        </div>
-                        <div style={{flex:1,padding:"6px 8px",borderRadius:6,background:C.redBg,textAlign:"center"}}>
-                          <div style={{fontSize:11,color:C.muted}}>Descuento total</div>
-                          <div style={{fontSize:16,fontWeight:800,color:C.red}}>{pct(calc.descFlotaPct)}</div>
-                        </div>
-                      </div>
-                    )}
-                    {calc.cesAplicado > 0 && (
-                      <div style={{fontSize:11,color:C.muted,marginTop:4}}>
-                        Tramo {pct(calc.descFlotaPct - calc.cesPct)} + adicional {pct(calc.cesPct)} = {pct(calc.descFlotaPct)} sobre la lista sin IVA.
+                      <div style={{fontSize:12,marginTop:6}}>
+                        <span style={{color:C.accent}}>Aporte marca {pct(calc.steFlota)}</span>
+                        {" + "}<span style={{color:"#b45309"}}>CES regular según tramo {pct(calc.redFlota)}</span>
+                        {" + "}<span style={{color:C.red}}>Adicional Pompeyo {pct(calc.cesPct)}</span>
+                        {" = "}<b style={{color:C.red}}>Total {pct(calc.descFlotaPct)}</b>
                       </div>
                     )}
                     {calc.cesAplicado > 0 && calc.margenFlotaPesos < 0 && (
