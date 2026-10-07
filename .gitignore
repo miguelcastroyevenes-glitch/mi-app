@@ -1,0 +1,9 @@
+# Planillas de origen (listas de precios, exportes de APC/Roma): traen márgenes, costos y aportes.
+# Viven en C:\Proyectos\app-deal\files\<Mes> y apc-descargas, nunca en el repo (es público).
+*.xlsx
+*.xls
+*.csv
+# Credenciales y basura de Python
+*.env
+.env
+__pycache__/
