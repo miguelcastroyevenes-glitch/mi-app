@@ -33,6 +33,7 @@ para que no queden dos clones editables.
 | `python scripts\actualizar_catalogo.py --carpeta <carpeta del mes> --mes <mes> --anio <año>` | Carga mensual del catálogo (4 marcas, B2B, UTM, versión). Sin `--aplicar` es ensayo. Ver `MANTENCION.md`. |
 | `.\scripts\publicar.ps1 -Mensaje "v29: catálogo octubre"` | Respaldo → pull → validar → subir versión → commit → push. |
 | `python scripts\actualizar_stock_apc.py --publicar` | Baja el stock físico de APC (Peugeot + Citroën), rehace `stock.html` y sube **solo ese archivo**. Corre solo todos los días a las 07:30. Credenciales en `C:\Proyectos\app-deal\apc.env` (fuera del repo). Con `--ver` se mira el navegador; sin `--publicar` es ensayo. |
+| `python scripts\actualizar_zonal.py --publicar` | Pestaña "Stock de marca (zonal)": lee de Outlook (solo lectura) el último correo con "stock" de Benjamín Bastian (Citroën) y Cristian Zurita (Peugeot), guarda el Excel en `files\Zonal` y actualiza la pestaña. Sin planilla nueva o solo con foto, esa marca no cambia. Corre en la misma tarea de las 07:30. |
 
 Ensayo sin publicar nada:
 ```powershell

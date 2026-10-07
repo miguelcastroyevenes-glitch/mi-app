@@ -1,5 +1,5 @@
 # stock_diario.ps1 — lo corre el Programador de tareas ("Stock APC diario", 07:30).
-# Baja el stock de APC y publica stock.html. Deja el detalle en apc-descargas\ultima-corrida.log
+# Baja el stock de APC y el zonal (Outlook) y publica stock.html. Deja el detalle en apc-descargas\ultima-corrida.log
 # y, si falla, un aviso en el Escritorio ("STOCK APC NO SE ACTUALIZO.txt") con el motivo.
 
 $base   = "C:\Proyectos\app-deal"
@@ -13,8 +13,14 @@ $env:PYTHONIOENCODING = "utf-8"
 Set-Location $repo
 
 "=== $(Get-Date -Format 'dd-MM-yyyy HH:mm') ===" | Out-File $log -Encoding utf8
+"--- Stock fisico (APC) ---" | Out-File $log -Append -Encoding utf8
 cmd /c "`"$python`" scripts\actualizar_stock_apc.py --publicar >> `"$log`" 2>&1"
 $codigo = $LASTEXITCODE
+# Zonal (correos de Benjamin Bastian / Cristian Zurita). Corre aunque APC falle; si no hay
+# planilla nueva deja la pestana como estaba.
+"--- Stock de marca (zonal, Outlook) ---" | Out-File $log -Append -Encoding utf8
+cmd /c "`"$python`" scripts\actualizar_zonal.py --publicar >> `"$log`" 2>&1"
+if ($LASTEXITCODE -ne 0 -and $codigo -eq 0) { $codigo = $LASTEXITCODE }
 
 if ($codigo -eq 0) {
     if (Test-Path $aviso) { Remove-Item $aviso -Confirm:$false }
@@ -30,6 +36,7 @@ Causas tipicas:
 - Tenias APC abierto a esa hora (APC permite una sola sesion).
 - Cambiaste la clave de APC: actualizala en C:\Proyectos\app-deal\apc.env
 - APC estaba caido.
+- (Zonal) Outlook no respondio. Si solo fallo el zonal, el stock fisico SI se publico.
 
 Detalle completo: $log
 Pantallazo del error (si lo hay): C:\Proyectos\app-deal\apc-descargas\
