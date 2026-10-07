@@ -32,6 +32,7 @@ para que no queden dos clones editables.
 | `.\scripts\validar.ps1` | Chequea la sintaxis de las dos apps. Cero riesgo. |
 | `python scripts\actualizar_catalogo.py --carpeta <carpeta del mes> --mes <mes> --anio <año>` | Carga mensual del catálogo (4 marcas, B2B, UTM, versión). Sin `--aplicar` es ensayo. Ver `MANTENCION.md`. |
 | `.\scripts\publicar.ps1 -Mensaje "v29: catálogo octubre"` | Respaldo → pull → validar → subir versión → commit → push. |
+| `python scripts\actualizar_stock_apc.py --publicar` | Baja el stock físico de APC (Peugeot + Citroën), rehace `stock.html` y sube **solo ese archivo**. Corre solo todos los días a las 07:30. Credenciales en `C:\Proyectos\app-deal\apc.env` (fuera del repo). Con `--ver` se mira el navegador; sin `--publicar` es ensayo. |
 
 Ensayo sin publicar nada:
 ```powershell
@@ -100,7 +101,7 @@ Start-ScheduledTask -TaskName "Respaldo app deal"
 Get-ScheduledTaskInfo -TaskName "Respaldo app deal"   # LastTaskResult 0 = OK
 ```
 
-**El respaldo se automatiza; el publicar no.** Publicar mueve plata de verdad y necesita que
+**El respaldo se automatiza; el publicar no** — salvo el stock (acordado 07-10-2026): `stock.html` no calcula plata y su script corta solo si algo se ve raro (campos de costo, caída de más de 40% en unidades). El Deal sigue igual: Publicar mueve plata de verdad y necesita que
 alguien haya mirado la app en el navegador. `publicar.ps1` se corre a mano, siempre.
 
 ## Red de seguridad en GitHub
