@@ -22,6 +22,7 @@ Uso (desde mi-app):
   python scripts/actualizar_catalogo.py --carpeta "C:\\Proyectos\\app-deal\\files\\Octubre" --mes octubre --anio 2026
   python scripts/actualizar_catalogo.py ... --aplicar        # escribe index.html (sin esto es ensayo)
   python scripts/actualizar_catalogo.py ... --utm 72151       # si el SII no responde
+  python scripts/actualizar_catalogo.py ... --marcas Citroën   # solo una marca (lista corregida); el resto intacto
 
 Requisitos: pip install openpyxl pypdf   (pypdf es opcional, solo para el cruce con PDF)
 """
@@ -71,9 +72,10 @@ def fnum(x):
 def pesos(n): return '$' + f'{n:,}'.replace(',', '.')
 
 # ─────────────────────────── 1. Extraer y validar Excel ───────────────────────────
-def extraer(carpeta):
+def extraer(carpeta, marcas=None):
     modelos, errores = [], []
     for marca, (pat, hojas, _) in MARCAS.items():
+        if marcas and marca not in marcas: continue
         f = glob.glob(os.path.join(carpeta, pat))
         if not f: errores.append(f'No encontré la lista de {marca} ({pat})'); continue
         wb = openpyxl.load_workbook(f[0], data_only=True)
@@ -164,7 +166,7 @@ LINEA = re.compile(r'^(\s*\{familia:"[^"]*",modelo:"([^"]*)",)cit:"[^"]*",pl:\d+
                    r'tmp:(?:\{[^}]*\}|null),cc:(?:\{[^}]*\}|null),ci:(?:\{[^}]*\}|null)(.*)$', re.S)
 B2B_RE = re.compile(r'b2b:\{plSinIva:\d+,margenFijo:[\d.]+,t1:\{[^}]*\},t2:\{[^}]*\},gc:\{[^}]*\}\}')
 
-def reescribir(txt, nuevos, b2b, mapa, avisos):
+def reescribir(txt, nuevos, b2b, mapa, avisos, marcas=None):
     i = txt.index('const CATALOGO_LOCAL = {'); j = txt.index('\n};', i) + 3
     lineas = txt[i:j].split('\n')
     marca = tipo = None; out = []; usados = set(); quitados = []; cierres = {}
@@ -177,6 +179,7 @@ def reescribir(txt, nuevos, b2b, mapa, avisos):
             cierres[(marca, tipo)] = len(out)
         m = LINEA.match(ln)
         if not m: out.append(ln); continue
+        if marcas and marca not in marcas: out.append(ln); continue   # marca que no se carga: intacta
         k = llave(marca, tipo, m.group(2))
         if k not in nuevos: quitados.append((marca, tipo, m.group(2))); continue
         n = nuevos[k]; usados.add(k); resto = m.group(3)
@@ -220,8 +223,9 @@ def utm_sii(mes, anio):
     return int(m.group(1).replace('.', ''))
 
 # ─────────────────────────── 8. Verificación final ───────────────────────────
-def verificar(txt, excel, b2b, mapa):
+def verificar(txt, excel, b2b, mapa, marcas=None):
     cat = leer_catalogo(txt); app = aplanar(cat); err = []
+    if marcas: app = {k: v for k, v in app.items() if k[0] in marcas}
     iv = set(re.findall(r'"([A-Z0-9]+-\d)":\{rend', txt))
     for k, m in app.items():
         tag = f'{k[0]} | {m["modelo"]}'; e = excel.get(k)
@@ -241,13 +245,13 @@ def verificar(txt, excel, b2b, mapa):
                 if x[tr]['precio'] != round(x['plSinIva'] * (1 - x[tr]['pct'])): err.append(f'{tag} b2b {tr}: precio != plSinIva x (1-pct)')
     return err, cat
 
-def cruce_pdf(carpeta, cat):
+def cruce_pdf(carpeta, cat, marcas=None):
     try: import pypdf
     except ImportError: return ['(pypdf no instalado: me salté el cruce con las circulares)']
     notas = []
     for marca, (_, _, pat) in MARCAS.items():
         f = glob.glob(os.path.join(carpeta, pat))
-        if not f or marca not in cat: continue
+        if not f or marca not in cat or (marcas and marca not in marcas): continue
         t = ' '.join(p.extract_text() or '' for p in pypdf.PdfReader(f[0]).pages)
         bloque = t[t.upper().find('DESDE'):] if 'DESDE' in t.upper() else ''
         # Peugeot/Opel escriben "$13.790.000"; Citroën "9.590.000$"
@@ -300,12 +304,15 @@ def main():
     ap.add_argument('--index', default=INDEX, help='index.html a actualizar (por defecto el del repo)')
     ap.add_argument('--utm', type=int, help='UTM del mes si el SII no responde')
     ap.add_argument('--aplicar', action='store_true', help='escribe index.html (sin esto, solo ensayo)')
+    ap.add_argument('--marcas', nargs='+', choices=list(MARCAS),
+                    help='cargar solo estas marcas (ej. llegó una lista corregida); las demás quedan intactas')
     a = ap.parse_args()
     mes = a.mes.lower()
     if mes not in MESES: sys.exit(f'Mes no reconocido: {a.mes}')
 
     print(f'== 1. Listas de {mes} {a.anio} en {a.carpeta}')
-    excel_lista, errores = extraer(a.carpeta)
+    if a.marcas: print(f'   Solo {", ".join(a.marcas)}: el resto de las marcas no se toca')
+    excel_lista, errores = extraer(a.carpeta, a.marcas)
     print(f'   {len(excel_lista)} modelos leídos, {len(errores)} errores de validación')
     if errores:
         for e in errores: print('   ERROR', e)
@@ -319,7 +326,7 @@ def main():
 
     mapa = json.load(open(os.path.join(AQUI, 'mapa_b2b.json'), encoding='utf-8'))
     b2b = leer_b2b(a.carpeta); avisos = []
-    nuevo_txt, quitados, agregados = reescribir(txt, excel, b2b, mapa, avisos)
+    nuevo_txt, quitados, agregados = reescribir(txt, excel, b2b, mapa, avisos, a.marcas)
 
     print('== 3. UTM')
     try: utm = a.utm or utm_sii(mes, a.anio)
@@ -332,9 +339,9 @@ def main():
     if n1 != 1 or n2 != 1: sys.exit('ERROR: no encontré VALOR_UTM o APP_VERSION en index.html')
 
     print('== 4. Verificación del resultado')
-    err, despues = verificar(nuevo_txt, excel, b2b, mapa)
+    err, despues = verificar(nuevo_txt, excel, b2b, mapa, a.marcas)
     for e in err: print('   ERROR', e)
-    for n in cruce_pdf(a.carpeta, despues): print('  ', n)
+    for n in cruce_pdf(a.carpeta, despues, a.marcas): print('  ', n)
     for w in avisos: print('   AVISO', w)
     print(f'   Salen {len(quitados)}, entran {len(agregados)}; errores: {len(err)}')
 
