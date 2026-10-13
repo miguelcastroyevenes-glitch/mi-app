@@ -163,7 +163,12 @@ def leer_peugeot(wb) -> dict:
     ws = wb.worksheets[0]
     filas = ws.iter_rows(values_only=True)
     cab = [limpio(c) for c in next(filas)]
-    i = {k: cab.index(k) for k in ("Brand", "Modelo EDS", "CDC EDS", "Color description", "Location")}
+    # Desde el 13-10-2026 Cristian manda otro formato: "Entrega" (Piso / Fines Noviembre) en vez de
+    # "Location", "Modelo" en vez de "Modelo EDS" y "Color" en vez de "Color description".
+    alias = {"Modelo EDS": ("Modelo EDS", "Modelo"), "Color description": ("Color description", "Color"),
+             "Location": ("Location", "Entrega")}
+    i = {k: next(cab.index(n) for n in alias.get(k, (k,)) if n in cab)
+         for k in ("Brand", "Modelo EDS", "CDC EDS", "Color description", "Location")}
     grupos = collections.defaultdict(collections.Counter)
     familia = {}
     for f in filas:
@@ -172,7 +177,7 @@ def leer_peugeot(wb) -> dict:
         version, color, lugar = limpio(f[i["CDC EDS"]]), limpio(f[i["Color description"]]).upper(), limpio(f[i["Location"]])
         if not version:
             continue
-        donde = "chile" if lugar.lower() == "en chile" else lugar          # "Entrega Fines Noviembre"
+        donde = "chile" if lugar.lower() in ("en chile", "piso") else lugar   # "Entrega Fines Noviembre"
         grupos[(donde, version)][color] += 1
         familia[version] = limpio(f[i["Modelo EDS"]])
     meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
@@ -201,7 +206,7 @@ def leer_planilla(ruta: Path) -> tuple[str, dict]:
     if "Citroen" in wb.sheetnames:
         return "citroen", leer_citroen(wb)
     primera = [limpio(c.value) for c in next(wb.worksheets[0].iter_rows(max_row=1))]
-    if {"Brand", "CDC EDS", "Location"} <= set(primera):
+    if {"Brand", "CDC EDS"} <= set(primera) and {"Location", "Entrega"} & set(primera):
         return "peugeot", leer_peugeot(wb)
     raise ValueError("no reconozco el formato (ni la matriz de Citroën ni la lista de Peugeot)")
 
