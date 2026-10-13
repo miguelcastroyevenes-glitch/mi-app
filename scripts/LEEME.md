@@ -33,12 +33,18 @@ para que no queden dos clones editables.
 | `python scripts\actualizar_catalogo.py --carpeta <carpeta del mes> --mes <mes> --anio <año>` | Carga mensual del catálogo (4 marcas, B2B, UTM, versión). Sin `--aplicar` es ensayo. Ver `MANTENCION.md`. |
 | `.\scripts\publicar.ps1 -Mensaje "v29: catálogo octubre"` | Respaldo → pull → validar → subir versión → commit → push. |
 | `python scripts\actualizar_stock_apc.py --publicar` | Baja el stock físico de APC (Peugeot + Citroën), rehace `stock.html` y sube **solo ese archivo**. Corre solo todos los días a las 07:30. Credenciales en `C:\Proyectos\app-deal\apc.env` (fuera del repo). Con `--ver` se mira el navegador; sin `--publicar` es ensayo. |
-| `python scripts\actualizar_zonal.py --publicar` | Pestaña "Stock de marca (zonal)": lee de Outlook (solo lectura) el último correo con "stock" de Benjamín Bastian (Citroën) y Cristian Zurita (Peugeot), guarda el Excel en `files\Zonal` y actualiza la pestaña. Sin planilla nueva o solo con foto, esa marca no cambia. Corre en la misma tarea de las 07:30. |
+| `python scripts\actualizar_zonal.py --publicar` | Pestaña "Stock de marca (zonal)": lee de Outlook (solo lectura) el último correo con "stock" de Benjamín Bastian (Citroën) y Cristian Zurita (Peugeot), guarda el Excel en `files\Zonal` y actualiza la pestaña. Sin planilla nueva o solo con foto, esa marca no cambia. Corre en la misma tarea de las 07:30. Nunca retrocede a un corte más viejo que el publicado. |
+| `python scripts\actualizar_asignacion.py --aplicar` | Pestañas "Asignación de marca" y "Pre inscritas". Lee las planillas del Drive bajadas a `files\Asignacion` (`asignacion-<marca>-<fecha Drive>.xlsx` y `preinscritas-<fecha>.csv`). **Solo la pestaña más nueva** de cada marca: al cerrar el mes esas unidades pasan a Stock físico. Saca lo que ya está en APC. Pre inscritas sin RUT ni nombres (el repo es público). Sin `--aplicar` es ensayo; después se publica con `-SinSubirVersion`. |
 
 Ensayo sin publicar nada:
 ```powershell
 .\scripts\publicar.ps1 -Mensaje "prueba" -Ensayo
 ```
+
+> **Ojo (desde v31, 13-10-2026):** el Deal tiene un panel "📦 Stock disponible" que **lee `stock.html`**
+> (las líneas `const fisico = …;`, `const asignacion`, `const asignacionMeta`, `const preinscritas`,
+> `const preinscritasMeta` y `const zonal`, una por línea). Si un script cambia ese formato, el panel
+> deja de mostrar stock sin dar error. Los nombres de versión se emparejan en `fichas()` de `index.html`.
 
 Cambio que toca solo `stock.html` (no corresponde subir `APP_VERSION` del Deal):
 ```powershell

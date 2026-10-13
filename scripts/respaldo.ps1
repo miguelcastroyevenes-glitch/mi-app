@@ -24,7 +24,8 @@ $bundle = "$Destino\bundles\mi-app-$dia.bundle"
 Write-Host "Creando bundle de todo el historial..."
 git -C $repo bundle create $bundle --all
 if ($LASTEXITCODE -ne 0) { throw "git bundle fallo" }
-git -C $repo bundle verify $bundle | Out-Null
+# git escribe "is okay" por stderr y PowerShell 5.1 lo trata como error: se corre por cmd.
+cmd /c "git -C `"$repo`" bundle verify `"$bundle`" >nul 2>&1"
 if ($LASTEXITCODE -ne 0) { throw "El bundle quedo corrupto" }
 $mb = [math]::Round((Get-Item $bundle).Length / 1MB, 1)
 Write-Host "  OK  $bundle ($mb MB, verificado)" -ForegroundColor Green

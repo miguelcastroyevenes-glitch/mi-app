@@ -148,7 +148,7 @@ const PROX_MES = {boletin:"", vigencia:"", hasta:"", data:{}};
 // pasado no queda colgado en pantalla si a alguien se le olvida vaciarlo: cuando el mes
 // nuevo empieza, el precio del catalogo YA es el nuevo y el aviso no tiene nada que avisar.
 const PROX_MES_VIGENTE = !!PROX_MES.hasta && (new Date().toISOString().slice(0,10) <= PROX_MES.hasta);
-const APP_VERSION = "2026-10-01 · v30"; // ← actualizar cada vez que se sube una nueva versión
+const APP_VERSION = "2026-10-13 · v31"; // ← actualizar cada vez que se sube una nueva versión
 
 // Valor UTM del MES EN CURSO, para el Permiso de Circulación proporcional y el Impuesto
 // Verde. Ambos se pagan al momento de inscribir el auto nuevo, así que usan la UTM
