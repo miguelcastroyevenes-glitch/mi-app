@@ -114,9 +114,14 @@ def cant_txt(v) -> str | None:
         return None
 
 
+def hoja_citroen(wb) -> str | None:
+    """La hoja viene a veces mal escrita ("Citreon", 09-10-2026): basta con que empiece con "Citr"."""
+    return next((n for n in wb.sheetnames if limpio(n).lower().startswith("citr")), None)
+
+
 def leer_citroen(wb) -> dict:
     """Matriz de Benjamín: dos bloques lado a lado, cada uno con su columna 'Modelo/Versión'."""
-    ws = wb["Citroen"]
+    ws = wb[hoja_citroen(wb)]
     fila_cab = next(r for r in range(1, 10)
                     if any(limpio(c.value).lower() == "modelo/versión" for c in ws[r]))
     cab = {c.column: limpio(c.value) for c in ws[fila_cab] if c.value is not None}
@@ -203,7 +208,7 @@ def leer_peugeot(wb) -> dict:
 
 def leer_planilla(ruta: Path) -> tuple[str, dict]:
     wb = openpyxl.load_workbook(ruta, data_only=True)
-    if "Citroen" in wb.sheetnames:
+    if hoja_citroen(wb):
         return "citroen", leer_citroen(wb)
     primera = [limpio(c.value) for c in next(wb.worksheets[0].iter_rows(max_row=1))]
     if {"Brand", "CDC EDS"} <= set(primera) and {"Location", "Entrega"} & set(primera):
