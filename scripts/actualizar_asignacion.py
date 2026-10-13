@@ -1,4 +1,4 @@
-"""actualizar_asignacion.py — pestaña "Asignación de marca" de stock.html desde las planillas del Drive.
+"""actualizar_asignacion.py — pestañas "Asignación de marca" y "Pre inscritas" de stock.html desde el Drive.
 
 Uso:
     python scripts\\actualizar_asignacion.py                 # ensayo: lee files\\Asignacion y muestra el resumen
@@ -13,15 +13,18 @@ De dónde sale (visto el 13-10-2026):
     en el Drive (última modificación), y es la que se muestra en la página.
 
 Reglas:
-  - Se leen las 2 pestañas más nuevas de cada marca (lo de un mes atrás puede venir aún en barco).
+  - Se lee SOLO la pestaña más nueva de cada marca (Miguel, 13-10-2026): la jefa la carga ~2 veces al
+    mes con lo que compra a Stellantis, y al cerrar el mes esas unidades pasan a Stock físico (APC).
+    Las pestañas de meses anteriores ya no cuentan.
+  - Si la pestaña más nueva no es del mes en curso (aún no cargan el mes), la página lo avisa.
   - Unidad "En APC" o cuyo VIN ya está en Stock físico: se saca (ya está en la otra pestaña).
   - Con NV / CAT / sucursal escrita: queda "tomada" con ese texto. Sin nada: "Libre".
-  - Sin nada pero de la pestaña anterior (su entrega ya pasó y no llegó a APC): "Verificar disponibilidad".
 """
 from __future__ import annotations
 
 import argparse
 import collections
+import datetime as dt
 import json
 import re
 from pathlib import Path
@@ -31,7 +34,8 @@ import openpyxl
 REPO = Path(__file__).resolve().parent.parent
 CARPETA = REPO.parent / "files" / "Asignacion"
 STOCK_HTML = REPO / "stock.html"
-PESTANAS = 2
+MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
+         "septiembre", "octubre", "noviembre", "diciembre"]
 
 
 def limpio(s) -> str:
@@ -91,6 +95,37 @@ def ultima_planilla(marca: str) -> Path:
     return archivos[-1]
 
 
+SUCURSALES = ("MOVICENTER", "PLAZA SUR", "QUILIN", "IRARRAZAVAL", "EGAÑA", "BILBAO", "ARAUCO",
+              "PROFESSIONAL", "CAM")
+
+
+def tomada_por(texto: str) -> str:
+    """El repo es público: de "MOVICENTER 12.345.678-9 / NOMBRE" solo sale "Tomada · MOVICENTER".
+    Nunca RUT ni nombres de clientes."""
+    t = texto.upper()
+    suc = next((s for s in SUCURSALES if re.search(rf"\b{s}\b", t)), None)
+    return f"Tomada · {suc.title() if suc != 'CAM' else 'CAM'}" if suc else "Tomada"
+
+
+def leer_preinscritas() -> tuple[list, dict]:
+    """Planilla "Unidades Pre Inscritas TM" (Drive), guardada como preinscritas-<aaaa-mm-dd>.csv (;)."""
+    archivos = sorted(CARPETA.glob("preinscritas-*.csv"))
+    if not archivos:
+        raise SystemExit(f"No hay planilla de pre inscritas en {CARPETA}")
+    ruta = archivos[-1]
+    grupos = collections.defaultdict(list)
+    for linea in ruta.read_text(encoding="utf-8").splitlines()[1:]:
+        anio, modelo, version, color, codigo, vin, ppu, precio, nv = (limpio(x) for x in linea.split(";"))
+        if len(vin) != 17:
+            continue
+        grupos[f"{modelo} · año {anio}"].append({
+            "vin": vin, "info": f"{version} - Código {codigo} - PPU {ppu} - {precio}",
+            "color": color.upper(), "nv": tomada_por(nv) if nv else ""})
+    lista = [{"modelo": m, "n": len(us), "det": us} for m, us in sorted(grupos.items(), reverse=True)]
+    f = re.search(r"(\d{4})-(\d{2})-(\d{2})", ruta.name)
+    return lista, {"fecha": f"{f[3]}-{f[2]}-{f[1]}"}
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Asignación de marca desde las planillas del Drive")
     ap.add_argument("--aplicar", action="store_true")
@@ -102,9 +137,9 @@ def main() -> None:
     for marca in ("peugeot", "citroen"):
         ruta = ultima_planilla(marca)
         wb = openpyxl.load_workbook(ruta, data_only=True)
-        hojas = wb.sheetnames[:PESTANAS]
+        hojas = wb.sheetnames[:1]                          # solo el mes en curso
         vistos, unidades, sacadas = set(), [], 0
-        for h in hojas:                                    # la más nueva primero: manda si un VIN se repite
+        for h in hojas:
             for u in leer_pestana(wb[h]):
                 if u["vin"] in vistos:
                     continue
@@ -113,8 +148,6 @@ def main() -> None:
                     sacadas += 1
                     continue
                 u["mes"] = h
-                if h != hojas[0] and not u["nv"]:         # mes anterior, sin NV y no llegó a APC
-                    u["nv"] = "__VERIFY__"
                 unidades.append(u)
         grupos = collections.defaultdict(list)
         for u in unidades:
@@ -122,16 +155,27 @@ def main() -> None:
         asignacion[marca] = [{"modelo": m, "n": len(us), "det": us}
                              for m, us in sorted(grupos.items(), key=lambda kv: (-len(kv[1]), kv[0]))]
         fecha = re.search(r"(\d{4})-(\d{2})-(\d{2})", ruta.name)
-        meta[marca] = {"fecha": f"{fecha[3]}-{fecha[2]}-{fecha[1]}", "pestanas": hojas}
+        mes_hoy = MESES[dt.date.today().month - 1]
+        meta[marca] = {"fecha": f"{fecha[3]}-{fecha[2]}-{fecha[1]}", "pestana": hojas[0],
+                       "al_dia": hojas[0].lower().startswith(mes_hoy)}
         libres = sum(1 for u in unidades if not u["nv"])
-        verif = sum(1 for u in unidades if u["nv"] == "__VERIFY__")
-        print(f"{marca}: pestañas {', '.join(hojas)} · {len(unidades)} unidades ({libres} libres, "
-              f"{len(unidades) - libres - verif} tomadas, {verif} a verificar) · {sacadas} ya en APC/Stock físico")
+        aviso = "" if meta[marca]["al_dia"] else f"  ⚠ aún no cargan {mes_hoy}"
+        print(f"{marca}: pestaña {hojas[0]} · {len(unidades)} unidades ({libres} libres, "
+              f"{len(unidades) - libres} tomadas) · {sacadas} ya en APC/Stock físico{aviso}")
 
     bloque = (f"const asignacion = {json.dumps(asignacion, ensure_ascii=False)};\n"
               f"const asignacionMeta = {json.dumps(meta, ensure_ascii=False)};")
     nuevo = re.sub(r"const asignacion = .*?;\n(const asignacionMeta = .*?;\n)?",
                    lambda _: bloque + "\n", html, count=1, flags=re.S)
+
+    pre, pre_meta = leer_preinscritas()
+    n = sum(m["n"] for m in pre)
+    libres = sum(1 for m in pre for u in m["det"] if not u["nv"])
+    print(f"pre inscritas: planilla del {pre_meta['fecha']} · {n} unidades ({libres} libres, {n - libres} tomadas)")
+    bloque = (f"const preinscritas = {json.dumps(pre, ensure_ascii=False)};\n"
+              f"const preinscritasMeta = {json.dumps(pre_meta, ensure_ascii=False)};")
+    nuevo = re.sub(r"const preinscritas = .*?;\n(const preinscritasMeta = .*?;\n)?",
+                   lambda _: bloque + "\n", nuevo, count=1, flags=re.S)
     if not a.aplicar:
         print("\nENSAYO: stock.html no se tocó. Agrega --aplicar para escribirlo.")
         return
