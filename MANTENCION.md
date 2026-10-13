@@ -153,12 +153,26 @@ redondeo es lo que hace que calce exacto con la calculadora del SII.
 - Los furgones solo están exentos sobre **2.000 kg** de carga. El Combo (907 kg) y el
   Berlingo/Partner **sí pagan**.
 
-**De dónde salen `rend` y `nox`:** del CSV oficial `VehiculosHomologados.csv` (Ministerio
-de Transporte / SII), columnas `Rendimiento Urbano (Km/l)` y `Nox (gr/Km)`. Miguel lo tiene
-en `Downloads`. Se busca por CIT exacto.
+**De dónde salen `rend` y `nox`:** de la **"Nómina de Rendimiento Urbano y Emisiones NOx"**
+oficial de la Subsecretaría de Transportes (3CV), que se descarga gratis y sin cuenta en
+https://www.subtrans.gob.cl/3cv/vehiculos-hibridos/ (botón "Descargar"). Se actualiza
+seguido: bajar la más reciente cuando entre un modelo nuevo.
+
+- Formato `.xls` (Excel antiguo, no CSV), hoja `Base`, encabezado en la fila 2. Se lee con
+  `xlrd` (`python -m pip install xlrd`).
+- Columnas: `Código Informe Técnico` (= CIT), `Valor medido NOx (g/km)` → `nox`,
+  `Rendimiento Urbano (km/l)` → `rend`. Se busca por CIT exacto.
+- Eléctricos vienen con `N/A` en ambas columnas → en la tabla van `rend:0, nox:0` (exentos).
+- **Copia local:** `C:\Proyectos\_entregables\Kit_Calculadora_Amigo\Nomina-Rendimiento-Urbano-NOx-SII_28-sep-2026.xls`
+  (versión 28-09-2026, bajada el 07-10-2026).
+- **Cruce 07-10-2026 contra v30:** los 66 CIT de la tabla están en la nómina; 61 idénticos y
+  los 5 restantes son eléctricos (`N/A` = 0). Ningún CIT del catálogo queda sin fila.
+
+Reemplaza al antiguo `VehiculosHomologados.csv`, que ya no está en este equipo (quedó, si
+acaso, en Descargas del PC de Pompeyo).
 
 > **Si un CIT del catálogo nuevo no está en la tabla, el impuesto sale $0 en silencio.**
-> Al cargar una marca o modelo nuevo hay que cruzar todos los CIT contra el CSV y confirmar
+> Al cargar una marca o modelo nuevo hay que cruzar todos los CIT contra la nómina y confirmar
 > que calzaron todos. Varias versiones comparten CIT (mismo informe técnico) — es normal
 > tener menos llaves que modelos.
 
