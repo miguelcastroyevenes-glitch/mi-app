@@ -285,6 +285,13 @@ def main() -> None:
         if previo.get("fecha") == f and previo.get("chile") == datos["chile"]:
             log(f"   {marca}: misma planilla del {f}, sin cambios.")
             continue
+        try:                                             # nunca retroceder a un corte más viejo
+            publicado = dt.datetime.strptime(previo.get("fecha", ""), "%d-%m-%Y").date()
+        except ValueError:
+            publicado = None
+        if publicado and fecha < publicado:
+            log(f"   {marca}: planilla del {f} es más vieja que la publicada ({previo['fecha']}), se ignora.")
+            continue
         uds = lambda xs: sum(int(c["cant"].lstrip("+")) for it in xs for c in it["colores"])
         log(f"   {marca}: corte {f} · en Chile {len(datos['chile'])} versiones (~{uds(datos['chile'])} uds) · "
             f"en tránsito {len(datos['transito'])} versiones (~{uds(datos['transito'])} uds)")
