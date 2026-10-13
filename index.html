@@ -326,6 +326,151 @@ const PL = {tmp:"TMP",cc:"Crédito Conv.",ci:"Compra Inteligente"};
 const PL_KEY = {"TMP":"tmp","Crédito Conv.":"cc","Compra Inteligente":"ci"};
 
 // ═══════════════════════════════════════════════════════════════════════════
+// ═══ STOCK EN EL DEAL ═══
+// Lee los datos de stock.html (misma página publicada): así el deal ve el stock del día sin que
+// ningún script tenga que escribir en dos lugares. Desde file:// el fetch falla y el panel no sale.
+let _stockPromise = null;
+function cargarStock() {
+  if (!_stockPromise) {
+    _stockPromise = fetch("stock.html", {cache:"no-store"})
+      .then(r => r.ok ? r.text() : Promise.reject(r.status))
+      .then(html => {
+        const obj = (n) => { const m = html.match(new RegExp("^const " + n + " = (.*);$", "m")); return m ? JSON.parse(m[1]) : null; };
+        const corte = (html.match(/Última actualización: <b>([^<]+)<\/b>/) || [])[1] || "";
+        return { fisico:obj("fisico"), asignacion:obj("asignacion"), asignacionMeta:obj("asignacionMeta"),
+                 preinscritas:obj("preinscritas"), preinscritasMeta:obj("preinscritasMeta"), zonal:obj("zonal"), corte };
+      })
+      .catch(() => null);
+  }
+  return _stockPromise;
+}
+
+// Nombres de versión: el catálogo dice "Hybrid 136hp AT" y Stellantis "MHEV 136 eDCT6". Se normaliza a
+// fichas comparables; la familia se decide por el prefijo de familia más largo del catálogo.
+const _SINONIMO = {mhev:"hybrid", puretech:"gasolina", bluehdi:"diesel", hdi:"diesel", electrico:"electric", furgon:""};
+const _FUERA = new Set(["mca","new","nueva","at","mt","mt6","edct6","eat8","e6","hp","p64","p74","de"]);
+function fichas(s) {
+  return (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/(\d+)\s*hp\b/g, "$1").replace(/[^a-z0-9]+/g, " ").trim().split(" ")
+    .map(t => _SINONIMO[t] !== undefined ? _SINONIMO[t] : t).filter(t => t && !_FUERA.has(t));
+}
+function familiaDe(nombre, familias) {
+  const f = fichas(nombre).join(" ") + " ";
+  let mejor = null;
+  familias.forEach(fam => { const k = fichas(fam).join(" "); if (k && f.startsWith(k + " ") && (!mejor || k.length > mejor.length)) mejor = k; });
+  return mejor;
+}
+function mismaVersion(a, b, fam) {
+  const n = fam.split(" ").length;
+  const x = fichas(a).slice(n), y = fichas(b).slice(n);
+  if (!x.length || !y.length) return false;
+  const [corto, largo] = x.length <= y.length ? [x, y] : [y, x];
+  return corto.every(t => largo.includes(t));
+}
+
+function StockEnDeal({ auto, marca, catalogo, mc }) {
+  const [data, setData] = useState(undefined);
+  const [abierto, setAbierto] = useState(false);
+  const [soloVersion, setSoloVersion] = useState(true);
+  useEffect(() => { cargarStock().then(setData); }, []);
+  const mk = marca === "Peugeot" ? "peugeot" : marca === "Citroën" ? "citroen" : null;
+
+  const res = useMemo(() => {
+    if (!data || !mk || !auto) return null;
+    const familias = Object.values(catalogo[marca] || {}).flat().map(m => m.familia);
+    const fam = fichas(auto.familia).join(" ");
+    const enFam = (nombre) => familiaDe(nombre, familias) === fam;
+    const igual = (nombre) => mismaVersion(nombre, auto.modelo, fam);
+    const filas = [];
+    (data.fisico?.[mk] || []).forEach(g => g.det.forEach(d => { if (enFam(d.version)) filas.push({fuente:"fisico", version:d.version, color:d.color, donde:d.sucursal, n:1, exacta:igual(d.version)}); }));
+    (data.asignacion?.[mk] || []).forEach(g => g.det.forEach(d => { if (enFam(d.version)) filas.push({fuente:"asignacion", version:d.version, color:d.color,
+      donde:[d.entrega, d.nv==="__VERIFY__" ? "⚠️ verificar" : (d.nv || "Libre")].filter(Boolean).join(" · "), libre:!d.nv, n:1, exacta:igual(d.version)}); }));
+    if (mk === "peugeot") (data.preinscritas || []).forEach(g => g.det.forEach(d => { const v = (d.info || "").split(" - ")[0];
+      if (enFam(v)) filas.push({fuente:"preinscritas", version:v, color:d.color, donde:(d.nv || "Libre") + " · " + g.modelo.split("·").pop().trim(), libre:!d.nv, n:1, exacta:igual(v)}); }));
+    const z = data.zonal?.[mk];
+    if (z) ["chile","transito"].forEach(k => (z[k] || []).forEach(it => { if (enFam(it.modelo)) it.colores.forEach(c => filas.push({fuente:"zonal", version:it.modelo, color:c.color,
+      donde:k === "chile" ? "En Chile" : "Llega " + (it.entrega || "—"), camino:k !== "chile", n:parseInt(String(c.cant).replace("+","")) || 0, mas:String(c.cant).startsWith("+"), exacta:igual(it.modelo)})); }));
+    return filas;
+  }, [data, mk, auto, catalogo, marca]);
+
+  if (!mk || !auto || data === null) return null;            // marca sin stock publicado, o sin acceso a stock.html
+  const hayExacta = res && res.some(f => f.exacta);
+  const filas = res ? res.filter(f => !soloVersion || !hayExacta || f.exacta) : [];
+  const FUENTES = [
+    ["fisico", "Patio (APC)", data && data.corte],
+    ["asignacion", "Asignación", data && data.asignacionMeta?.[mk]?.fecha],
+    ["preinscritas", "Pre inscritas", data && data.preinscritasMeta?.fecha],
+    ["zonal", "Zonal marca", data && data.zonal?.[mk]?.fecha],
+  ].filter(([k]) => k !== "preinscritas" || mk === "peugeot");
+  // Zonal: el número grande es lo que ya está en Chile; lo que viene en barco va aparte.
+  const suma = (k, camino = false) => filas.filter(f => f.fuente === k && !!f.camino === camino).reduce((a, f) => a + f.n, 0);
+  const masDe = (k, camino = false) => filas.some(f => f.fuente === k && !!f.camino === camino && f.mas);
+
+  return (
+    <div style={base.section}>
+      <div style={{...base.card, marginBottom:0, borderLeft:"4px solid " + mc}}>
+        <div onClick={() => setAbierto(!abierto)} style={{cursor:"pointer"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div style={{fontSize:13,fontWeight:800,color:mc}}>📦 Stock disponible</div>
+            <div style={{fontSize:12,color:C.muted}}>{abierto ? "Ocultar ▲" : "Ver detalle ▼"}</div>
+          </div>
+          {data === undefined ? <div style={{fontSize:12,color:C.muted,marginTop:6}}>Cargando stock…</div> : (
+            <>
+              <div style={{fontSize:11,color:C.muted,margin:"2px 0 8px"}}>
+                {hayExacta && soloVersion ? "Misma versión que estás cotizando" : hayExacta ? "Toda la familia " + auto.familia : "No hay de esta versión exacta · se muestra toda la familia " + auto.familia}
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(" + FUENTES.length + ",1fr)",gap:6}}>
+                {FUENTES.map(([k, lab, fecha]) => (
+                  <div key={k} style={{background:suma(k) || suma(k, true) ? mc + "10" : C.bg,borderRadius:8,padding:"6px 4px",textAlign:"center"}}>
+                    <div style={{fontSize:18,fontWeight:800,color:suma(k) ? mc : C.light}}>{masDe(k) ? "+" : ""}{suma(k)}</div>
+                    <div style={{fontSize:10,fontWeight:700,color:C.text}}>{lab}</div>
+                    {suma(k, true) > 0 && <div style={{fontSize:9,fontWeight:700,color:mc}}>+{suma(k, true)}{masDe(k, true) ? " o más" : ""} en camino</div>}
+                    <div style={{fontSize:9,color:C.light}}>{fecha || "—"}</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+        {abierto && res && (
+          <div style={{marginTop:10}}>
+            {hayExacta && (
+              <div style={{display:"flex",gap:6,marginBottom:8}}>
+                {[[true, "Esta versión"], [false, "Toda la familia"]].map(([v, lab]) => (
+                  <div key={lab} onClick={() => setSoloVersion(v)} style={{flex:1,textAlign:"center",padding:"6px",borderRadius:8,fontSize:12,cursor:"pointer",
+                    border:"1.5px solid " + (soloVersion === v ? mc : C.border),color:soloVersion === v ? mc : C.muted,fontWeight:soloVersion === v ? 700 : 500}}>{lab}</div>
+                ))}
+              </div>
+            )}
+            {FUENTES.map(([k, lab]) => {
+              const fs = filas.filter(f => f.fuente === k);
+              if (!fs.length) return null;
+              return (
+                <div key={k} style={{marginBottom:8}}>
+                  <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",color:C.muted,margin:"6px 0 4px"}}>{lab}</div>
+                  {fs.map((f, i) => (
+                    <div key={i} style={{display:"flex",justifyContent:"space-between",gap:8,padding:"5px 0",borderTop:i ? "1px solid " + C.border : "none",fontSize:12}}>
+                      <div style={{minWidth:0}}>
+                        <div style={{fontWeight:600}}>{f.color}{f.n > 1 || f.mas ? <span style={{color:mc}}> × {f.mas ? "+" : ""}{f.n}</span> : null}</div>
+                        <div style={{fontSize:11,color:C.muted,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.version}</div>
+                      </div>
+                      <div style={{fontSize:11,color:f.libre ? C.green : C.muted,textAlign:"right",flexShrink:0,maxWidth:"45%"}}>{f.donde}</div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+            {!filas.length && <div style={{fontSize:12,color:C.muted}}>No hay unidades de esta familia en ninguna fuente.</div>}
+            <div style={{fontSize:11,color:C.muted,marginTop:6}}>
+              Zonal = stock abierto a todos los concesionarios: confirmar con el zonal. <a href="stock.html" target="_blank" style={{color:mc}}>Abrir página de stock →</a>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function DealFinal() {
   // Catalog state
   const [catalogo, setCatalogo] = useState(CATALOGO_LOCAL);
@@ -1097,6 +1242,9 @@ const defaultDocs = [
               </div>
             )}
           </div>
+
+          {/* Stock disponible de la familia / versión que se cotiza (lee stock.html) */}
+          <StockEnDeal auto={auto} marca={marca} catalogo={catalogo} mc={mc} />
 
           {/* Forma de Pago (retail) / Tramo de flota (B2B) */}
           <div style={base.section}>
