@@ -116,3 +116,15 @@ alguien haya mirado la app en el navegador. `publicar.ps1` se corre a mano, siem
 `.github/workflows/validar.yml` valida la sintaxis de las dos apps en cada push a `main`.
 Si queda en rojo, el commit tiene un problema de sintaxis. **Avisa, no bloquea**: GitHub Pages
 publica igual, así que si sale rojo hay que arreglarlo o revertir al tiro.
+
+## Stock Quilín para el conteo físico (correo diario 09:00)
+
+`stock_quilin_diario.py` saca de APC el stock de PEUGEOT QUILIN y CITROEN QUILIN (Estado AutoPro
+Disponible + Facturado + Vendido), lo une en un Excel de una hoja horizontal y lo envía desde el
+Outlook de Miguel a Miguel, los 4 vendedores (`vigia-roma/vendedores.json`) y los `EXTRA` de
+`C:\Proyectos\app-deal\stock_quilin.env`. Si falla, escribe solo a Miguel.
+
+- Tarea: "Stock Quilin conteo diario", 09:00, corre `stock_quilin_diario.ps1`. Necesita Outlook clásico abierto.
+- Registro: `C:\Proyectos\app-deal\apc-descargas\quilin\ultima-corrida.log` (los Excel quedan ahí mismo).
+- Probar sin enviar: `python scripts\stock_quilin_diario.py --ensayo` · solo a Miguel: `--solo-miguel`.
+- Por qué existe y qué decidió Miguel: `C:\Proyectos\app-deal\handshake_stock-quilin-diario.md`.
