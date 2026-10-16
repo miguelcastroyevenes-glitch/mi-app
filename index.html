@@ -148,7 +148,7 @@ const PROX_MES = {boletin:"", vigencia:"", hasta:"", data:{}};
 // pasado no queda colgado en pantalla si a alguien se le olvida vaciarlo: cuando el mes
 // nuevo empieza, el precio del catalogo YA es el nuevo y el aviso no tiene nada que avisar.
 const PROX_MES_VIGENTE = !!PROX_MES.hasta && (new Date().toISOString().slice(0,10) <= PROX_MES.hasta);
-const APP_VERSION = "2026-10-13 · v31"; // ← actualizar cada vez que se sube una nueva versión
+const APP_VERSION = "2026-10-16 · v32"; // ← actualizar cada vez que se sube una nueva versión
 
 // Valor UTM del MES EN CURSO, para el Permiso de Circulación proporcional y el Impuesto
 // Verde. Ambos se pagan al momento de inscribir el auto nuevo, así que usan la UTM
@@ -289,9 +289,70 @@ const lsSaveDeal = (d) => { const deals = lsGetDeals(); deals.unshift(d); lsSet(
 const lsUpdateDeal = (updated) => { const deals = lsGetDeals().map(d => d.id === updated.id ? updated : d); lsSet("deals", deals); };
 const lsDeleteDeal = (id) => { const deals = lsGetDeals().filter(d=>d.id!==id); lsSet("deals", deals); };
 
-// ─── Deal encode/decode (base64 para WhatsApp) ─────────────────────────────
-const encodeDeal = (d) => { try { return btoa(unescape(encodeURIComponent(JSON.stringify(d)))); } catch(e) { return ""; } };
+// ─── Código viejo (deal entero en base64): ya no se genera, solo se lee ────
 const decodeDeal = (s) => { try { return JSON.parse(decodeURIComponent(escape(atob(s.trim())))); } catch(e) { return null; } };
+
+// ─── Código corto + enlace (desde v32) ─────────────────────────────────────
+// El código viejo llevaba el deal entero (unas 2.000 letras). El corto lleva solo lo que el
+// vendedor eligió más los totales que muestra el registro; al abrirlo, la calculadora
+// recalcula todo con el catálogo vigente (igual que hacía "Cargar Código"). Va dentro de un
+// enlace: quien lo recibe lo toca y se abre el deal. Los códigos viejos se siguen leyendo.
+const b64url = (bytes) => { let s = ""; bytes.forEach(b => { s += String.fromCharCode(b); }); return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""); };
+const unb64url = (s) => { s = s.replace(/-/g,"+").replace(/_/g,"/"); while (s.length % 4) s += "="; return Uint8Array.from(atob(s), c => c.charCodeAt(0)); };
+const pasarPorStream = async (bytes, stream) => new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer());
+const encodeDealCorto = async (d) => {
+  const arr = [
+    d.id, d.fecha, d.vendedor, d.cliente, d.rutCliente || "", d.marca, d.tipo, d.cit, d.modelo,
+    d.modoVenta === "flota" ? 1 : 0, d.tramoFlota || "", d.pagoKey || "",
+    d.descPompeyo || 0, d.bonoZonal || 0, d.comisionCredito || 0, d.cesAdicional || 0, d.pushVin || "",
+    (d.docItems || []).map(x => [x.id, x.monto, x.activo ? 1 : 0]),
+    (d.accItems || []).map(x => x.fijo ? [x.id, x.monto] : [x.nombre, x.monto]),
+    [d.precioLista || 0, d.bonoTotal || 0, d.precioAuto || 0, d.totalDoc || 0, d.totalAcc || 0, d.totalCliente || 0,
+     d.utilidadProxy || 0, Math.round((d.utilidadPct || 0) * 1e5) / 1e5, d.margenNeto || 0],
+    d.editado ? 1 : 0, d.fechaEdicion || "",
+  ];
+  const bytes = new TextEncoder().encode(JSON.stringify(arr));
+  if (typeof CompressionStream !== "undefined") {
+    try { return "2z" + b64url(await pasarPorStream(bytes, new CompressionStream("deflate-raw"))); } catch (e) {}
+  }
+  return "2j" + b64url(bytes);
+};
+const decodeDealCorto = async (s, docsBase, accFijos) => {
+  try {
+    let bytes = unb64url(s.slice(2));
+    if (s[1] === "z") bytes = await pasarPorStream(bytes, new DecompressionStream("deflate-raw"));
+    const a = JSON.parse(new TextDecoder().decode(bytes));
+    const [id, fecha, vendedor, cliente, rutCliente, marca, tipo, cit, modelo, esFlota, tramoFlota, pagoKey,
+      descPompeyo, bonoZonal, comisionCredito, cesAdicional, pushVin, docs, accs, T, editado, fechaEdicion] = a;
+    const [precioLista, bonoTotal, precioAuto, totalDoc, totalAcc, totalCliente, utilidadProxy, utilidadPct, margenNeto] = T || [];
+    return {
+      id, fecha, vendedor, cliente, rutCliente, marca, tipo, cit, modelo,
+      modoVenta: esFlota ? "flota" : "retail", tramoFlota: tramoFlota || null,
+      pagoKey: pagoKey || "tmp", formaPago: PL[pagoKey] || "TMP",
+      descPompeyo, bonoZonal, comisionCredito, cesAdicional, pushVin: pushVin || null,
+      docItems: (docs || []).map(([did, monto, act]) => {
+        const base = docsBase.find(x => x.id === did);
+        return { id: did, nombre: base ? base.nombre : "Documento", monto, activo: !!act };
+      }),
+      accItems: (accs || []).map(([k, monto]) => {
+        const fijo = typeof k === "number" ? accFijos.find(x => x.id === k) : null;
+        return fijo ? { ...fijo, monto } : { id: uid(), nombre: String(k), monto };
+      }),
+      precioLista, bonoTotal, precioAuto, totalDoc, totalAcc, totalCliente, utilidadProxy, utilidadPct, margenNeto,
+      editado: !!editado, fechaEdicion: fechaEdicion || null,
+    };
+  } catch (e) { return null; }
+};
+// Acepta lo que sea que peguen: el enlace completo, el código corto o el código viejo.
+const leerCodigoDeal = async (texto, docsBase, accFijos) => {
+  let t = (texto || "").trim();
+  const m = t.match(/[?&]d=([A-Za-z0-9_-]+)/);
+  if (m) t = m[1];
+  if (/^2[zj][A-Za-z0-9_-]+$/.test(t)) return decodeDealCorto(t, docsBase, accFijos);
+  return decodeDeal(t);
+};
+const enlaceDeal = (code) => location.origin + location.pathname + "?d=" + code;
+const encabezadoDeal = (d) => `Deal ${d.vendedor} · ${String(d.cliente || "").trim()} · ${d.marca} ${d.modelo}`;
 
 // ─── STYLES ─────────────────────────────────────────────────────────────────
 const C = {
@@ -864,7 +925,7 @@ const defaultDocs = [
       if (deal.totalAcc > 0) L.push(`Accesorios: ${fmt(deal.totalAcc)}`);
       L.push(`TOTAL CLIENTE (con IVA): ${fmt(deal.totalCliente)}`);
       L.push("");
-      L.push(`Código: ${code}`);
+      L.push(`Abrir el deal: ${code}`);
       return L.join("\n");
     }
     L.push(`Forma de pago: ${deal.formaPago}`);
@@ -896,7 +957,7 @@ const defaultDocs = [
     L.push(`Comisión crédito: ${fmt(deal.comisionCredito)}`);
     L.push(`Utilidad Proxy: ${fmt(deal.utilidadProxy)} (${pct(deal.utilidadPct)})`);
     L.push("");
-    L.push(`Código: ${code}`);
+    L.push(`Abrir el deal: ${code}`);
     return L.join("\n");
   };
 
@@ -949,22 +1010,38 @@ const defaultDocs = [
         body: JSON.stringify({action: editingDealId ? "deal_update" : "deal", deal}) }).catch(()=>{});
     }
 
-    const code = encodeDeal(deal);
-    const msg = buildMensajeDeal(deal, code);
-    setPostCierreCode(code);
-    setPostCierreMsg(msg);
-    setShowDetalle(false);
     goHome();
+    encodeDealCorto(deal).then(code => {
+      const link = enlaceDeal(code);
+      setPostCierreCode(encabezadoDeal(deal) + "\n" + link);
+      setPostCierreMsg(buildMensajeDeal(deal, link));
+      setShowDetalle(false);
+    });
   };
 
   // ─── Import deal from code ───
-  const importDeal = () => {
-    const d = decodeDeal(importCode);
-    if (!d) { alert("Código inválido"); return; }
+  const abrirDealRecibido = (d) => {
     if (!lsGetDeals().find(x=>x.id===d.id)) { lsSaveDeal(d); setDeals(lsGetDeals()); }
-    setImportCode("");
     cargarDealParaEditar(d);
   };
+  const importDeal = async () => {
+    const d = await leerCodigoDeal(importCode, defaultDocs, ACC_FIJOS);
+    if (!d) { alert("Código inválido"); return; }
+    setImportCode("");
+    abrirDealRecibido(d);
+  };
+
+  // Si la app se abrió desde un enlace de deal (?d=...), se carga solo y se limpia la dirección
+  // para que al recargar no se vuelva a abrir.
+  useEffect(() => {
+    const m = location.search.match(/[?&]d=([A-Za-z0-9_-]+)/);
+    if (!m) return;
+    history.replaceState(null, "", location.pathname);
+    leerCodigoDeal(m[1], defaultDocs, ACC_FIJOS).then(d => {
+      if (d) abrirDealRecibido(d);
+      else alert("El enlace del deal no se pudo leer. Pedile al vendedor que lo vuelva a compartir.");
+    });
+  }, []);
 
   const deleteDeal = (id) => { lsDeleteDeal(id); setDeals(lsGetDeals()); };
 
@@ -1017,18 +1094,18 @@ const defaultDocs = [
           {postCierreCode && (
             <div style={{...base.card,border:"2px solid "+C.green}}>
               <div style={{fontSize:13,fontWeight:700,marginBottom:4,color:C.green}}>✅ Deal guardado</div>
-              <div style={{fontSize:12,color:C.muted,marginBottom:8}}>Comparte solo este código. Se pega en "Cargar Código" y abre el deal completo, ya validado.</div>
+              <div style={{fontSize:12,color:C.muted,marginBottom:8}}>Comparte este mensaje. Quien lo recibe toca el enlace y se abre el deal completo, ya validado.</div>
               <textarea readOnly value={postCierreCode} rows={3}
                 style={{...base.input,resize:"vertical",fontFamily:"monospace",fontSize:11,marginBottom:8,wordBreak:"break-all"}}
                 onClick={e=>e.target.select()} />
               <div style={{display:"flex",gap:8,marginBottom:8}}>
                 <div onClick={()=>compartirDeal(postCierreCode)}
                   style={{flex:1,padding:"10px",borderRadius:8,background:C.accent,color:"#fff",textAlign:"center",cursor:"pointer",fontWeight:700,fontSize:13}}>
-                  Compartir código
+                  Compartir deal
                 </div>
                 <div onClick={()=>copiarAlPortapapeles(postCierreCode)}
                   style={{flex:1,padding:"10px",borderRadius:8,border:"2px solid "+C.accent,color:C.accent,textAlign:"center",cursor:"pointer",fontWeight:700,fontSize:13}}>
-                  Copiar código
+                  Copiar mensaje
                 </div>
               </div>
               <div onClick={()=>setShowDetalle(v=>!v)} style={{fontSize:12,color:C.accent,textAlign:"center",cursor:"pointer",fontWeight:600}}>
@@ -1116,9 +1193,9 @@ const defaultDocs = [
         <div style={base.section}>
           <div style={base.secTitle}>Cargar Deal desde código</div>
           <div style={base.card}>
-            <div style={{fontSize:13,color:C.muted,marginBottom:8}}>Pegá el código que te llegó por WhatsApp:</div>
+            <div style={{fontSize:13,color:C.muted,marginBottom:8}}>Pegá el enlace o el código que te llegó por WhatsApp:</div>
             <textarea value={importCode} onChange={e=>setImportCode(e.target.value)}
-              placeholder="Pegar código base64 aquí..." rows={4}
+              placeholder="Pegar enlace o código aquí..." rows={4}
               style={{...base.input,resize:"vertical",fontFamily:"monospace",fontSize:12}} />
             <div onClick={importDeal}
               style={{marginTop:10,padding:"12px",borderRadius:8,background:C.accent,color:"#fff",textAlign:"center",cursor:"pointer",fontWeight:600}}>
@@ -1126,7 +1203,7 @@ const defaultDocs = [
             </div>
           </div>
           <div style={{fontSize:12,color:C.muted,marginTop:8}}>
-            <b>¿Cómo funciona?</b> El vendedor cierra el deal y comparte solo un código. Pégalo aquí y apreta "Cargar Deal": se abre la calculadora con todo el desglose (Utilidad Proxy, bono y descuento) ya validado contra el catálogo vigente, y queda en tu registro.
+            <b>¿Cómo funciona?</b> El vendedor cierra el deal y comparte un enlace. Lo normal es tocarlo y se abre solo; si no, pégalo aquí y apreta "Cargar Deal": se abre la calculadora con todo el desglose (Utilidad Proxy, bono y descuento) ya validado contra el catálogo vigente, y queda en tu registro.
           </div>
         </div>
       )}
