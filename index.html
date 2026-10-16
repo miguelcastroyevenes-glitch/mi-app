@@ -28,7 +28,10 @@ const { useState, useMemo, useCallback, useEffect, useRef } = React;
 
 // ─── GOOGLE SHEETS CONFIG ───────────────────────────────────────────────────
 // Paso pendiente: Miguel debe deployar el Apps Script, copiar la URL aquí y re-subir
-const SCRIPT_URL = ""; // ← Pegar URL del Apps Script desplegado
+// Puerta a la planilla "Deal Final - Registro de Deals" (Drive de Miguel). Solo guarda un deal
+// y entrega uno por su número; no lista nada. El código del programita está en
+// apps-script/registro-deals.gs.
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwpLtPWXvk9Y1AUS8xvaMHfkuR7ygh9_nsGD3ifeuFGi7fj3O-dU--LGdl09pidwSXq0g/exec";
 
 // ─── CATÁLOGO EMBEBIDO (fallback si no hay conexión a Sheets) ───────────────
 const CATALOGO_LOCAL = {
@@ -148,7 +151,7 @@ const PROX_MES = {boletin:"", vigencia:"", hasta:"", data:{}};
 // pasado no queda colgado en pantalla si a alguien se le olvida vaciarlo: cuando el mes
 // nuevo empieza, el precio del catalogo YA es el nuevo y el aviso no tiene nada que avisar.
 const PROX_MES_VIGENTE = !!PROX_MES.hasta && (new Date().toISOString().slice(0,10) <= PROX_MES.hasta);
-const APP_VERSION = "2026-10-16 · v32"; // ← actualizar cada vez que se sube una nueva versión
+const APP_VERSION = "2026-10-16 · v33"; // ← actualizar cada vez que se sube una nueva versión
 
 // Valor UTM del MES EN CURSO, para el Permiso de Circulación proporcional y el Impuesto
 // Verde. Ambos se pagan al momento de inscribir el auto nuevo, así que usan la UTM
@@ -343,15 +346,37 @@ const decodeDealCorto = async (s, docsBase, accFijos) => {
     };
   } catch (e) { return null; }
 };
-// Acepta lo que sea que peguen: el enlace completo, el código corto o el código viejo.
+// ─── Número corto (desde v33): el deal queda en la planilla y el enlace lleva solo su número ───
+const conTiempo = (ms) => { const c = new AbortController(); setTimeout(() => c.abort(), ms); return c.signal; };
+// Se manda como texto plano para que el navegador no pida permiso previo (la planilla no lo contesta).
+const guardarDealEnPlanilla = async (deal, codigo) => {
+  try {
+    const r = await fetch(SCRIPT_URL, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body: JSON.stringify({ deal, codigo }), signal: conTiempo(8000) });
+    const j = await r.json();
+    return j && j.ok && /^[A-Z0-9]{6}$/.test(j.numero) ? j.numero : null;
+  } catch (e) { return null; }
+};
+const traerCodigoDePlanilla = async (numero) => {
+  try {
+    const r = await fetch(SCRIPT_URL + "?n=" + encodeURIComponent(numero), { signal: conTiempo(10000) });
+    const j = await r.json();
+    return j && j.ok ? j.codigo : null;
+  } catch (e) { return null; }
+};
+
+// Acepta lo que sea que peguen: el enlace (con número o con código), el código corto o el viejo.
 const leerCodigoDeal = async (texto, docsBase, accFijos) => {
   let t = (texto || "").trim();
+  const n = t.match(/[?&]n=([A-Za-z0-9]{6})\b/);
+  if (n) { t = await traerCodigoDePlanilla(n[1].toUpperCase()); if (!t) return null; }
   const m = t.match(/[?&]d=([A-Za-z0-9_-]+)/);
   if (m) t = m[1];
   if (/^2[zj][A-Za-z0-9_-]+$/.test(t)) return decodeDealCorto(t, docsBase, accFijos);
   return decodeDeal(t);
 };
 const enlaceDeal = (code) => location.origin + location.pathname + "?d=" + code;
+const enlaceNumero = (numero) => location.origin + location.pathname + "?n=" + numero;
 const encabezadoDeal = (d) => `Deal ${d.vendedor} · ${String(d.cliente || "").trim()} · ${d.marca} ${d.modelo}`;
 
 // ─── STYLES ─────────────────────────────────────────────────────────────────
@@ -535,8 +560,9 @@ function StockEnDeal({ auto, marca, catalogo, mc }) {
 function DealFinal() {
   // Catalog state
   const [catalogo, setCatalogo] = useState(CATALOGO_LOCAL);
-  const [catSource, setCatSource] = useState("embebido");
-  const [catLoading, setCatLoading] = useState(false);
+  // El catálogo es siempre el embebido (la descarga desde la planilla se quitó en v33).
+  const catSource = "embebido";
+  const catLoading = false;
 
   // Navigation: "home" | "calc" | "import"
   const [view, setView] = useState("home");
@@ -563,6 +589,7 @@ function DealFinal() {
   const [editingDealId, setEditingDealId] = useState(null);
   const [postCierreMsg, setPostCierreMsg] = useState(null);
   const [postCierreCode, setPostCierreCode] = useState("");
+  const [guardandoDeal, setGuardandoDeal] = useState(false);
   const [showDetalle, setShowDetalle] = useState(false);
   const [pushVin, setPushVin] = useState("");
   const [pushDispoOk, setPushDispoOk] = useState(false);
@@ -593,21 +620,6 @@ const defaultDocs = [
   const [importCode, setImportCode] = useState("");
   const [copyMsg, setCopyMsg] = useState("");
 
-  // ─── Try load catalog from Sheets on mount ───
-  useEffect(() => {
-    if (!SCRIPT_URL) return;
-    setCatLoading(true);
-    fetch(SCRIPT_URL + "?action=catalogo")
-      .then(r => r.json())
-      .then(data => {
-        if (data && data.Peugeot) {
-          setCatalogo(data);
-          setCatSource("sheets");
-        }
-      })
-      .catch(() => {})
-      .finally(() => setCatLoading(false));
-  }, []);
 
   // ─── Derived data ───
   const modelos = useMemo(() => {
@@ -1004,18 +1016,18 @@ const defaultDocs = [
     if (editingDealId) { lsUpdateDeal(deal); } else { lsSaveDeal(deal); }
     setDeals(lsGetDeals());
 
-    // Post to Sheets if connected
-    if (SCRIPT_URL) {
-      fetch(SCRIPT_URL, { method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({action: editingDealId ? "deal_update" : "deal", deal}) }).catch(()=>{});
-    }
-
     goHome();
-    encodeDealCorto(deal).then(code => {
-      const link = enlaceDeal(code);
+    setPostCierreCode(""); setPostCierreMsg(null);
+    setGuardandoDeal(true);
+    // Se guarda en la planilla y el enlace lleva solo el número. Si la planilla no contesta,
+    // el enlace lleva el código corto (funciona igual, solo que es más largo).
+    encodeDealCorto(deal).then(async code => {
+      const numero = await guardarDealEnPlanilla(deal, code);
+      const link = numero ? enlaceNumero(numero) : enlaceDeal(code);
       setPostCierreCode(encabezadoDeal(deal) + "\n" + link);
       setPostCierreMsg(buildMensajeDeal(deal, link));
       setShowDetalle(false);
+      setGuardandoDeal(false);
     });
   };
 
@@ -1034,10 +1046,10 @@ const defaultDocs = [
   // Si la app se abrió desde un enlace de deal (?d=...), se carga solo y se limpia la dirección
   // para que al recargar no se vuelva a abrir.
   useEffect(() => {
-    const m = location.search.match(/[?&]d=([A-Za-z0-9_-]+)/);
-    if (!m) return;
+    if (!/[?&][dn]=/.test(location.search)) return;
+    const q = location.search;
     history.replaceState(null, "", location.pathname);
-    leerCodigoDeal(m[1], defaultDocs, ACC_FIJOS).then(d => {
+    leerCodigoDeal(q, defaultDocs, ACC_FIJOS).then(d => {
       if (d) abrirDealRecibido(d);
       else alert("El enlace del deal no se pudo leer. Pedile al vendedor que lo vuelva a compartir.");
     });
@@ -1091,6 +1103,9 @@ const defaultDocs = [
       {/* ═══ HOME VIEW ═══ */}
       {view === "home" && (<>
         <div style={base.section}>
+          {guardandoDeal && !postCierreCode && (
+            <div style={{...base.card,textAlign:"center",color:C.muted,fontSize:13}}>Guardando el deal…</div>
+          )}
           {postCierreCode && (
             <div style={{...base.card,border:"2px solid "+C.green}}>
               <div style={{fontSize:13,fontWeight:700,marginBottom:4,color:C.green}}>✅ Deal guardado</div>
@@ -1838,7 +1853,7 @@ const defaultDocs = [
                   </div>
                 )}
                 <div style={{fontSize:12,color:C.muted,marginBottom:10}}>
-                  Se guardará en el registro local, se enviará a Sheets{SCRIPT_URL?" ✅":" (pendiente)"}, y en la pantalla de inicio vas a poder Compartir o Copiar el resumen.
+                  Se guardará en tu registro y en la planilla, y en la pantalla de inicio vas a poder Compartir o Copiar el mensaje con el enlace.
                 </div>
                 <div style={{display:"flex",gap:8}}>
                   <div onClick={()=>setConfirmCierre(false)}
