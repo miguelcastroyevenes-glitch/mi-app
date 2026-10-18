@@ -12,7 +12,9 @@ Hace, en orden:
   5. Saca los modelos que ya no vienen y agrega los nuevos (avisa los que necesitan revisión).
   6. Revisa que cada CIT tenga fila en IMPUESTO_VERDE (si falta, el impuesto sale $0).
   7. Trae la UTM del mes desde el SII y sube APP_VERSION.
-  8. Verifica el archivo resultante modelo por modelo y, si hay pypdf, cruza los
+  8. Candado: si hay dos listas de una misma marca en la carpeta, o si los autos de la lista
+     de cada marca no son los mismos que quedan en la app (falta o sobra uno), NO escribe.
+     Verifica el archivo resultante modelo por modelo y, si hay pypdf, cruza los
      "precio desde" de las circulares de Acciones Comerciales.
   9. Deja un resumen septiembre→octubre (o el mes que sea) para mandar al equipo.
 
@@ -76,6 +78,11 @@ def extraer(carpeta):
     for marca, (pat, hojas, _) in MARCAS.items():
         f = glob.glob(os.path.join(carpeta, pat))
         if not f: errores.append(f'No encontré la lista de {marca} ({pat})'); continue
+        # Candado: con dos listas de la misma marca no se elige una a ciegas (error de octubre 2026)
+        if len(f) > 1:
+            errores.append(f'Hay {len(f)} listas de {marca} en la carpeta: '
+                           + ' · '.join(os.path.basename(x) for x in sorted(f))
+                           + '. Deja solo la vigente y vuelve a correr.'); continue
         wb = openpyxl.load_workbook(f[0], data_only=True)
         for hoja, tipo in hojas:
             m = MAP_PAS if tipo == 'P' else MAP_COM
@@ -94,11 +101,23 @@ def extraer(carpeta):
                 if (cit is None or str(cit).strip() == '') and pl is None:
                     if nom and str(nom).strip(): fam = re.sub(r'\s+', ' ', str(nom)).strip()
                     continue
-                if not pl: continue
+                if not pl:
+                    # Candado: una fila con CIT y sin precio lista numérico no se salta en silencio
+                    if cit is not None and str(cit).strip():
+                        errores.append(f'{marca} | {hoja} fila {r}: tiene CIT {str(cit).strip()} pero el precio lista '
+                                       f'no es un número ({cel(r, m["pl"])!r}). Revisa la lista.')
+                    continue
                 modelos.append(dict(marca=marca, tipo=tipo, familia=fam or '', cit=str(cit).strip(),
                     modelo=re.sub(r'\s+', ' ', str(nom)).strip(), pl=int(round(pl)),
                     margen=round(num(cel(r, mgcol)) or (0.09 if tipo == 'P' else 0.10), 4),
                     tmp=bloque(r, m['tmp']), cc=bloque(r, m['cc']), ci=bloque(r, m['ci'])))
+    # Candado: el mismo nombre dos veces en una lista haría desaparecer un auto sin aviso
+    vistos = {}
+    for m in modelos:
+        vistos.setdefault(llave(m['marca'], m['tipo'], m['modelo']), []).append(m)
+    for k, ms in vistos.items():
+        if len(ms) > 1:
+            errores.append(f'{k[0]} | {ms[0]["modelo"]}: el mismo nombre aparece {len(ms)} veces en la lista. Revisa la lista.')
     for m in modelos:
         tag = f"{m['marca']} | {m['modelo']}"
         if not (0 < m['margen'] < 1): errores.append(f'{tag}: margen {m["margen"]} fuera de rango')
@@ -225,7 +244,7 @@ def verificar(txt, excel, b2b, mapa):
     iv = set(re.findall(r'"([A-Z0-9]+-\d)":\{rend', txt))
     for k, m in app.items():
         tag = f'{k[0]} | {m["modelo"]}'; e = excel.get(k)
-        if not e: err.append(f'{tag}: no está en el Excel'); continue
+        if not e: continue   # lo reporta candado() como "sobra en la app"
         for c in ('cit', 'pl', 'margen'):
             if m[c] != e[c]: err.append(f'{tag}: {c} app={m[c]} excel={e[c]}')
         for t in ('tmp', 'cc', 'ci'):
@@ -240,6 +259,25 @@ def verificar(txt, excel, b2b, mapa):
                 if abs(x[tr]['redProf'] + x[tr]['steProf'] - x[tr]['pct']) > 1e-9: err.append(f'{tag} b2b {tr}: red+ste != pct')
                 if x[tr]['precio'] != round(x['plSinIva'] * (1 - x[tr]['pct'])): err.append(f'{tag} b2b {tr}: precio != plSinIva x (1-pct)')
     return err, cat
+
+def candado(excel, cat):
+    """Cada marca por separado: los autos de su lista y los de la app deben ser los mismos."""
+    err = []; lineas = []
+    for marca in list(MARCAS) + [x for x in cat if x not in MARCAS]:
+        lista = {k: e for k, e in excel.items() if k[0] == marca}
+        # fila por fila (no aplanar): una fila repetida en la app también tiene que contar
+        filas = [(llave(marca, tipo[0], m['modelo']), m) for tipo, lst in cat.get(marca, {}).items() for m in lst]
+        enapp = dict(filas)
+        for k in sorted(set(lista) - set(enapp)):
+            err.append(f'{marca} | {lista[k]["modelo"]}: viene en la lista de {marca} y no quedó en la app (falta en la app)')
+        for k in sorted(set(enapp) - set(lista)):
+            err.append(f'{marca} | {enapp[k]["modelo"]}: está en la app y no viene en la lista de {marca} (sobra en la app)')
+        repetidos = sorted({k for k, _ in filas if sum(1 for kk, _ in filas if kk == k) > 1})
+        for k in repetidos:
+            err.append(f'{marca} | {enapp[k]["modelo"]}: aparece más de una vez en la app (sobra en la app)')
+        ok = set(lista) == set(enapp) and not repetidos
+        lineas.append(f'Candado {marca}: lista {len(lista)} · app {len(filas)} · {"calzan" if ok else "NO CALZAN"}')
+    return err, lineas
 
 def cruce_pdf(carpeta, cat):
     try: import pypdf
@@ -333,6 +371,9 @@ def main():
 
     print('== 4. Verificación del resultado')
     err, despues = verificar(nuevo_txt, excel, b2b, mapa)
+    err_candado, lineas = candado(excel, despues)
+    err += err_candado
+    for ln in lineas: print('  ', ln)
     for e in err: print('   ERROR', e)
     for n in cruce_pdf(a.carpeta, despues): print('  ', n)
     for w in avisos: print('   AVISO', w)
