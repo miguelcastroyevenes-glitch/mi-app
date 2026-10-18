@@ -101,11 +101,23 @@ def extraer(carpeta):
                 if (cit is None or str(cit).strip() == '') and pl is None:
                     if nom and str(nom).strip(): fam = re.sub(r'\s+', ' ', str(nom)).strip()
                     continue
-                if not pl: continue
+                if not pl:
+                    # Candado: una fila con CIT y sin precio lista numérico no se salta en silencio
+                    if cit is not None and str(cit).strip():
+                        errores.append(f'{marca} | {hoja} fila {r}: tiene CIT {str(cit).strip()} pero el precio lista '
+                                       f'no es un número ({cel(r, m["pl"])!r}). Revisa la lista.')
+                    continue
                 modelos.append(dict(marca=marca, tipo=tipo, familia=fam or '', cit=str(cit).strip(),
                     modelo=re.sub(r'\s+', ' ', str(nom)).strip(), pl=int(round(pl)),
                     margen=round(num(cel(r, mgcol)) or (0.09 if tipo == 'P' else 0.10), 4),
                     tmp=bloque(r, m['tmp']), cc=bloque(r, m['cc']), ci=bloque(r, m['ci'])))
+    # Candado: el mismo nombre dos veces en una lista haría desaparecer un auto sin aviso
+    vistos = {}
+    for m in modelos:
+        vistos.setdefault(llave(m['marca'], m['tipo'], m['modelo']), []).append(m)
+    for k, ms in vistos.items():
+        if len(ms) > 1:
+            errores.append(f'{k[0]} | {ms[0]["modelo"]}: el mismo nombre aparece {len(ms)} veces en la lista. Revisa la lista.')
     for m in modelos:
         tag = f"{m['marca']} | {m['modelo']}"
         if not (0 < m['margen'] < 1): errores.append(f'{tag}: margen {m["margen"]} fuera de rango')
@@ -250,16 +262,21 @@ def verificar(txt, excel, b2b, mapa):
 
 def candado(excel, cat):
     """Cada marca por separado: los autos de su lista y los de la app deben ser los mismos."""
-    app = aplanar(cat); err = []; lineas = []
-    for marca in MARCAS:
+    err = []; lineas = []
+    for marca in list(MARCAS) + [x for x in cat if x not in MARCAS]:
         lista = {k: e for k, e in excel.items() if k[0] == marca}
-        enapp = {k: m for k, m in app.items() if k[0] == marca}
+        # fila por fila (no aplanar): una fila repetida en la app también tiene que contar
+        filas = [(llave(marca, tipo[0], m['modelo']), m) for tipo, lst in cat.get(marca, {}).items() for m in lst]
+        enapp = dict(filas)
         for k in sorted(set(lista) - set(enapp)):
             err.append(f'{marca} | {lista[k]["modelo"]}: viene en la lista de {marca} y no quedó en la app (falta en la app)')
         for k in sorted(set(enapp) - set(lista)):
             err.append(f'{marca} | {enapp[k]["modelo"]}: está en la app y no viene en la lista de {marca} (sobra en la app)')
-        ok = set(lista) == set(enapp)
-        lineas.append(f'Candado {marca}: lista {len(lista)} · app {len(enapp)} · {"calzan" if ok else "NO CALZAN"}')
+        repetidos = sorted({k for k, _ in filas if sum(1 for kk, _ in filas if kk == k) > 1})
+        for k in repetidos:
+            err.append(f'{marca} | {enapp[k]["modelo"]}: aparece más de una vez en la app (sobra en la app)')
+        ok = set(lista) == set(enapp) and not repetidos
+        lineas.append(f'Candado {marca}: lista {len(lista)} · app {len(filas)} · {"calzan" if ok else "NO CALZAN"}')
     return err, lineas
 
 def cruce_pdf(carpeta, cat):
