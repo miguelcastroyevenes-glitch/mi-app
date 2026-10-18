@@ -151,7 +151,7 @@ const PROX_MES = {boletin:"", vigencia:"", hasta:"", data:{}};
 // pasado no queda colgado en pantalla si a alguien se le olvida vaciarlo: cuando el mes
 // nuevo empieza, el precio del catalogo YA es el nuevo y el aviso no tiene nada que avisar.
 const PROX_MES_VIGENTE = !!PROX_MES.hasta && (new Date().toISOString().slice(0,10) <= PROX_MES.hasta);
-const APP_VERSION = "2026-10-17 · v35"; // ← actualizar cada vez que se sube una nueva versión
+const APP_VERSION = "2026-10-18 · v36"; // ← actualizar cada vez que se sube una nueva versión
 
 // Valor UTM del MES EN CURSO, para el Permiso de Circulación proporcional y el Impuesto
 // Verde. Ambos se pagan al momento de inscribir el auto nuevo, así que usan la UTM
@@ -377,7 +377,26 @@ const leerCodigoDeal = async (texto, docsBase, accFijos) => {
 };
 const enlaceDeal = (code) => location.origin + location.pathname + "?d=" + code;
 const enlaceNumero = (numero) => location.origin + location.pathname + "?n=" + numero;
-const encabezadoDeal = (d) => `Deal ${d.vendedor} · ${String(d.cliente || "").trim()} · ${d.marca} ${d.modelo}`;
+// Mensaje corto del WhatsApp: modelo, descuento que pone Pompeyo y utilidad final.
+// Sin vendedor ni cliente: lo manda el propio vendedor y el enlace abre todo.
+// Venta normal: Pompeyo + aporte red (CE). Flota: aporte de la casa del tramo + adicional
+// Pompeyo, en % sobre la lista sin IVA; el aporte de la marca no va.
+const encabezadoDeal = (d) => {
+  let descPesos, descPct;
+  if (d.modoVenta === "flota") {
+    descPesos = (d.aporteRedFlota || 0) + (d.cesAdicional || 0);
+    const plSinIva = (d.precioFlotaNeto || 0) + (d.descFlotaPesos || 0);
+    descPct = plSinIva > 0 ? descPesos / plSinIva : 0;
+  } else {
+    descPesos = (d.descPompeyo || 0) + (d.aporteRed || 0);
+    descPct = d.totalDadoPct || 0;
+  }
+  return [
+    `${d.marca} ${d.modelo}`,
+    `Descuento Pompeyo total: ${pct(descPct)} · ${fmt(descPesos)}`,
+    `Utilidad total: ${fmt(d.utilidadProxy || 0)} · ${pct(d.utilidadPct || 0)}`,
+  ].join("\n");
+};
 
 // ─── STYLES ─────────────────────────────────────────────────────────────────
 const C = {
@@ -1110,7 +1129,7 @@ const defaultDocs = [
             <div style={{...base.card,border:"2px solid "+C.green}}>
               <div style={{fontSize:13,fontWeight:700,marginBottom:4,color:C.green}}>✅ Deal guardado</div>
               <div style={{fontSize:12,color:C.muted,marginBottom:8}}>Comparte este mensaje. Quien lo recibe toca el enlace y se abre el deal completo, ya validado.</div>
-              <textarea readOnly value={postCierreCode} rows={3}
+              <textarea readOnly value={postCierreCode} rows={5}
                 style={{...base.input,resize:"vertical",fontFamily:"monospace",fontSize:11,marginBottom:8,wordBreak:"break-all"}}
                 onClick={e=>e.target.select()} />
               <div style={{display:"flex",gap:8,marginBottom:8}}>
