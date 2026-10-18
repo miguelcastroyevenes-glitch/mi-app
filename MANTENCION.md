@@ -57,6 +57,21 @@ No publica: después hay que abrir la app en el navegador (un deal retail y uno 
 correr `publicar.ps1`. Probado contra la carga de octubre 2026: partiendo de v28 deja el
 catálogo idéntico al publicado a mano en v29.
 
+**Candado (desde octubre 2026).** Antes de escribir, el script revisa tres cosas y si alguna
+falla **no escribe nada** y dice qué pasó:
+1. Que haya **una sola lista por marca** en la carpeta. Si hay dos (por ejemplo, la marca mandó
+   una versión nueva con el mismo número), frena y nombra los dos archivos. Qué hacer: dejar en
+   la carpeta solo la vigente (la más nueva que mandó la marca) y volver a correr. Así entró el
+   error de octubre: la lista Citroën Nº 10 llegó en dos versiones y se cargó la vieja.
+2. Que **cada auto de la lista de cada marca quede en la app** ("falta en la app"). Pasa cuando
+   la marca o el tipo (pasajeros/comerciales) no existe en la app: hay que crearlo a mano (ver
+   "Marca nueva", más abajo).
+3. Que **cada auto de esa marca en la app venga en su lista** ("sobra en la app"). Pasa si una
+   línea del catálogo quedó con un formato que el script no reconoce y no la pudo sacar:
+   revisarla a mano en `CATALOGO_LOCAL`.
+En cada carga imprime una línea por marca: `Candado Citroën: lista 23 · app 23 · calzan`.
+Sin excepciones: si un auto no viene en la lista oficial, no va en la app aunque haya stock.
+
 Lo que el script **no** hace solo (avisa y hay que hacerlo a mano): marca nueva, `b2b` de un
 comercial nuevo (agregarlo también a `mapa_b2b.json`) y filas nuevas de `IMPUESTO_VERDE`.
 
