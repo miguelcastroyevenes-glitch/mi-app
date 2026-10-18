@@ -74,6 +74,13 @@ un número (vacío o escrito como texto), o si el mismo nombre aparece dos veces
 En cada carga imprime una línea por marca: `Candado Citroën: lista 23 · app 23 · calzan`.
 Sin excepciones: si un auto no viene en la lista oficial, no va en la app aunque haya stock.
 
+**Cada lista que llega pasa primero por el ensayo, aunque sea una segunda versión del mismo mes**
+(Miguel, 18-10-2026). Cuando llega una lista por correo, guardarla en la carpeta del mes en lugar
+de la anterior (si quedan las dos, el candado frena) y correr el script **sin** `--aplicar`. Leer
+qué sale y qué entra antes de decidir si se carga. Nunca suponer qué cambió: en octubre 2026 la
+segunda lista Citroën parecía traer solo los Basalt, pero además devolvía el C3 Aircross 5P Turbo
+y sacaba el 7P, y no se cargó.
+
 Lo que el script **no** hace solo (avisa y hay que hacerlo a mano): marca nueva, `b2b` de un
 comercial nuevo (agregarlo también a `mapa_b2b.json`) y filas nuevas de `IMPUESTO_VERDE`.
 
