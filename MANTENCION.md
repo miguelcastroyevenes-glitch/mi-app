@@ -68,7 +68,9 @@ falla **no escribe nada** y dice qué pasó:
    "Marca nueva", más abajo).
 3. Que **cada auto de esa marca en la app venga en su lista** ("sobra en la app"). Pasa si una
    línea del catálogo quedó con un formato que el script no reconoce y no la pudo sacar:
-   revisarla a mano en `CATALOGO_LOCAL`.
+   revisarla a mano en `CATALOGO_LOCAL`. También frena si un auto aparece dos veces en la app.
+Y antes de todo eso, al leer la lista, frena si una fila tiene CIT pero el precio lista no es
+un número (vacío o escrito como texto), o si el mismo nombre aparece dos veces en una lista.
 En cada carga imprime una línea por marca: `Candado Citroën: lista 23 · app 23 · calzan`.
 Sin excepciones: si un auto no viene en la lista oficial, no va en la app aunque haya stock.
 
