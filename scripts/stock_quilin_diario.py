@@ -174,6 +174,7 @@ def armar_excel(archivos: list[Path], hoy: dt.date) -> tuple[Path, list[dict]]:
     ws.title = "Conteo"
     fecha = f"{DIAS[hoy.weekday()]} {hoy:%d-%m-%Y}"
     n = len(COLUMNAS)
+    n_hoja = n + 1          # + REV LOCAL, columna vacía para la X a mano (paso 2, 27-10-2026)
     por_marca = {}
     for u in unidades:
         por_marca[u["Marca"].title()] = por_marca.get(u["Marca"].title(), 0) + 1
@@ -182,8 +183,8 @@ def armar_excel(archivos: list[Path], hoy: dt.date) -> tuple[Path, list[dict]]:
     ws.cell(1, 1, f"Stock Quilín para conteo físico · {fecha}").font = Font(bold=True, size=14)
     ws.cell(2, 1, f"{len(unidades)} autos ({resumen}) · Estado APC: Disponible, Facturado, Vendido · "
                   f"Fuente: APC, sacado {dt.datetime.now():%d-%m-%Y %H:%M}").font = Font(size=9, italic=True)
-    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=n)
-    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=n)
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=n_hoja)
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=n_hoja)
 
     fino = Side(style="thin", color="999999")
     borde = Border(left=fino, right=fino, top=fino, bottom=fino)
@@ -193,15 +194,21 @@ def armar_excel(archivos: list[Path], hoy: dt.date) -> tuple[Path, list[dict]]:
         c.font, c.fill, c.border = Font(bold=True, size=9), gris, borde
         c.alignment = Alignment(horizontal="center", vertical="center")
         ws.column_dimensions[c.column_letter].width = ancho
+    c = ws.cell(4, n_hoja, "REV LOCAL")
+    c.font, c.fill, c.border = Font(bold=True, size=9), gris, borde
+    c.alignment = Alignment(horizontal="center", vertical="center")
+    ws.column_dimensions[c.column_letter].width = 12
     for i, u in enumerate(unidades, 5):
         for j, (col, _, _) in enumerate(COLUMNAS, 1):
             c = ws.cell(i, j, u[col])
             c.font, c.border = Font(size=9), borde
             c.alignment = Alignment(vertical="center", shrink_to_fit=True)
+        c = ws.cell(i, n_hoja)
+        c.border = borde
 
     ws.freeze_panes = "A5"
     ws.print_title_rows = "4:4"
-    ws.print_area = f"A1:{ws.cell(4 + len(unidades), n).coordinate}"
+    ws.print_area = f"A1:{ws.cell(4 + len(unidades), n_hoja).coordinate}"
     ws.page_setup.orientation = "landscape"
     ws.page_setup.paperSize = ws.PAPERSIZE_LETTER
     ws.sheet_properties.pageSetUpPr = PageSetupProperties(fitToPage=True)
