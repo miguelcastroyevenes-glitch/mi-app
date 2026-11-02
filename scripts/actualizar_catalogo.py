@@ -159,6 +159,18 @@ def leer_b2b(carpeta):
                 filas.append(dict(txt=f'{ws.cell(r, 1).value} {ws.cell(r, 3).value}'.lower(),
                     mf=round(float(ws.cell(r, 4).value), 4), tot=g(r), ste=g(r + 1), red=g(r + 2)))
         out[marca] = filas
+    if not out and 'Descuentos B2B Red - VU' in wb.sheetnames:
+        # formato desde noviembre 2026: una hoja, una fila por modelo con descuento, aporte dealer y
+        # aporte Stellantis por tramo; No Professional = 1 punto más de dealer y 1 menos de Stellantis
+        ws = wb['Descuentos B2B Red - VU']; marcas = {'PEUGEOT': 'Peugeot', 'CITROËN': 'Citroën', 'OPEL': 'Opel'}
+        for r in range(5, ws.max_row + 1):
+            marca = marcas.get(str(ws.cell(r, 3).value or '').strip())
+            if not marca: continue
+            v = lambda c: round(float(ws.cell(r, c).value), 4)
+            d1, d2, dg, a1, a2, ag, s1, s2, sg = (v(c) for c in (9, 11, 13, 16, 18, 20, 23, 25, 27))
+            out.setdefault(marca, []).append(dict(txt=f'{ws.cell(r, 1).value} {ws.cell(r, 6).value}'.lower(),
+                mf=v(7), tot=[d1, d2, d1, d2, dg], red=[a1, a2, round(a1 + 0.01, 4), round(a2 + 0.01, 4), ag],
+                ste=[s1, s2, round(s1 - 0.01, 4), round(s2 - 0.01, 4), sg]))
     return out
 
 def b2b_txt(psi, f):
