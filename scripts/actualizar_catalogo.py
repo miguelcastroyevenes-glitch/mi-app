@@ -209,7 +209,11 @@ def reescribir(txt, nuevos, b2b, mapa, avisos):
         m = LINEA.match(ln)
         if not m: out.append(ln); continue
         k = llave(marca, tipo, m.group(2))
-        if k not in nuevos: quitados.append((marca, tipo, m.group(2))); continue
+        if k not in nuevos:
+            if 'fueraLista:' in m.group(3):   # se queda a propósito aunque no venga en la lista del mes
+                avisos.append(f'{marca} | {m.group(2)}: no viene en la lista del mes; se mantiene con sus valores anteriores (fueraLista)')
+                out.append(ln); continue
+            quitados.append((marca, tipo, m.group(2))); continue
         n = nuevos[k]; usados.add(k); resto = m.group(3)
         if 'b2b:{' in resto:
             psi = int(re.search(r'b2b:\{plSinIva:(\d+)', resto).group(1))
@@ -278,7 +282,7 @@ def candado(excel, cat):
     for marca in list(MARCAS) + [x for x in cat if x not in MARCAS]:
         lista = {k: e for k, e in excel.items() if k[0] == marca}
         # fila por fila (no aplanar): una fila repetida en la app también tiene que contar
-        filas = [(llave(marca, tipo[0], m['modelo']), m) for tipo, lst in cat.get(marca, {}).items() for m in lst]
+        filas = [(llave(marca, tipo[0], m['modelo']), m) for tipo, lst in cat.get(marca, {}).items() for m in lst if not m.get('fueraLista')]
         enapp = dict(filas)
         for k in sorted(set(lista) - set(enapp)):
             err.append(f'{marca} | {lista[k]["modelo"]}: viene en la lista de {marca} y no quedó en la app (falta en la app)')
