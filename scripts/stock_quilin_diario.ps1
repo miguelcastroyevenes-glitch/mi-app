@@ -27,7 +27,7 @@ if ($codigo -eq 0 -and $envio) {
     $avisoIntentado = Select-String -Path $log -Pattern "AVISO_SOLICITADO_LABORATORIO" -Quiet
     if ($codigo -ne 0 -and -not $avisoIntentado) {
         $avisador = Join-Path (Join-Path $laboratorio 'lab') 'aviso_cli.py'
-        & $python $avisador --tarea "Stock Quilin (conteo diario)" --detalle "El programa de Python terminó antes de activar su aviso interno; revisar el registro." --log $log 2>&1 | ForEach-Object { "$_" } | Out-File $log -Append -Encoding utf8
+        & $python $avisador --tarea "Stock Quilin (conteo diario)" --detalle "El programa de Python termino antes de activar su aviso interno; revisar el registro." --log $log 2>&1 | ForEach-Object { "$_" } | Out-File $log -Append -Encoding utf8
     }
     # Si terminó bien pero no quedó anotado el envío diario al equipo, también avisa.
     if ($codigo -eq 0) {
