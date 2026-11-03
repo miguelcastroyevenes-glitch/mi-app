@@ -7,6 +7,8 @@ $repo   = Join-Path $base "mi-app"
 $log    = Join-Path $base "apc-descargas\ultima-corrida.log"
 $aviso  = Join-Path ([Environment]::GetFolderPath("Desktop")) "STOCK APC NO SE ACTUALIZO.txt"
 $python = "C:\Users\Migue\AppData\Local\Programs\Python\Python312\python.exe"
+# Si falla, ademas del aviso en el Escritorio le llega un correo a Miguel (pieza 3.2, Tanda 1).
+$laboratorio = "C:\Proyectos\laboratorio-ia"
 
 New-Item -ItemType Directory -Force -Path (Split-Path $log) | Out-Null
 $env:PYTHONIOENCODING = "utf-8"
@@ -42,5 +44,7 @@ Detalle completo: $log
 Pantallazo del error (si lo hay): C:\Proyectos\app-deal\apc-descargas\
 Para reintentar a mano:  python C:\Proyectos\app-deal\mi-app\scripts\actualizar_stock_apc.py --publicar
 "@ | Out-File $aviso -Encoding utf8
+    $avisador = Join-Path (Join-Path $laboratorio 'lab') 'aviso_cli.py'
+    & $python $avisador --tarea "Stock APC diario" --detalle "$motivo" --log $log 2>&1 | ForEach-Object { "$_" } | Out-File $log -Append -Encoding utf8
 }
 exit $codigo
