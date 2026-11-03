@@ -22,15 +22,27 @@ $envio = Select-String -Path $log -Pattern "Enviado a" -Quiet
 if ($codigo -eq 0 -and $envio) {
     if (Test-Path $aviso) { Remove-Item $aviso -Confirm:$false }
 } elseif (-not $envio) {
-    # Con codigo distinto de 0 el .py ya aviso por correo; aqui solo falta el caso en que
-    # termino bien pero el envio al equipo no quedo registrado.
+    # Si Python fallo antes de llegar a su manejador (por ejemplo, al cargar el modulo),
+    # el envoltorio hace un intento de respaldo por el mismo aviso del laboratorio.
+    $avisoIntentado = Select-String -Path $log -Pattern "AVISO_SOLICITADO_LABORATORIO" -Quiet
+    if ($codigo -ne 0 -and -not $avisoIntentado) {
+        $avisador = Join-Path (Join-Path $laboratorio 'lab') 'aviso_cli.py'
+        & $python $avisador --tarea "Stock Quilin (conteo diario)" --detalle "El programa de Python terminó antes de activar su aviso interno; revisar el registro." --log $log 2>&1 | ForEach-Object { "$_" } | Out-File $log -Append -Encoding utf8
+    }
+    # Si terminó bien pero no quedó anotado el envío diario al equipo, también avisa.
     if ($codigo -eq 0) {
         $avisador = Join-Path (Join-Path $laboratorio 'lab') 'aviso_cli.py'
         & $python $avisador --tarea "Stock Quilin (envio al equipo)" --detalle "termino sin error pero no quedo registrado el envio" --log $log 2>&1 | ForEach-Object { "$_" } | Out-File $log -Append -Encoding utf8
     }
+    $avisoConfirmado = Select-String -Path $log -Pattern "AVISO_ENVIADO_LABORATORIO|AVISO_ENVIADO" -Quiet
+    if ($avisoConfirmado) {
+        $estadoCorreo = "El registro confirma que el aviso se envio."
+    } else {
+        $estadoCorreo = "El registro no confirma que el aviso se haya enviado; revisa el detalle."
+    }
     @"
 El stock de Quilin para el conteo NO se envio hoy ($(Get-Date -Format 'dd-MM-yyyy HH:mm')).
-A Miguel le debio llegar un correo de aviso; si no llego, el motivo esta en el detalle.
+$estadoCorreo
 
 Detalle: $log
 Para reintentar a mano:  python C:\Proyectos\app-deal\mi-app\scripts\stock_quilin_diario.py

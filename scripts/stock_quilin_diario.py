@@ -265,9 +265,9 @@ def avisar_falla(e: Exception) -> None:
     """Aviso de falla a Miguel por Gmail, con el aviso común de las tareas (pieza 3.2).
     Ya no usa Outlook: si Outlook está cerrado, el aviso igual sale. El envío diario
     al equipo sigue saliendo por Outlook (enviar)."""
-    import os
-    detalle = (f"{e}. Causas típicas: APC abierto a las 09:00 (permite una sola sesión), "
-               "cambió la clave de APC (apc.env) o APC estaba caído. El equipo no recibió la hoja de conteo.")
+    detalle = (f"Error: {e}. El equipo no recibió la hoja de conteo. "
+               "La causa exacta está en el registro de la corrida.")
+    log("AVISO_SOLICITADO_LABORATORIO")
     try:
         laboratorio = Path(r"C:\Proyectos\laboratorio-ia")
         if str(laboratorio) not in sys.path:
@@ -275,8 +275,9 @@ def avisar_falla(e: Exception) -> None:
         from lab.aviso_cli import notificar_falla
 
         notificar_falla("Stock Quilin (conteo diario)", detalle, SALIDA / "ultima-corrida.log")
-        log("Aviso enviado por el laboratorio.")
+        log("AVISO_ENVIADO_LABORATORIO")
     except Exception as aviso_error:
+        log("AVISO_NO_ENVIADO_LABORATORIO")
         log(f"No se pudo avisar a Miguel: {aviso_error}")
 
 
@@ -289,27 +290,27 @@ def main() -> None:
     a = ap.parse_args()
 
     hoy = dt.date.today()
-    miguel, todos = leer_destinos()
-    para = [miguel] if a.solo_miguel else todos
     try:
+        miguel, todos = leer_destinos()
+        para = [miguel] if a.solo_miguel else todos
         archivos = a.archivos or bajar_de_apc(a.ver)
         excel, unidades = armar_excel(archivos, hoy)
+        if a.ensayo:
+            log(f"Ensayo: no se envió nada. Destinatarios previstos: {len(todos)}")
+            return
+
+        fecha = f"{DIAS[hoy.weekday()]} {hoy:%d-%m-%Y}"
+        enviar(para, f"Stock Quilín para conteo · {fecha}",
+               f"Hola equipo:\n\nVa el stock de hoy de Peugeot Quilín y Citroën Quilín ({len(unidades)} autos), "
+               f"sacado de APC a las {dt.datetime.now():%H:%M}.\n\n"
+               "Imprímanlo, recorran el local y marquen cada auto: tick si está, X si no está. "
+               "Después me entregan la hoja.\n\nMiguel", excel)
     except Exception as e:
         log(f"Error: {e}")
         traceback.print_exc()
         if not a.ensayo:
             avisar_falla(e)
         sys.exit(1)
-
-    if a.ensayo:
-        log(f"Ensayo: no se envió nada. Destinatarios previstos: {len(todos)}")
-        return
-    fecha = f"{DIAS[hoy.weekday()]} {hoy:%d-%m-%Y}"
-    enviar(para, f"Stock Quilín para conteo · {fecha}",
-           f"Hola equipo:\n\nVa el stock de hoy de Peugeot Quilín y Citroën Quilín ({len(unidades)} autos), "
-           f"sacado de APC a las {dt.datetime.now():%H:%M}.\n\n"
-           "Imprímanlo, recorran el local y marquen cada auto: tick si está, X si no está. "
-           "Después me entregan la hoja.\n\nMiguel", excel)
 
 
 if __name__ == "__main__":
