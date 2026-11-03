@@ -261,6 +261,25 @@ def enviar(para: list[str], asunto: str, cuerpo: str, adjunto: Path | None = Non
     log(f"4. Enviado a {len(para)} destinatarios: {asunto}")
 
 
+def avisar_falla(e: Exception) -> None:
+    """Aviso de falla a Miguel por Gmail, con el aviso común de las tareas (pieza 3.2).
+    Ya no usa Outlook: si Outlook está cerrado, el aviso igual sale. El envío diario
+    al equipo sigue saliendo por Outlook (enviar)."""
+    import os
+    detalle = (f"{e}. Causas típicas: APC abierto a las 09:00 (permite una sola sesión), "
+               "cambió la clave de APC (apc.env) o APC estaba caído. El equipo no recibió la hoja de conteo.")
+    try:
+        laboratorio = Path(r"C:\Proyectos\laboratorio-ia")
+        if str(laboratorio) not in sys.path:
+            sys.path.insert(0, str(laboratorio))
+        from lab.aviso_cli import notificar_falla
+
+        notificar_falla("Stock Quilin (conteo diario)", detalle, SALIDA / "ultima-corrida.log")
+        log("Aviso enviado por el laboratorio.")
+    except Exception as aviso_error:
+        log(f"No se pudo avisar a Miguel: {aviso_error}")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--ensayo", action="store_true", help="no envía nada")
@@ -279,14 +298,7 @@ def main() -> None:
         log(f"Error: {e}")
         traceback.print_exc()
         if not a.ensayo:
-            enviar([miguel], f"Stock Quilín NO salió hoy {hoy:%d-%m-%Y}",
-                   f"Hoy el robot no pudo sacar el stock de APC, así que el equipo no recibió la hoja de conteo.\n\n"
-                   f"Motivo: {e}\n\n"
-                   "Causas típicas: tenías APC abierto a las 09:00 (APC permite una sola sesión), "
-                   "cambió la clave de APC (C:\\Proyectos\\app-deal\\apc.env) o APC estaba caído.\n\n"
-                   "Para reintentar a mano en el servidor:\n"
-                   "python C:\\Proyectos\\app-deal\\mi-app\\scripts\\stock_quilin_diario.py\n\n"
-                   f"Detalle: C:\\Proyectos\\app-deal\\apc-descargas\\quilin\\ultima-corrida.log")
+            avisar_falla(e)
         sys.exit(1)
 
     if a.ensayo:
