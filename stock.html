@@ -26,6 +26,7 @@
     --citroen-bg:#e9f2fb;
     --amber:#c47f0a;
     --amber-bg:#fdf3e2;
+    --estimado:#C026D3;
     --green:#1a8a5f;
     --green-bg:#e7f6ee;
     --radius:18px;
@@ -196,7 +197,10 @@
   .zonal-head{grid-column:1/-1; display:flex; flex-wrap:wrap; align-items:baseline; gap:8px; margin:14px 0 2px; font-weight:700;}
   .zonal-head small{font-weight:500; color:#6b7280; font-size:.78rem;}
   .zonal-sub{grid-column:1/-1; font-size:.8rem; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:.04em; margin-top:6px;}
-  .zonal-entrega{display:inline-block; font-size:.72rem; font-weight:600; color:var(--amber); background:var(--amber-bg); border-radius:100px; padding:2px 9px; margin:-4px 0 10px;}
+  .estimado{color:var(--estimado);}
+  .zonal-entrega{display:inline-block; font-size:.72rem; font-weight:600; background:var(--card); border:1px solid var(--estimado); border-radius:100px; padding:2px 9px; margin:-4px 0 10px;}
+  .zonal-estimado-legend{grid-column:1/-1; display:flex; align-items:center; gap:8px; width:max-content; max-width:100%; color:var(--estimado); background:var(--card); border:1px solid var(--estimado); border-radius:100px; padding:6px 12px; font-size:.76rem; font-weight:700;}
+  .zonal-estimado-swatch{width:10px; height:10px; flex:0 0 10px; border-radius:50%; background:var(--estimado);}
 
   footer{
     max-width:1100px; margin:32px auto 0; font-size:.74rem; color:var(--ink-faint);
@@ -345,9 +349,16 @@ document.getElementById('asig-count-badge').textContent = `${tabsDef[1].peugeot}
 function renderZonalGrid(containerId){
   const grid = document.getElementById(containerId);
   grid.innerHTML = '';
+  const hayFechasEstimadas = ["citroen", "peugeot"].some(b => zonal[b] && zonal[b].transito && zonal[b].transito.some(it => it.entrega));
+  if(hayFechasEstimadas){
+    const leyenda = document.createElement("div");
+    leyenda.className = "zonal-estimado-legend";
+    leyenda.innerHTML = "<span class=\"zonal-estimado-swatch\" aria-hidden=\"true\"></span><span>Estimado · fecha prevista de llegada</span>";
+    grid.appendChild(leyenda);
+  }
   const add = (cls, html, brand) => { const d = document.createElement('div'); d.className = cls; if(brand) d.dataset.brand = brand; d.innerHTML = html; grid.appendChild(d); };
   const card = (it, brand) => add('zonal-card',
-    `<h3>${it.modelo}</h3>${it.entrega ? `<div class="zonal-entrega">🚢 Entrega ${it.entrega}</div>` : ''}` +
+    `<h3>${it.modelo}</h3>${it.entrega ? `<div class="zonal-entrega estimado">🚢 Entrega ${it.entrega}</div>` : ''}` +
     `<div class="zonal-colors">${it.colores.map(c=>`<span class="zonal-chip"><span class="color-sw" style="background:${sw(c.color)}"></span>${c.color} <b>${c.cant}</b></span>`).join('')}</div>`, brand);
   [['citroen','Citroën'], ['peugeot','Peugeot']].forEach(([b, nombre]) => {
     const z = zonal[b];
