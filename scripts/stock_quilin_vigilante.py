@@ -163,7 +163,11 @@ def correos_outlook(desde: dt.date) -> tuple[list[dict], bool]:
                 if fecha_asunto(asunto) == dt.date.today().strftime("%d-%m-%Y"):
                     robot_hoy = True
             if asunto.startswith(("Re:", "RE:")) and ASUNTO_BASE in asunto:
-                correos.append({"subject": asunto, "sender": smtp_remitente(item), "attachments": [
+                try:
+                    cuerpo = str(item.Body or "")
+                except Exception:
+                    cuerpo = ""
+                correos.append({"subject": asunto, "sender": smtp_remitente(item), "body": cuerpo, "attachments": [
                     {"extension": Path(str(a.FileName)).suffix, "hidden": False, "inline": False, "object": a} for a in fotos], "item": item})
     return correos, robot_hoy
 
@@ -174,8 +178,11 @@ def leer_foto(foto: Path) -> dict:
     llave = dotenv_values(r"C:\Proyectos\asistente-ventas\.env").get("ANTHROPIC_API_KEY", "")
     if not llave:
         raise RuntimeError("No hay llave de IA en C:\\Proyectos\\asistente-ventas\\.env.")
-    pedido = '''Lee la columna REV LOCAL (la última) de esta hoja de conteo, fila por fila.
-Devuelve por cada código impreso: marca X, vacio o dudosa. X solo si es clara; todo lo que no sea una X clara es dudosa. Nunca inventes códigos. Responde SOLO JSON: {"filas":[{"codigo":"...","marca":"X|vacio|dudosa"}]}'''
+    pedido = '''Hoja de conteo físico. El equipo marca con una X el auto que NO está; la X puede quedar dentro de la columna REV LOCAL, al lado o fuera del margen derecho de su fila.
+Por cada código impreso en la columna "Cód. interno", fila por fila, di si su fila tiene una X.
+Puntos, ticks, rayitas, comas o cualquier marca que no sea una X NO cuentan: esa fila es vacio.
+dudosa solo si hay una marca parecida a una X que no puedes asegurar que sea X.
+Ignora lo escrito a mano al pie de la hoja. Nunca inventes códigos. Responde SOLO JSON: {"filas":[{"codigo":"...","marca":"X|vacio|dudosa"}]}'''
     tipo = "image/png" if foto.suffix.lower() == ".png" else "image/jpeg"
     respuesta = Anthropic(api_key=llave, max_retries=2, timeout=120).messages.create(model="claude-opus-5-5", max_tokens=8000, messages=[{"role":"user","content":[{"type":"image","source":{"type":"base64","media_type":tipo,"data":base64.standard_b64encode(foto.read_bytes()).decode()}},{"type":"text","text":pedido}]}])
     texto = "".join(b.text for b in respuesta.content if b.type == "text").strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
@@ -338,6 +345,28 @@ def enviar_resultado(correo, asunto: str, cuerpo: str, excel: Path) -> None:
         enviar_correo_nuevo(asunto, cuerpo, excel)
 
 
+_CORTE_CITA = re.compile(r"^\s*(De:|From:|Enviado el:|Sent:|-{2,}\s*Original|_{5,}|El .{0,80}escribi[oó]:|On .{0,80}wrote:)", re.IGNORECASE | re.MULTILINE)
+_CODIGO = re.compile(r"\b[A-Z0-9]{2,11}\d{5,6}\b")
+
+
+def texto_propio(cuerpo: str) -> str:
+    """Solo lo que Miguel escribió arriba; corta donde empieza el correo citado."""
+    m = _CORTE_CITA.search(cuerpo or "")
+    return (cuerpo or "")[:m.start()] if m else (cuerpo or "")
+
+
+def codigos_de_texto(cuerpo: str, autos: dict) -> tuple[set[str], list[str]]:
+    """Códigos de la hoja que Miguel nombra en su texto ("faltan VB502279"). Acepta el chasis completo."""
+    hallados, ignorados = set(), []
+    for token in _CODIGO.findall(texto_propio(cuerpo).upper()):
+        codigo = token if token in autos else next((c for c in autos if len(token) == 17 and token.endswith(c)), None)
+        if codigo:
+            hallados.add(codigo)
+        elif token not in ignorados:
+            ignorados.append(token)
+    return hallados, ignorados
+
+
 def filtrar_lectura(lectura: dict, autos: dict) -> tuple[set[str], set[str], list[str]]:
     """Conserva solamente códigos presentes en el Excel y separa X de dudas."""
     marcas, dudosas, ignorados = set(), set(), []
@@ -389,8 +418,11 @@ def main() -> int:
         lectura = {"filas": []} if a.marcas else leer_foto(foto)
         marcas = set((a.marcas or "").split(",")) - {""}; dudosas = set((a.dudosas or "").split(",")) - {""}
         lectura_marcas, lectura_dudosas, ignorados = filtrar_lectura(lectura, autos)
+        if item is not None:
+            del_texto, fuera = codigos_de_texto(elegido.get("body", ""), autos)
+            marcas.update(del_texto); ignorados += [f"texto:{t}" for t in fuera]
         marcas.update(lectura_marcas)
-        dudosas.update(lectura_dudosas)
+        dudosas.update(lectura_dudosas - marcas)
         clasificaciones = clasificar_roma(sorted(marcas)) if marcas else {}
         marcado = marcar_excel(wb, autos, sorted(marcas), clasificaciones, fecha)
         lineas = [f"Autos con X: {len(marcas)}"] + [f"- {c}: {autos[c]['modelo']} · {clasificaciones[c]['vendedor']} · {clasificaciones[c]['resultado']}" for c in sorted(marcas)]

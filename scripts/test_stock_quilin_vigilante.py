@@ -95,3 +95,36 @@ def test_manda_la_ultima_entrega_y_el_motivo_sale_de_la_respuesta():
     assert v.estado_sin_acta(v.ultima_entrega([rechazada, aprobada, otra]), respuestas) == "sin acta · entrega aprobada"
     assert v.estado_sin_acta(v.ultima_entrega([rechazada, otra]), respuestas) == "sin acta · entrega rechazada: Saldo negativo. Favor regularizar. Saludos"
     assert v.estado_sin_acta(v.ultima_entrega([otra]), respuestas) == "sin acta · entrega nunca pedida"
+
+
+AUTOS_1B = {c: {"fila": i + 5, "modelo": "M", "rev": 10} for i, c in enumerate(
+    ["VB502279", "VB514033", "VB504132", "VB501159", "VB504623", "VMC71823", "VZ000876", "VN000361",
+     "VN000364", "VN000575", "VJ009742", "VJ009095", "VJ000706", "VJ008167", "VS003978", "VS003079", "VS005013"])}
+
+
+def test_dos_x_y_quince_vacios_dan_dos_faltantes_sin_dudas():
+    filas = [{"codigo": c, "marca": "X" if c in ("VMC71823", "VZ000876") else "vacio"} for c in AUTOS_1B]
+    marcas, dudosas, ignorados = v.filtrar_lectura({"filas": filas}, AUTOS_1B)
+    assert marcas == {"VMC71823", "VZ000876"} and dudosas == set() and ignorados == []
+
+
+def test_texto_faltan_suma_el_auto():
+    hallados, fuera = v.codigos_de_texto("faltan VB502279 y vj000706\n\nsaludos", AUTOS_1B)
+    assert hallados == {"VB502279", "VJ000706"} and fuera == []
+
+
+def test_chasis_completo_en_texto_se_reconoce():
+    hallados, _ = v.codigos_de_texto("falta el 935CEFCE0VB502279", AUTOS_1B)
+    assert hallados == {"VB502279"}
+
+
+def test_codigo_fuera_de_la_hoja_se_ignora():
+    hallados, fuera = v.codigos_de_texto("faltan VB999999", AUTOS_1B)
+    assert hallados == set() and fuera == ["VB999999"]
+
+
+def test_texto_citado_no_se_lee():
+    cuerpo = "listo\r\n\r\nDe: Miguel Castro\r\nEnviado el: miércoles\r\nVB502279 VJ000706"
+    assert v.codigos_de_texto(cuerpo, AUTOS_1B) == (set(), [])
+    cuerpo2 = "ok\n________________________________\nFrom: robot\nVB502279"
+    assert v.codigos_de_texto(cuerpo2, AUTOS_1B)[0] == set()
