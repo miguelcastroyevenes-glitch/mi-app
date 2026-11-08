@@ -345,7 +345,7 @@ def enviar_resultado(correo, asunto: str, cuerpo: str, excel: Path) -> None:
         enviar_correo_nuevo(asunto, cuerpo, excel)
 
 
-_CORTE_CITA = re.compile(r"^\s*(De:|From:|Enviado el:|Sent:|-{2,}\s*Original|_{5,}|El .{0,80}escribi[oó]:|On .{0,80}wrote:)", re.IGNORECASE | re.MULTILINE)
+_CORTE_CITA = re.compile(r"^\s*(De:|From:|Enviado el:|Sent:|Enviado desde mi |Sent from my |Obtener Outlook para |Get Outlook for |-{2,}\s*Original|_{5,}|El .{0,80}escribi[oó]:|On .{0,80}wrote:)", re.IGNORECASE | re.MULTILINE)
 _CODIGO = re.compile(r"\b[A-Z0-9]{2,11}\d{5,6}\b")
 
 

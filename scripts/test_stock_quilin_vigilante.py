@@ -128,3 +128,15 @@ def test_texto_citado_no_se_lee():
     assert v.codigos_de_texto(cuerpo, AUTOS_1B) == (set(), [])
     cuerpo2 = "ok\n________________________________\nFrom: robot\nVB502279"
     assert v.codigos_de_texto(cuerpo2, AUTOS_1B)[0] == set()
+
+
+def test_firma_iphone_corta_el_citado():
+    cuerpo = "faltan VJ000706
+
+Enviado desde mi iPhone
+
+VB502279"
+    assert v.codigos_de_texto(cuerpo, AUTOS_1B)[0] == {"VJ000706"}
+    assert v.codigos_de_texto("ok
+Sent from my iPhone
+VB502279", AUTOS_1B)[0] == set()
