@@ -54,12 +54,40 @@ def test_codigo_ia_fuera_excel_se_ignora_por_funcion_del_programa():
     assert ignorados == ["FUERA"]
 
 
+def test_lectura_corrige_8_por_b_y_ambigua_se_ignora():
+    marcas, _, ignorados = v.filtrar_lectura({"filas": [{"codigo": "V8502279", "marca": "X"}]}, {"VB502279": {}})
+    assert marcas == {"VB502279"} and ignorados == []
+    assert v.resolver_codigo("V85", {"VB5": {}, "V8S": {}}) is None
+
+
 def test_validar_destinatarios_rechaza_cualquier_otro():
     v.validar_destinatarios([v.MIGUEL])
     with pytest.raises(RuntimeError):
         v.validar_destinatarios(["otro@pompeyo.cl"])
     with pytest.raises(RuntimeError):
         v.validar_destinatarios([v.MIGUEL, "otro@pompeyo.cl"])
+
+
+def test_validar_destinatarios_acepta_vendedor_tabla(monkeypatch):
+    monkeypatch.setattr(v, "CORREOS_VENDEDORES", {"DANIEL RODRIGUEZ": "daniel@pompeyo.cl"})
+    v.validar_destinatarios(["daniel@pompeyo.cl", v.MIGUEL])
+
+
+def test_correo_por_vendedor_con_copia_y_venta_miguel_no_genera(monkeypatch):
+    monkeypatch.setattr(v, "CORREOS_VENDEDORES", {"DANIEL RODRIGUEZ": "daniel@pompeyo.cl"})
+    clasificaciones = {
+        "A": {"resultado": "sin acta · entrega nunca pedida", "vendedor": "Daniel Rodríguez"},
+        "B": {"resultado": "sin acta · entrega aprobada · venta de Miguel", "vendedor": "Miguel Castro"},
+    }
+    correos, pendientes = v.armar_correos_vendedores(clasificaciones, {}, "09-11-2026")
+    assert len(correos) == 1 and correos[0]["para"] == "daniel@pompeyo.cl"
+    assert "B" in "\n".join(pendientes)
+
+
+def test_dudosa_y_sin_acta_no_entran_a_apc_y_asunto_no_ensayo():
+    datos = {"X": {"resultado": "sin acta · entrega aprobada"}, "D": {"resultado": "con acta"}}
+    assert v.codigos_para_apc({"X"}, datos) == []
+    assert "ENSAYO" not in "Stock realizado y cuadrado · 09-11-2026"
 
 
 # Formas tomadas de Roma en solo lectura el 28-10-2026 (ventas 214303, 220488, 220843, 223559).
@@ -134,3 +162,9 @@ def test_firma_iphone_corta_el_citado():
     cuerpo = "faltan VJ000706\n\nEnviado desde mi iPhone\n\nVB502279"
     assert v.codigos_de_texto(cuerpo, AUTOS_1B)[0] == {"VJ000706"}
     assert v.codigos_de_texto("ok\nSent from my iPhone\nVB502279", AUTOS_1B)[0] == set()
+
+
+def test_nombre_completo_de_roma_encuentra_el_correo():
+    assert v.correo_de_vendedor("DANIEL FRANCISCO RODRÍGUEZ AHUMADA") == "daniel.rodriguez@pompeyo.cl"
+    assert v.correo_de_vendedor("TERRY PEÑA") == "terry.pena@pompeyo.cl"
+    assert v.correo_de_vendedor("ROCÍO GARRIDO") is None

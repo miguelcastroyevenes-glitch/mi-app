@@ -1,6 +1,7 @@
-"""Vigilante ENSAYO del conteo físico de Stock Quilín.
+"""Vigilante del conteo físico de Stock Quilín.
 
-Nunca abre APC ni escribe en Roma.  Una ejecución procesa a lo más una respuesta.
+Roma se consulta sólo en lectura; APC queda limitado a Entrega Cliente -> Entregado.
+Una ejecución procesa a lo más una respuesta.
 """
 from __future__ import annotations
 
@@ -15,6 +16,11 @@ import sys
 from pathlib import Path
 
 MIGUEL = "miguel.castro@pompeyo.cl"
+CORREOS_VENDEDORES = {
+    # Tomadas de los destinatarios del correo real de las 9:00 (Outlook, 09-11-2026).
+    "DANIEL RODRIGUEZ": "daniel.rodriguez@pompeyo.cl", "JAVIER MADARIAGA": "javier.madariaga@pompeyo.cl",
+    "BRAUDI ALIAGA": "braudi.aliaga@pompeyo.cl", "TERRY PENA": "terry.pena@pompeyo.cl",
+}
 ASUNTO_BASE = "Stock Quilín para conteo ·"
 RAIZ = Path(__file__).resolve().parents[2]  # carpeta app-deal (o la copia de trabajo)
 SALIDA = RAIZ / "apc-descargas" / "quilin"
@@ -86,8 +92,10 @@ def reservar_aviso(estado: dict, fecha: dt.date, hora: str, robot_hoy: bool, hay
 
 
 def validar_destinatarios(destinatarios: list[str]) -> None:
-    if destinatarios != [MIGUEL]:
-        raise RuntimeError("El vigilante solo puede escribir a miguel.castro@pompeyo.cl.")
+    permitidos = {MIGUEL.lower(), *(x.lower() for x in CORREOS_VENDEDORES.values() if x != "TODO")}
+    recibidos = [x.strip().lower() for x in destinatarios if x.strip()]
+    if not recibidos or len(recibidos) != len(set(recibidos)) or any(x not in permitidos for x in recibidos):
+        raise RuntimeError("El vigilante solo puede escribir a Miguel y a los vendedores de su tabla fija.")
 
 
 def procesos_apc_corriendo() -> bool:
@@ -309,8 +317,79 @@ def clasificar_roma(codigos: list[str]) -> dict:
         sesion.close()
 
 
-def imprimir_envio(asunto: str, cuerpo: str) -> None:
-    validar_destinatarios([MIGUEL]); print(f"Para: {MIGUEL}\nAsunto: {asunto}\n{cuerpo}")
+def _nombre_tabla(nombre: str) -> str:
+    return re.sub(r"[^A-Z]", "", nombre.upper().translate(str.maketrans("ÁÉÍÓÚÑ", "AEIOUN")))
+
+
+def _palabras(nombre: str) -> set[str]:
+    limpio = nombre.upper().translate(str.maketrans("ÁÉÍÓÚÑ", "AEIOUN"))
+    return set(re.findall(r"[A-Z]+", limpio))
+
+
+def correo_de_vendedor(nombre: str) -> str | None:
+    """Roma trae el nombre completo ("DANIEL FRANCISCO RODRÍGUEZ AHUMADA"): calza si están nombre y apellido de la tabla."""
+    palabras = _palabras(nombre)
+    hallados = [c for v, c in CORREOS_VENDEDORES.items() if _palabras(v) <= palabras]
+    return hallados[0] if len(hallados) == 1 and hallados[0] != "TODO" else None
+
+
+def instruccion_sin_acta(resultado: str) -> str:
+    if "rechazada:" in resultado:
+        return "Regulariza lo que rechazó la solicitud: " + resultado.split("rechazada:", 1)[1].strip()
+    if "nunca pedida" in resultado:
+        return "Sube el acta firmada y pide la entrega del vehículo."
+    return "Sube el acta firmada para regularizar la entrega."
+
+
+def armar_correos_vendedores(clasificaciones: dict, autos: dict, fecha: str) -> tuple[list[dict], list[str]]:
+    """Agrupa autos sin acta: uno por vendedor; Miguel/no reconocidos quedan para el resumen."""
+    grupos, pendientes = {}, []
+    for codigo, dato in clasificaciones.items():
+        resultado, vendedor = str(dato.get("resultado", "")), str(dato.get("vendedor", ""))
+        if not resultado.startswith("sin acta"):
+            continue
+        if "venta de Miguel" in resultado or "MIGUEL" in vendedor.upper():
+            pendientes.append(f"- {codigo}: venta de Miguel; {resultado}"); continue
+        correo = correo_de_vendedor(vendedor)
+        if not correo:
+            pendientes.append(f"- {codigo}: vendedor {vendedor or 'no reconocido'}; {resultado}")
+            continue
+        grupos.setdefault((vendedor, correo), []).append((codigo, resultado))
+    correos = []
+    for (vendedor, correo), filas in grupos.items():
+        nombre = _nombre_tabla(vendedor)
+        if "DANIEL" in nombre or "JAVIER" in nombre:
+            cuerpo = "Resultado: estos autos no estaban en Quilín y falta regularizar su acta.\n\n" + "\n".join(
+                f"{i}. {codigo}: {instruccion_sin_acta(resultado)}" for i, (codigo, resultado) in enumerate(filas, 1))
+        elif "BRAUDI" in nombre:
+            cuerpo = "Gracias por revisar estos autos. Para dejarlos cerrados, falta una sola mejora:\n\n" + "\n".join(
+                f"- {codigo}: {instruccion_sin_acta(resultado)}" for codigo, resultado in filas)
+        else:  # Terry: datos y pasos ordenados con su motivo.
+            cuerpo = "Datos del conteo físico Quilín " + fecha + ":\n\n" + "\n".join(
+                f"- {codigo}: {resultado}.\n  Paso: {instruccion_sin_acta(resultado)} (para regularizar la entrega)." for codigo, resultado in filas)
+        correos.append({"para": correo, "vendedor": vendedor, "asunto": f"Pendientes de entrega Quilín · {fecha}", "cuerpo": cuerpo})
+    return correos, pendientes
+
+
+def codigos_para_apc(marcas: set[str], clasificaciones: dict) -> list[str]:
+    """La lista de APC sólo nace de X (nunca dudas) que Roma clasificó con acta."""
+    return [c for c in sorted(marcas) if str(clasificaciones[c].get("resultado", "")).startswith("con acta")]
+
+
+def imprimir_envio(asunto: str, cuerpo: str, para: list[str] | None = None, cc: list[str] | None = None) -> None:
+    para, cc = para or [MIGUEL], cc or []
+    validar_destinatarios([*para, *cc])
+    print(f"Para: {'; '.join(para)}\nCC: {'; '.join(cc)}\nAsunto: {asunto}\n{cuerpo}")
+
+
+def enviar_correo_vendedor(para: str, asunto: str, cuerpo: str) -> None:
+    """Un correo por vendedor, siempre con Miguel en copia."""
+    validar_destinatarios([para, MIGUEL])
+    import win32com.client
+    nuevo = win32com.client.Dispatch("Outlook.Application").CreateItem(0)
+    nuevo.To, nuevo.CC, nuevo.BCC = para, MIGUEL, ""
+    nuevo.Subject, nuevo.Body = asunto, cuerpo
+    nuevo.Send()
 
 
 def enviar_correo_nuevo(asunto: str, cuerpo: str, excel: Path | None = None) -> None:
@@ -347,6 +426,8 @@ def enviar_resultado(correo, asunto: str, cuerpo: str, excel: Path) -> None:
 
 _CORTE_CITA = re.compile(r"^\s*(De:|From:|Enviado el:|Sent:|Enviado desde mi |Sent from my |Obtener Outlook para |Get Outlook for |-{2,}\s*Original|_{5,}|El .{0,80}escribi[oó]:|On .{0,80}wrote:)", re.IGNORECASE | re.MULTILINE)
 _CODIGO = re.compile(r"\b[A-Z0-9]{2,11}\d{5,6}\b")
+_CONFUSIONES = {"8": "B", "B": "8", "2": "Z", "Z": "2", "5": "S", "S": "5",
+                "0": "OD", "O": "0D", "D": "0O", "1": "I", "I": "1", "6": "G", "G": "6"}
 
 
 def texto_propio(cuerpo: str) -> str:
@@ -355,11 +436,27 @@ def texto_propio(cuerpo: str) -> str:
     return (cuerpo or "")[:m.start()] if m else (cuerpo or "")
 
 
+def resolver_codigo(leido: str, autos: dict) -> str | None:
+    """Corrige una lectura solo si conduce a un codigo unico y exacto de la hoja."""
+    token = leido.upper().strip()
+    if token in autos:
+        return token
+    directos = [c for c in autos if len(token) == 17 and token.endswith(c)]
+    if len(directos) == 1:
+        return directos[0]
+    candidatos = []
+    for codigo in autos:
+        comparable = token[-len(codigo):] if len(token) == 17 else token
+        if len(comparable) == len(codigo) and all(a == b or b in _CONFUSIONES.get(a, "") for a, b in zip(comparable, codigo)):
+            candidatos.append(codigo)
+    return candidatos[0] if len(candidatos) == 1 else None
+
+
 def codigos_de_texto(cuerpo: str, autos: dict) -> tuple[set[str], list[str]]:
     """Códigos de la hoja que Miguel nombra en su texto ("faltan VB502279"). Acepta el chasis completo."""
     hallados, ignorados = set(), []
     for token in _CODIGO.findall(texto_propio(cuerpo).upper()):
-        codigo = token if token in autos else next((c for c in autos if len(token) == 17 and token.endswith(c)), None)
+        codigo = resolver_codigo(token, autos)
         if codigo:
             hallados.add(codigo)
         elif token not in ignorados:
@@ -373,12 +470,13 @@ def filtrar_lectura(lectura: dict, autos: dict) -> tuple[set[str], set[str], lis
     for fila in lectura.get("filas", []):
         codigo = str(fila.get("codigo", "")).strip()
         marca = str(fila.get("marca", "")).lower()
-        if codigo not in autos:
+        corregido = resolver_codigo(codigo, autos)
+        if corregido is None:
             ignorados.append(codigo)
         elif marca == "x":
-            marcas.add(codigo)
+            marcas.add(corregido)
         elif marca != "vacio":
-            dudosas.add(codigo)
+            dudosas.add(corregido)
     return marcas, dudosas, ignorados
 
 
@@ -405,7 +503,7 @@ def main() -> int:
             if not elegidas:
                 hora = a.hora or dt.datetime.now().strftime("%H:%M")
                 if reservar_aviso(estado, hoy, hora, robot_hoy, hay_foto):
-                    asunto = f"ENSAYO · Falta la foto del conteo de hoy · {hoy:%d-%m-%Y}"; cuerpo = "Falta la foto del conteo de hoy. Es un ensayo."
+                    asunto = f"Falta la foto del conteo de hoy · {hoy:%d-%m-%Y}"; cuerpo = "Falta la foto del conteo de hoy."
                     if a.simular: imprimir_envio(asunto, cuerpo)
                     else:
                         guardar_estado(estado, False)
@@ -425,16 +523,37 @@ def main() -> int:
         dudosas.update(lectura_dudosas - marcas)
         clasificaciones = clasificar_roma(sorted(marcas)) if marcas else {}
         marcado = marcar_excel(wb, autos, sorted(marcas), clasificaciones, fecha)
+        candidatos_apc = codigos_para_apc(marcas, clasificaciones)
+        if not a.simular:  # se anota antes de actuar: un error a medio camino nunca repite correos a vendedores
+            estado["trabajados"].append(fecha); guardar_estado(estado, False)
+        from apc_entrega import entregar_en_apc
+        try:
+            resultados_apc = entregar_en_apc(candidatos_apc, hacer=not a.simular) if candidatos_apc else {}
+        except Exception as exc:  # APC caído: no se marca nada y Miguel lo ve en el resumen
+            resultados_apc = {c: f"falló: no pude entrar a APC ({exc})" for c in candidatos_apc}
+        correos_vendedores, pendientes_vendedores = armar_correos_vendedores(clasificaciones, autos, fecha)
+        if a.simular:
+            for correo_vendedor in correos_vendedores:
+                imprimir_envio(correo_vendedor["asunto"], correo_vendedor["cuerpo"], [correo_vendedor["para"]], [MIGUEL])
+        else:
+            for correo_vendedor in correos_vendedores:
+                enviar_correo_vendedor(correo_vendedor["para"], correo_vendedor["asunto"], correo_vendedor["cuerpo"])
         lineas = [f"Autos con X: {len(marcas)}"] + [f"- {c}: {autos[c]['modelo']} · {clasificaciones[c]['vendedor']} · {clasificaciones[c]['resultado']}" for c in sorted(marcas)]
+        if resultados_apc:
+            lineas += ["APC:", *[f"- {c}: {r}" for c, r in resultados_apc.items()]]
+        if correos_vendedores:
+            lineas += ["Se escribió a:", *[f"- {x['vendedor']}" for x in correos_vendedores]]
+        sin_venta = [c for c in sorted(marcas) if "sin venta en Roma" in str(clasificaciones[c].get("resultado", ""))]
+        if sin_venta:
+            lineas += ["Ojo, sin venta:", *[f"- {c}" for c in sin_venta]]
+        if pendientes_vendedores:
+            lineas += ["Revisa Miguel (no se escribió al vendedor):", *pendientes_vendedores]
         if dudosas: lineas += ["Te pregunto por estos autos:", *[f"- {c}" for c in sorted(dudosas)]]
-        lineas += ["Es un ensayo: no se tocó APC ni se escribió a ningún vendedor."]
-        asunto = f"ENSAYO · Stock realizado y cuadrado · {fecha}"; cuerpo = "\n".join(lineas)
+        asunto = f"Stock realizado y cuadrado · {fecha}"; cuerpo = "\n".join(lineas)
         if a.simular: imprimir_envio(asunto, cuerpo); print(f"Excel: {marcado}")
         else:
-            estado["trabajados"].append(fecha)
-            guardar_estado(estado, False)
             enviar_resultado(item, asunto, cuerpo, marcado)
-        registrar(f"Ensayo {fecha}: X={len(marcas)}, dudosas={len(dudosas)}, ignorados={ignorados}")
+        registrar(f"Vigilante {fecha}: X={len(marcas)}, dudosas={len(dudosas)}, ignorados={ignorados}")
         return 0
     except Exception as exc:
         registrar(f"Error: {exc}"); print(f"Error: {exc}", file=sys.stderr); return 1
