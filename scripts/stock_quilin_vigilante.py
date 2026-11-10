@@ -580,7 +580,23 @@ def main() -> int:
         registrar(f"Vigilante {fecha}: X={len(marcas)}, dudosas={len(dudosas)}, ignorados={ignorados}")
         return 0
     except Exception as exc:
-        registrar(f"Error: {exc}"); print(f"Error: {exc}", file=sys.stderr); return 1
+        registrar(f"Error: {exc}"); print(f"Error: {exc}", file=sys.stderr)
+        avisar_falla(estado, hoy, exc, a.simular)
+        return 1
+
+
+def avisar_falla(estado: dict, hoy: dt.date, exc: Exception, simular: bool) -> None:
+    """Una vez al dia avisa a Miguel que el conteo no se pudo procesar, para que no falle callado."""
+    clave = f"falla-{hoy:%Y-%m-%d}"
+    if simular or clave in estado["avisos"]:
+        return
+    try:
+        estado["avisos"].append(clave); guardar_estado(estado, False)
+        enviar_correo_nuevo(f"El conteo de stock no se pudo procesar · {hoy:%d-%m-%Y}",
+                            "El vigilante del conteo falló y lo seguirá intentando cada 10 minutos.\n\n"
+                            f"Motivo: {exc}\n\nEste aviso llega una sola vez por día.")
+    except Exception as aviso_exc:
+        registrar(f"Error al avisar la falla: {aviso_exc}")
 
 
 if __name__ == "__main__":
