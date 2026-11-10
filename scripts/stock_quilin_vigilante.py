@@ -180,6 +180,30 @@ def correos_outlook(desde: dt.date) -> tuple[list[dict], bool]:
     return correos, robot_hoy
 
 
+MAX_FOTO_BYTES = 4_500_000  # la IA rechaza fotos de mas de 10 MB una vez codificadas
+LADO_MAX = 3000
+
+
+def foto_para_ia(foto: Path) -> tuple[str, bytes]:
+    """Devuelve (tipo, bytes) de la foto, achicada si pesa demasiado para la IA."""
+    crudo = foto.read_bytes()
+    tipo = "image/png" if foto.suffix.lower() == ".png" else "image/jpeg"
+    if len(crudo) <= MAX_FOTO_BYTES and foto.suffix.lower() != ".heic":
+        return tipo, crudo
+    import io
+    from PIL import Image, ImageOps
+    img = ImageOps.exif_transpose(Image.open(io.BytesIO(crudo))).convert("RGB")
+    lado = LADO_MAX
+    while True:
+        copia = img.copy()
+        copia.thumbnail((lado, lado))
+        buf = io.BytesIO()
+        copia.save(buf, "JPEG", quality=85)
+        if buf.tell() <= MAX_FOTO_BYTES or lado <= 1200:
+            return "image/jpeg", buf.getvalue()
+        lado = int(lado * 0.8)
+
+
 def leer_foto(foto: Path) -> dict:
     from anthropic import Anthropic
     from dotenv import dotenv_values
@@ -191,8 +215,8 @@ Por cada código impreso en la columna "Cód. interno", fila por fila, di si su 
 Puntos, ticks, rayitas, comas o cualquier marca que no sea una X NO cuentan: esa fila es vacio.
 dudosa solo si hay una marca parecida a una X que no puedes asegurar que sea X.
 Ignora lo escrito a mano al pie de la hoja. Nunca inventes códigos. Responde SOLO JSON: {"filas":[{"codigo":"...","marca":"X|vacio|dudosa"}]}'''
-    tipo = "image/png" if foto.suffix.lower() == ".png" else "image/jpeg"
-    respuesta = Anthropic(api_key=llave, max_retries=2, timeout=120).messages.create(model="claude-opus-5-5", max_tokens=8000, messages=[{"role":"user","content":[{"type":"image","source":{"type":"base64","media_type":tipo,"data":base64.standard_b64encode(foto.read_bytes()).decode()}},{"type":"text","text":pedido}]}])
+    tipo, datos = foto_para_ia(foto)
+    respuesta = Anthropic(api_key=llave, max_retries=2, timeout=120).messages.create(model="claude-opus-5-5", max_tokens=8000, messages=[{"role":"user","content":[{"type":"image","source":{"type":"base64","media_type":tipo,"data":base64.standard_b64encode(datos).decode()}},{"type":"text","text":pedido}]}])
     texto = "".join(b.text for b in respuesta.content if b.type == "text").strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
     return json.loads(texto)
 

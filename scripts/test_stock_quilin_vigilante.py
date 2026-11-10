@@ -168,3 +168,23 @@ def test_nombre_completo_de_roma_encuentra_el_correo():
     assert v.correo_de_vendedor("DANIEL FRANCISCO RODRÍGUEZ AHUMADA") == "daniel.rodriguez@pompeyo.cl"
     assert v.correo_de_vendedor("TERRY PEÑA") == "terry.pena@pompeyo.cl"
     assert v.correo_de_vendedor("ROCÍO GARRIDO") is None
+
+
+def test_foto_grande_se_achica(tmp_path):
+    import io, os
+    from PIL import Image
+    import stock_quilin_vigilante as v
+    foto = tmp_path / "grande.jpeg"
+    Image.frombytes("RGB", (4000, 3000), os.urandom(4000 * 3000 * 3)).save(foto, "JPEG", quality=100)
+    assert foto.stat().st_size > v.MAX_FOTO_BYTES
+    tipo, datos = v.foto_para_ia(foto)
+    assert tipo == "image/jpeg" and len(datos) <= v.MAX_FOTO_BYTES
+    assert max(Image.open(io.BytesIO(datos)).size) <= v.LADO_MAX
+
+
+def test_foto_chica_no_se_toca(tmp_path):
+    from PIL import Image
+    import stock_quilin_vigilante as v
+    foto = tmp_path / "chica.jpeg"
+    Image.new("RGB", (800, 600), "white").save(foto, "JPEG")
+    assert v.foto_para_ia(foto)[1] == foto.read_bytes()
