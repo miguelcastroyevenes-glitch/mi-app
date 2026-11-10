@@ -188,3 +188,18 @@ def test_foto_chica_no_se_toca(tmp_path):
     foto = tmp_path / "chica.jpeg"
     Image.new("RGB", (800, 600), "white").save(foto, "JPEG")
     assert v.foto_para_ia(foto)[1] == foto.read_bytes()
+
+
+def test_falla_avisa_una_vez_por_dia(monkeypatch, tmp_path):
+    import datetime as dt
+    import stock_quilin_vigilante as v
+    enviados = []
+    monkeypatch.setattr(v, "ESTADO", tmp_path / "estado.json")
+    monkeypatch.setattr(v, "enviar_correo_nuevo", lambda asunto, cuerpo, excel=None: enviados.append(asunto))
+    estado = {"trabajados": [], "avisos": []}
+    hoy = dt.date(2026, 11, 10)
+    v.avisar_falla(estado, hoy, RuntimeError("foto muy grande"), False)
+    v.avisar_falla(estado, hoy, RuntimeError("foto muy grande"), False)
+    assert len(enviados) == 1 and "10-11-2026" in enviados[0]
+    v.avisar_falla(estado, hoy, RuntimeError("x"), True)
+    assert len(enviados) == 1
