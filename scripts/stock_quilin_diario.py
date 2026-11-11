@@ -281,6 +281,22 @@ def avisar_falla(e: Exception) -> None:
         log(f"No se pudo avisar a Miguel: {aviso_error}")
 
 
+def bloque_vitrina(archivos: list[Path], hoy: dt.date, escribir: bool) -> str:
+    """Cruce de vitrina (vitrina_quilin). Si falla, el correo de stock sale igual con una línea de aviso."""
+    try:
+        import vitrina_quilin as vq
+        quilin = [f for x in archivos for f in apc.leer_export(x)]
+        kar = []
+        for marca in ("peugeot", "citroen"):
+            ultimo = max(apc.DESCARGAS.glob(f"stock-apc-{marca}-*.xls"), key=lambda p: p.stat().st_mtime, default=None)
+            if ultimo is None or dt.date.fromtimestamp(ultimo.stat().st_mtime) != hoy:
+                raise RuntimeError(f"no está la descarga de KAR de hoy ({marca})")
+            kar += apc.leer_export(ultimo)
+        return vq.correr(escribir, descargas=(quilin, kar))
+    except Exception as e:  # la hoja de conteo nunca se pierde por culpa de la vitrina
+        return f"VITRINA: no corrió hoy, motivo: {e}"
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--ensayo", action="store_true", help="no envía nada")
@@ -295,6 +311,8 @@ def main() -> None:
         para = [miguel] if a.solo_miguel else todos
         archivos = a.archivos or bajar_de_apc(a.ver)
         excel, unidades = armar_excel(archivos, hoy)
+        vitrina = bloque_vitrina(archivos, hoy, escribir=not a.ensayo)
+        log(vitrina)
         if a.ensayo:
             log(f"Ensayo: no se envió nada. Destinatarios previstos: {len(todos)}")
             return
@@ -304,7 +322,7 @@ def main() -> None:
                f"Hola equipo:\n\nVa el stock de hoy de Peugeot Quilín y Citroën Quilín ({len(unidades)} autos), "
                f"sacado de APC a las {dt.datetime.now():%H:%M}.\n\n"
                "Imprímanlo, recorran el local y marquen cada auto: tick si está, X si no está. "
-               "Después me entregan la hoja.\n\nMiguel", excel)
+               "Después me entregan la hoja.\n\n" + vitrina + "\n\nMiguel", excel)
     except Exception as e:
         log(f"Error: {e}")
         traceback.print_exc()
