@@ -127,8 +127,8 @@ def leer_citroen(wb) -> dict:
     cab = {c.column: limpio(c.value) for c in ws[fila_cab] if c.value is not None}
     cols_modelo = sorted(col for col, v in cab.items() if v.lower() == "modelo/versión")
     col_entrega = next((col for col, v in cab.items() if v.upper().startswith("ENTREGA")), None)
-    if len(cols_modelo) != 2:
-        raise ValueError(f"esperaba 2 bloques 'Modelo/Versión', hay {len(cols_modelo)}")
+    if len(cols_modelo) not in (1, 2):
+        raise ValueError(f"esperaba 1 o 2 bloques 'Modelo/Versión', hay {len(cols_modelo)}")
     # fechas de entrega en celdas combinadas (ej. AA4:AA8)
     entrega = {}
     if col_entrega:
@@ -156,6 +156,8 @@ def leer_citroen(wb) -> dict:
             out.append(item)
         return out
 
+    if len(cols_modelo) == 1:                            # formato nuevo (19-11-2026): solo Stock en Chile, sin tránsito
+        return {"chile": bloque(cols_modelo[0], max(cab) + 1, False), "transito": []}
     fin_chile = cols_modelo[1]
     while fin_chile - 1 not in cab and fin_chile > cols_modelo[0]:
         fin_chile -= 1                                   # salta la columna vacía entre bloques
@@ -171,9 +173,25 @@ def leer_peugeot(wb) -> dict:
     # Desde el 13-10-2026 Cristian manda otro formato: "Entrega" (Piso / Fines Noviembre) en vez de
     # "Location", "Modelo" en vez de "Modelo EDS" y "Color" en vez de "Color description".
     alias = {"Modelo EDS": ("Modelo EDS", "Modelo"), "Color description": ("Color description", "Color"),
-             "Location": ("Location", "Entrega")}
+             "Location": ("Location", "Entrega", "Status"),
+             "CDC EDS": ("CDC EDS", "Vehicle Description")}
     i = {k: next(cab.index(n) for n in alias.get(k, (k,)) if n in cab)
          for k in ("Brand", "Modelo EDS", "CDC EDS", "Color description", "Location")}
+
+    def texto(v) -> str:                               # el modelo puede venir como número (3008 / 3008.0)
+        if isinstance(v, float) and v.is_integer():
+            v = int(v)
+        return limpio(v)
+
+    def normaliza_lugar(lugar: str) -> str:            # tolera typos: "novimebre", "ces", "Entrega ..."
+        bajo = lugar.lower()
+        if bajo in ("en chile", "piso"):
+            return "chile"
+        if "novi" in bajo:
+            return "Fines Noviembre"
+        if "dicie" in bajo:
+            return "Fines Diciembre"
+        return lugar
     grupos = collections.defaultdict(collections.Counter)
     familia = {}
     for f in filas:
@@ -182,9 +200,9 @@ def leer_peugeot(wb) -> dict:
         version, color, lugar = limpio(f[i["CDC EDS"]]), limpio(f[i["Color description"]]).upper(), limpio(f[i["Location"]])
         if not version:
             continue
-        donde = "chile" if lugar.lower() in ("en chile", "piso") else lugar   # "Entrega Fines Noviembre"
+        donde = normaliza_lugar(lugar)                 # "chile" o "Fines Noviembre" / "Fines Diciembre"
         grupos[(donde, version)][color] += 1
-        familia[version] = limpio(f[i["Modelo EDS"]])
+        familia[version] = texto(f[i["Modelo EDS"]])
     meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
              "septiembre", "octubre", "noviembre", "diciembre"]
     hoy = dt.date.today().month
@@ -211,7 +229,8 @@ def leer_planilla(ruta: Path) -> tuple[str, dict]:
     if hoja_citroen(wb):
         return "citroen", leer_citroen(wb)
     primera = [limpio(c.value) for c in next(wb.worksheets[0].iter_rows(max_row=1))]
-    if {"Brand", "CDC EDS"} <= set(primera) and {"Location", "Entrega"} & set(primera):
+    if "Brand" in primera and {"CDC EDS", "Vehicle Description"} & set(primera) \
+            and {"Location", "Entrega", "Status"} & set(primera):
         return "peugeot", leer_peugeot(wb)
     raise ValueError("no reconozco el formato (ni la matriz de Citroën ni la lista de Peugeot)")
 
