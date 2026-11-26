@@ -138,6 +138,15 @@ def cerrar_aviso(page) -> None:
     page.wait_for_timeout(300)
 
 
+def validar_entrada_apc(url: str) -> None:
+    """Detiene una caída de APC antes de intentar los selectores de stock."""
+    if "/Shared/Show_Error.aspx" in url:
+        raise RuntimeError(
+            "APC devolvió su página de error al entrar; no llegué a la pantalla de stock. "
+            "Revisar la disponibilidad de APC y reintentar cuando el proveedor la restablezca."
+        )
+
+
 def entrar(page, env: dict) -> None:
     log("1. Entrando a APC...")
     page.goto(LOGIN_URL, wait_until="networkidle")
@@ -166,6 +175,7 @@ def entrar(page, env: dict) -> None:
     with page.expect_navigation(timeout=60000):
         page.evaluate("() => $('#LoginOk').trigger('click')")
     page.wait_for_load_state("networkidle")
+    validar_entrada_apc(page.url)
     log(f"   dentro: {page.url.split('?')[0]}")
 
 

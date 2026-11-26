@@ -1,6 +1,7 @@
 import datetime as dt
 
 import actualizar_zonal as a
+import openpyxl
 
 
 def test_limpio_normaliza_espacios_y_nulos():
@@ -49,3 +50,26 @@ const zonal = {citroen:{fecha:"07-10-2026",items:[{modelo:"C3",colores:[{color:"
     assert zonal["citroen"]["chile"][0]["colores"][0]["cant"] == "+10"
     assert zonal["citroen"]["transito"] == []
     assert zonal["peugeot"] is None
+
+
+def test_leer_citroen_acepta_uno_dos_y_tres_bloques():
+    for bloques in (1, 2, 3):
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Citroen"
+        for i in range(bloques):
+            inicio = 1 + i * 4
+            ws.cell(3, inicio, "Modelo/Versión")
+            ws.cell(3, inicio + 1, f"COLOR {i}")
+            if i:
+                ws.cell(3, inicio + 2, "ENTERGAS DESDE")  # error real del envío 24-11
+                ws.merge_cells(start_row=4, start_column=inicio + 2, end_row=5, end_column=inicio + 2)
+                ws.cell(4, inicio + 2, f"2{i}-12-2026")
+            ws.cell(4, inicio, f"Modelo {i}")
+            ws.cell(4, inicio + 1, i + 1)
+
+        leido = a.leer_citroen(wb)
+
+        assert [x["modelo"] for x in leido["chile"]] == ["Modelo 0"]
+        assert [x["modelo"] for x in leido["transito"]] == [f"Modelo {i}" for i in range(1, bloques)]
+        assert [x["entrega"] for x in leido["transito"]] == [f"2{i}-12-2026" for i in range(1, bloques)]

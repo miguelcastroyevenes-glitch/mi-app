@@ -120,27 +120,28 @@ def hoja_citroen(wb) -> str | None:
 
 
 def leer_citroen(wb) -> dict:
-    """Matriz de Benjamín: dos bloques lado a lado, cada uno con su columna 'Modelo/Versión'."""
+    """Matriz de Benjamín: Chile seguido de uno o más bloques de tránsito."""
     ws = wb[hoja_citroen(wb)]
     fila_cab = next(r for r in range(1, 10)
                     if any(limpio(c.value).lower() == "modelo/versión" for c in ws[r]))
     cab = {c.column: limpio(c.value) for c in ws[fila_cab] if c.value is not None}
     cols_modelo = sorted(col for col, v in cab.items() if v.lower() == "modelo/versión")
-    col_entrega = next((col for col, v in cab.items() if v.upper().startswith("ENTREGA")), None)
-    if len(cols_modelo) not in (1, 2):
-        raise ValueError(f"esperaba 1 o 2 bloques 'Modelo/Versión', hay {len(cols_modelo)}")
-    # fechas de entrega en celdas combinadas (ej. AA4:AA8)
-    entrega = {}
-    if col_entrega:
-        for rng in ws.merged_cells.ranges:
-            if rng.min_col == col_entrega:
-                v = ws.cell(rng.min_row, col_entrega).value
-                for r in range(rng.min_row, rng.max_row + 1):
-                    entrega[r] = v
+    if not cols_modelo:
+        raise ValueError("no encontré bloques 'Modelo/Versión'")
 
-    def bloque(col_ini: int, col_fin: int, con_entrega: bool) -> list[dict]:
+    def bloque(col_ini: int, col_fin: int, col_entrega: int | None) -> list[dict]:
+        # Las fechas pueden venir combinadas verticalmente; se conservan por bloque para
+        # que una segunda tabla de tránsito no herede la fecha de la primera.
+        entrega = {}
+        if col_entrega:
+            for rng in ws.merged_cells.ranges:
+                if rng.min_col == col_entrega:
+                    v = ws.cell(rng.min_row, col_entrega).value
+                    for r in range(rng.min_row, rng.max_row + 1):
+                        entrega[r] = v
         out = []
-        colores = [(col, cab[col]) for col in range(col_ini + 1, col_fin) if col in cab]
+        colores = [(col, cab[col]) for col in range(col_ini + 1, col_fin)
+                   if col in cab and col != col_entrega]
         for r in range(fila_cab + 1, ws.max_row + 1):
             modelo = limpio(ws.cell(r, col_ini).value)
             if not modelo or modelo.lower().startswith("x="):
@@ -150,19 +151,21 @@ def leer_citroen(wb) -> dict:
             if not chips:
                 continue
             item = {"modelo": modelo, "colores": chips}
-            if con_entrega:
-                v = entrega.get(r, ws.cell(r, col_entrega).value if col_entrega else None)
+            if col_entrega:
+                v = entrega.get(r, ws.cell(r, col_entrega).value)
                 item["entrega"] = limpio(v.strftime("%d-%m-%Y") if hasattr(v, "strftime") else v).replace(".", "-")
             out.append(item)
         return out
 
-    if len(cols_modelo) == 1:                            # formato nuevo (19-11-2026): solo Stock en Chile, sin tránsito
-        return {"chile": bloque(cols_modelo[0], max(cab) + 1, False), "transito": []}
-    fin_chile = cols_modelo[1]
-    while fin_chile - 1 not in cab and fin_chile > cols_modelo[0]:
-        fin_chile -= 1                                   # salta la columna vacía entre bloques
-    return {"chile": bloque(cols_modelo[0], fin_chile, False),
-            "transito": bloque(cols_modelo[1], col_entrega or (max(cab) + 1), True)}
+    bloques = []
+    for i, col_modelo in enumerate(cols_modelo):
+        col_fin = cols_modelo[i + 1] if i + 1 < len(cols_modelo) else max(cab) + 1
+        # Algunos envíos escriben "ENTERGAS DESDE"; se reconocen ambas grafías
+        # dentro del bloque, sin confundirlo con el bloque vecino.
+        col_entrega = next((col for col in range(col_modelo + 1, col_fin)
+                            if any(x in cab.get(col, "").upper() for x in ("ENTREG", "ENTERG"))), None)
+        bloques.append(bloque(col_modelo, col_fin, col_entrega))
+    return {"chile": bloques[0], "transito": [item for b in bloques[1:] for item in b]}
 
 
 def leer_peugeot(wb) -> dict:
